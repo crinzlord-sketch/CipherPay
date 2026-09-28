@@ -17,6 +17,7 @@ import {
   supportMessagesTable,
   sessionsTable,
 } from "@workspace/db";
+import { revokeAllExcept } from "../lib/sessions";
 import { gt, ne } from "drizzle-orm";
 import { signAdminToken, requireAdmin, type AdminRequest } from "../lib/admin-auth";
 import { creditWallet, debitWallet, formatTransaction } from "../lib/wallet";
@@ -588,8 +589,7 @@ router.post("/admin/users/:id/reset-activity", requireAdmin, async (req: AdminRe
   const [u] = await db.select().from(usersTable).where(eq(usersTable.id, id));
   if (!u) { res.status(404).json({ error: "User not found" }); return; }
 
-  await db.transaction(async (trx) => {
-    await trx.delete(transactionsTable).where(eq(transactionsTable.userId, id));
+  // Revoke every active device session before removing the account. The JWT itself may remain in a browser, but the API will reject it immediately on the next request.\n  await revokeAllExcept(id, null);\n\n  await db.transaction(async (trx) => {\n    await trx.delete(transactionsTable).where(eq(transactionsTable.userId, id));
     await trx.delete(socialOrdersTable).where(eq(socialOrdersTable.userId, id));
     await trx.delete(smsActivationsTable).where(eq(smsActivationsTable.userId, id));
     await trx.delete(notificationsTable).where(eq(notificationsTable.userId, id));
