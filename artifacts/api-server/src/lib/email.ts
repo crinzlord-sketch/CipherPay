@@ -112,9 +112,9 @@ export async function sendMail(to: string, subject: string, html: string, text?:
   }
 
   const plainText = text ?? html
-    .replace(/<style[\\s\\S]*?<\\/style>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
     .replace(/<[^>]+>/g, " ")
-    .replace(/\\s+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 
   // Resend uses HTTPS, so it works from Render Free where outbound SMTP
