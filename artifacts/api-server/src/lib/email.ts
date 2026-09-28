@@ -93,7 +93,7 @@ function brandWrap(title: string, contentHtml: string, previewText: string): str
             </tr>
             <tr>
               <td style="padding:24px 8px 0;color:#738099;font-size:12px;line-height:19px;">
-                <p style="margin:0 0 8px;">This is an automated message from CipherPay. Please do not reply directly to this email.</p>
+                <p style="margin:0 0 8px;">This is an automated message from CipherPay. You can reply to this email if you need assistance.</p>
                 <p style="margin:0;">Need help? Contact <a href="mailto:${safeReplyTo}" style="color:#5b3aa4;text-decoration:underline;">${safeReplyTo}</a><br>CipherPay, Nigeria</p>
               </td>
             </tr>
