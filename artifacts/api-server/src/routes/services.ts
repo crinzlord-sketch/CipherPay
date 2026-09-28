@@ -34,6 +34,13 @@ function getUserId(req: any): number | null {
 }
 
 const SMS_CANCEL_AFTER_MS = 15 * 60 * 1000;
+function normalizeNgPhone(phone: string): string {
+  const raw = String(phone ?? "").trim().replace(/[\\s().-]/g, "");
+  if (raw.startsWith("+234")) return raw;
+  if (raw.startsWith("234")) return `+${raw}`;
+  if (raw.startsWith("0")) return `+234${raw.slice(1)}`;
+  return raw;
+}
 
 // Mark a previously-successful debit as failed and credit back the same amount.
 // Idempotent: only refunds if the debit row is still in "success" state (CAS via WHERE clause).
@@ -96,7 +103,8 @@ router.post("/airtime/buy", async (req, res): Promise<void> => {
   const parsed = BuyAirtimeBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("; ") }); return; }
 
-  const { network, phone, amount } = parsed.data;
+  const { network, phone: rawPhone, amount } = parsed.data;
+  const phone = normalizeNgPhone(rawPhone);
   const networkObj = NETWORKS.find(n => n.id === network);
   const charge = amount + VAS_PROFIT_FEE;
 
@@ -214,7 +222,8 @@ router.post("/data/buy", async (req, res): Promise<void> => {
     return;
   }
 
-  const { network, phone, planId } = parsed.data;
+  const { network, phone: rawPhone, planId } = parsed.data;
+  const phone = normalizeNgPhone(rawPhone);
   const plans = await getDataPlans(network);
   const plan = plans.find(p => p.id === planId);
   if (!plan) { res.status(400).json({ error: "Plan not found or no longer available" }); return; }
