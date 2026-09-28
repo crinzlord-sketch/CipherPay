@@ -8,6 +8,7 @@ import { signAdminToken } from "../lib/admin-auth";
 import { generateUniqueAccountNumber } from "../lib/account";
 import { createSession, listSessions, revokeSession, revokeAllExcept } from "../lib/sessions";
 import { getOrCreateWallet, formatWallet, creditWallet } from "../lib/wallet";
+import { ensureUserPayoutWallet } from "../lib/payout-wallet";
 import { sendOtpEmail, isEmailConfigured } from "../lib/email";
 import { notifyUser } from "../lib/notifications";
 import path from "path";
@@ -124,6 +125,13 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   }).returning();
 
   await getOrCreateWallet(user.id);
+
+  // Provision the user's permanent Flutterwave payout wallet in the background.
+  // Registration must still succeed if Flutterwave temporarily rejects or delays
+  // PSA provisioning; the funding page retries through the same idempotent helper.
+  void ensureUserPayoutWallet(user.id).catch((e: any) => {
+    req.log?.warn?.({ userId: user.id, err: e?.message }, "initial Flutterwave payout wallet provisioning failed");
+  });
 
   // Credit referral bonuses if a valid referral code was provided.
   const REFERRAL_BONUS_REFERRER = 200;
