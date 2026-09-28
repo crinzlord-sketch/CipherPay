@@ -5766,7 +5766,7 @@ html[data-route-transition="auth-switch"]::after {
 }
 .mobile-welcome-actions { margin-top: 30px; }
 @media (max-width: 600px) {
-  .mobile-welcome-actions { margin-top: 38px; }
+  .mobile-welcome-actions { margin-top: 58px; }
 }
 
 /* Bank transfer result */
