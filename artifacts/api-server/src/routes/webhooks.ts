@@ -50,7 +50,7 @@ export async function flutterwaveWebhookHandler(req: Request, res: Response): Pr
   }
 }
 
-async function handleEvent(req: Request, evt: FlwEvent): Promise<void> {
+export async function handleEvent(req: Request, evt: FlwEvent): Promise<void> {
   const eventName = evt.event ?? evt["event.type"] ?? "";
   const data = evt.data ?? {};
 
