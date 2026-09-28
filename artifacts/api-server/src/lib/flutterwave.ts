@@ -418,6 +418,50 @@ export async function fetchPayoutWalletBalance(accountReference: string): Promis
   return Number(ngn?.available_balance ?? ngn?.availableBalance ?? 0);
 }
 
+// ── Wallet-to-wallet funding for bill payments ───────────────────────────────
+export async function waitForTransfer(id: number | string, timeoutMs = 30000): Promise<{ status: string | null; raw: any }> {
+  const started = Date.now();
+  let last: { status: string | null; raw: any } = { status: null, raw: null };
+  while (Date.now() - started < timeoutMs) {
+    last = await verifyTransferById(id);
+    const status = String(last.status ?? "").toUpperCase();
+    if (["SUCCESSFUL", "FAILED", "CANCELLED", "REVERSED"].includes(status)) return last;
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+  }
+  return last;
+}
+
+export async function movePayoutWalletToMerchant(params: { debitSubaccount: string; amount: number; reference: string }): Promise<FlwTransferResult> {
+  const merchantId = process.env.FLUTTERWAVE_MERCHANT_ID;
+  if (!merchantId) throw new Error("FLUTTERWAVE_MERCHANT_ID not set");
+  const result = await createTransfer({
+    amount: params.amount,
+    bankCode: "flutterwave",
+    accountNumber: merchantId,
+    reference: params.reference,
+    narration: "CipherPay bill-payment funding",
+    debitSubaccount: params.debitSubaccount,
+  });
+  if (!result.accepted || result.id == null) return result;
+  const final = await waitForTransfer(result.id);
+  const ok = String(final.status ?? "").toUpperCase() === "SUCCESSFUL";
+  return { ...result, accepted: ok, status: final.status, message: ok ? "Wallet funding completed" : (final.raw?.message ?? result.message), raw: final.raw ?? result.raw };
+}
+
+export async function moveMerchantToPayoutWallet(params: { payoutBarterId: string; amount: number; reference: string }): Promise<FlwTransferResult> {
+  const result = await createTransfer({
+    amount: params.amount,
+    bankCode: "flutterwave",
+    accountNumber: params.payoutBarterId,
+    reference: params.reference,
+    narration: "CipherPay bill-payment refund",
+  });
+  if (!result.accepted || result.id == null) return result;
+  const final = await waitForTransfer(result.id);
+  const ok = String(final.status ?? "").toUpperCase() === "SUCCESSFUL";
+  return { ...result, accepted: ok, status: final.status, message: ok ? "Wallet refund completed" : (final.raw?.message ?? result.message), raw: final.raw ?? result.raw };
+}
+
 // ── Subaccounts ───────────────────────────────────────────────────────────────
 // Subaccounts let transfers appear to originate from a specific user identity
 // rather than the main CipherPay merchant account. Pass the returned
