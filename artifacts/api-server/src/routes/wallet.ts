@@ -4,7 +4,8 @@ import { db, walletsTable, transactionsTable, usersTable } from "@workspace/db";
 import { FundWalletBody, VerifyFundingBody, WalletTransferBody, WithdrawFundsBody, ListTransactionsQueryParams, ClaimDepositBody } from "@workspace/api-zod";
 import { getOrCreateWallet, creditWallet, debitWallet, formatWallet, formatTransaction } from "../lib/wallet";
 import { generateReference } from "../lib/auth";
-import { initiatePayment, verifyByReference, createTransfer, createSubaccount, initiateBankTransfer, friendlyFlwError } from "../lib/flutterwave";
+import { initiatePayment, verifyByReference, createTransfer, initiateBankTransfer, friendlyFlwError } from "../lib/flutterwave";
+import { ensureUserPayoutWallet } from "../lib/payout-wallet";
 import { notifyUser } from "../lib/notifications";
 import { checkDepositLimit, checkPerTxLimitSync, getDepositFlagReason } from "../lib/kycLimits";
 
@@ -48,15 +49,21 @@ router.get("/wallet", async (req, res): Promise<void> => {
 router.get("/wallet/deposit-account", async (req, res): Promise<void> => {
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const bankName = process.env.DEPOSIT_BANK_NAME ?? "";
-  const accountNumber = process.env.DEPOSIT_ACCOUNT_NUMBER ?? "";
-  const accountName = process.env.DEPOSIT_ACCOUNT_NAME ?? "CipherPay";
-  res.json({
-    configured: Boolean(bankName && accountNumber),
-    bankName,
-    accountNumber,
-    accountName,
-  });
+  try {
+    const payout = await ensureUserPayoutWallet(userId);
+    const accountName = `${payout.user.firstName} ${payout.user.lastName}`.trim();
+    res.json({
+      configured: true,
+      accountNumber: payout.accountNumber,
+      bankName: payout.bankName,
+      accountName,
+      currency: "NGN",
+      permanent: true,
+    });
+  } catch (e: any) {
+    req.log?.warn?.({ userId, err: e?.message }, "payout wallet provisioning failed");
+    res.status(502).json({ error: friendlyFlwError(e?.message) });
+  }
 });
 
 // User submits a pending bank-transfer deposit after sending money to our fixed
@@ -191,79 +198,22 @@ router.post("/wallet/fund", async (req, res): Promise<void> => {
 router.post("/wallet/fund/bank-transfer", async (req, res): Promise<void> => {
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
-
-  const parsed = FundWalletBody.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("; ") }); return; }
-
-  const { amount, email } = parsed.data;
-  if (!Number.isFinite(amount) || amount < 100) { res.status(400).json({ error: "Amount must be at least ₦100" }); return; }
-  const reference = generateReference("FUND");
-
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
-  const payerEmail = email || user?.email;
-  if (!payerEmail) { res.status(400).json({ error: "Email is required for payment" }); return; }
-
-  const depositLimitError = await checkDepositLimit(userId, user?.kycLevel ?? 0, amount);
-  if (depositLimitError) { res.status(400).json({ error: depositLimitError }); return; }
-  const flagReason = getDepositFlagReason(user?.kycLevel ?? 0, amount);
-
-  // Persist the pending fund row BEFORE calling the provider. If we minted the
-  // NUBAN first and the DB insert then failed, the user could transfer into a
-  // valid account that no webhook/verify could match to credit — money lost.
-  // With the row first, a provider failure just marks this row failed (no NUBAN
-  // ever shown), and a successful charge always has a row to credit.
-  const [pending] = await db.insert(transactionsTable).values({
-    userId,
-    type: "fund",
-    amount: amount.toFixed(2),
-    status: "pending",
-    reference,
-    description: "Wallet funding via bank transfer",
-    isFlagged: Boolean(flagReason),
-    flagReason,
-    metadata: JSON.stringify({
-      provider: "flutterwave",
-      method: "bank_transfer",
-      email: payerEmail,
-      heldForKyc: Boolean(flagReason),
-    }),
-  }).returning({ id: transactionsTable.id });
-
   try {
-    const account = await initiateBankTransfer({
-      amount,
-      email: payerEmail,
-      reference,
-      fullname: user ? `${user.firstName} ${user.lastName}` : undefined,
-      narration: "CipherPay wallet funding",
-      // Deposits always go to the merchant account — no subaccount routing.
-    });
-
-    if (flagReason) {
-      await notifyUser({
-        userId, type: "warning", title: "Deposit held for KYC review",
-        body: `Your ₦${amount.toLocaleString()} payment will remain held because ${flagReason.toLowerCase()} Complete your KYC and an admin will review and release it.`,
-        link: `/transactions/${pending.id}`,
-      }).catch(() => {});
-    }
-
+    const payout = await ensureUserPayoutWallet(userId);
+    const accountName = `${payout.user.firstName} ${payout.user.lastName}`.trim();
     res.json({
-      reference,
+      reference: null,
       account: {
-        accountNumber: account.accountNumber,
-        bankName: "Flutterwave FMB",
-        amount: account.amount,
-        beneficiaryName: "CipherPay Wallet Funding",
-        expiresAt: account.expiresAt,
-        note: account.note,
+        accountNumber: payout.accountNumber,
+        bankName: payout.bankName,
+        accountName,
+        beneficiaryName: accountName,
+        permanent: true,
+        currency: "NGN",
       },
     });
   } catch (e: any) {
-    req.log?.warn?.({ err: e?.message }, "bank-transfer fund init failed");
-    // No NUBAN was returned to the user, so this pending row can never be paid
-    // into — mark it failed so it does not linger as a phantom pending deposit.
-    await db.update(transactionsTable).set({ status: "failed" })
-      .where(and(eq(transactionsTable.id, pending.id), eq(transactionsTable.status, "pending")));
+    req.log?.warn?.({ userId, err: e?.message }, "payout wallet funding account failed");
     res.status(502).json({ error: friendlyFlwError(e?.message) });
   }
 });
@@ -514,85 +464,31 @@ router.post("/wallet/withdraw", async (req, res): Promise<void> => {
     ? `${narration} (${senderName} via CipherPay)`
     : `CipherPay - ${senderName}`;
 
-  // Lazily create a subaccount for the user if none exists yet.
-  // business_name is always the CipherPay user's registered name.
-  let subaccountId = user.flwSubaccountId ?? undefined;
-  // Numeric id is what Flutterwave's debit_subaccount field actually accepts in
-  // POST /v3/transfers. The string RS_xxx subaccount_id is only used for charge
-  // split routing (initiatePayment / initiateBankTransfer subaccounts arrays).
-  let subaccountNumericId: number | undefined = user.flwSubaccountNumericId ?? undefined;
-
-  if (!subaccountId) {
-    try {
-      const sub = await createSubaccount({
-        accountBank: bankCode,
-        accountNumber,
-        businessName: senderName,
-        businessEmail: user.email,
-      });
-      subaccountNumericId = sub.id > 0 ? sub.id : undefined;
-      await db.update(usersTable)
-        .set({
-          flwSubaccountId: sub.subaccountId,
-          ...(subaccountNumericId ? { flwSubaccountNumericId: subaccountNumericId } : {}),
-        })
-        .where(eq(usersTable.id, userId));
-      req.log?.info?.({ userId, subaccountId: sub.subaccountId, subaccountNumericId }, "flw subaccount provisioned");
-    } catch (e: any) {
-      req.log?.warn?.({ userId, err: e?.message }, "flw subaccount creation skipped");
-    }
+  let payout;
+  try {
+    payout = await ensureUserPayoutWallet(userId);
+  } catch (e: any) {
+    await db.update(transactionsTable).set({ status: "failed", description: `${tx.description} — payout wallet unavailable` })
+      .where(and(eq(transactionsTable.id, tx.id), eq(transactionsTable.status, "pending")));
+    await creditWallet(userId, amount + fee, `Refund: Withdrawal setup failed (tx #${tx.id})`, "refund", { originalTxId: tx.id, type: "withdraw" });
+    res.status(502).json({ error: "Your personal payout wallet is not ready yet. Please try again shortly." });
+    return;
   }
 
-  // Track whether we actually used debit_subaccount so the metadata and
-  // flwSubaccountBalance can be updated accurately.
-  let usedSubaccountDebit = false;
-
+  // Debit the user's own Flutterwave payout wallet. This does not require a
+  // pre-funded merchant balance, and the payout wallet is named after the user.
   let transfer;
-  // Use the numeric subaccount id for debit_subaccount — Flutterwave's transfer
-  // API expects the numeric id, not the RS_xxx string subaccount_id.
-  const debitSubaccountId = subaccountNumericId ? String(subaccountNumericId) : undefined;
-
-  if (debitSubaccountId) {
-    // Attempt transfer debiting the user's subaccount (shows their name to recipient).
-    try {
-      transfer = await createTransfer({
-        amount, bankCode, accountNumber,
-        reference: tx.reference,
-        narration: narrationText,
-        debitSubaccount: debitSubaccountId,
-      });
-    } catch (e: any) {
-      transfer = { accepted: false, id: null, status: null, message: e?.message ?? "Transfer failed", raw: null };
-    }
-    if (transfer.accepted) {
-      usedSubaccountDebit = true;
-    } else if (/subaccount|invalid.*debit|insufficient/i.test(transfer.message)) {
-      // If rejected due to subaccount issues, retry from main account with a new reference.
-      req.log?.warn?.({ userId, debitSubaccountId, err: transfer.message }, "debit_subaccount rejected — retrying from main account");
-      const fallbackRef = `${tx.reference}-fb`;
-      await db.update(transactionsTable)
-        .set({ reference: fallbackRef })
-        .where(eq(transactionsTable.id, tx.id));
-      try {
-        transfer = await createTransfer({
-          amount, bankCode, accountNumber,
-          reference: fallbackRef,
-          narration: narrationText,
-        });
-      } catch (e: any) {
-        transfer = { accepted: false, id: null, status: null, message: e?.message ?? "Transfer failed", raw: null };
-      }
-    }
-  } else {
-    try {
-      transfer = await createTransfer({
-        amount, bankCode, accountNumber,
-        reference: tx.reference,
-        narration: narrationText,
-      });
-    } catch (e: any) {
-      transfer = { accepted: false, id: null, status: null, message: e?.message ?? "Transfer failed", raw: null };
-    }
+  try {
+    transfer = await createTransfer({
+      amount,
+      bankCode,
+      accountNumber,
+      reference: tx.reference,
+      narration: narrationText,
+      debitSubaccount: payout.accountReference,
+    });
+  } catch (e: any) {
+    transfer = { accepted: false, id: null, status: null, message: e?.message ?? "Transfer failed", raw: null };
   }
 
   if (!transfer.accepted) {
@@ -618,17 +514,10 @@ router.post("/wallet/withdraw", async (req, res): Promise<void> => {
       bankCode, accountNumber, accountName, fee,
       reference: tx.reference, flwTransferId: transfer.id, payoutMethod: "flutterwave",
       requestedAt: new Date().toISOString(),
-      ...(usedSubaccountDebit ? { usedSubaccountDebit: true, subaccountDebitAmount: amount } : {}),
+      payoutSource: "flutterwave_psa",
+      payoutSubaccount: payout.accountReference,
     }),
   }).where(eq(transactionsTable.id, tx.id));
-
-  // If the transfer is debiting from the user's subaccount, optimistically
-  // reduce flwSubaccountBalance now. On a FAILED webhook it is restored.
-  if (usedSubaccountDebit) {
-    await db.update(walletsTable)
-      .set({ flwSubaccountBalance: sql`greatest(0, ${walletsTable.flwSubaccountBalance} - ${amount})` })
-      .where(eq(walletsTable.userId, userId));
-  }
 
   await notifyUser({
     userId, type: "transaction",
