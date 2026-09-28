@@ -5513,3 +5513,10 @@ html[data-route-transition="auth-switch"]::after {
     animation: none !important;
   }
 }
+
+
+/* Mobile Safari input-zoom fix */
+@media (max-width: 600px) {
+  input, textarea, select, button { font-size: 16px; }
+  input::placeholder, textarea::placeholder { font-size: 16px; }
+}
