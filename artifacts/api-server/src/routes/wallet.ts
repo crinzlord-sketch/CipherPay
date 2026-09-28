@@ -43,15 +43,14 @@ router.get("/wallet", async (req, res): Promise<void> => {
   res.json(formatWallet(wallet));
 });
 
-// The fixed CipherPay account users transfer to for manual deposits. Sourced
-// from env so the displayed account NAME is always our business name ("CipherPay"),
-// never a merchant's personal name.
+// The per-user CipherPay payout account shown for manual deposits.
 router.get("/wallet/deposit-account", async (req, res): Promise<void> => {
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const payout = await ensureUserPayoutWallet(userId);
-    const accountName = `${payout.user.firstName} ${payout.user.lastName}`.trim();
+    const personName = `${payout.user.firstName} ${payout.user.lastName}`.trim();
+    const accountName = `CipherPay - ${personName}`;
     res.json({
       configured: true,
       accountNumber: payout.accountNumber,
@@ -200,7 +199,8 @@ router.post("/wallet/fund/bank-transfer", async (req, res): Promise<void> => {
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const payout = await ensureUserPayoutWallet(userId);
-    const accountName = `${payout.user.firstName} ${payout.user.lastName}`.trim();
+    const personName = `${payout.user.firstName} ${payout.user.lastName}`.trim();
+    const accountName = `CipherPay - ${personName}`;
     res.json({
       reference: null,
       account: {
