@@ -7,7 +7,7 @@ import {
 } from "@workspace/api-zod";
 import { creditWallet, debitWallet, formatTransaction } from "../lib/wallet";
 import {
-  flwReference, buyAirtime as flwBuyAirtime,
+  flwReference, buyAirtime as flwBuyAirtime, movePayoutWalletToMerchant, moveMerchantToPayoutWallet, fetchPayoutWalletBalance,
   dataPlans as flwDataPlans, buyData as flwBuyData,
   electricityPlans as flwElecPlans,
   FLW_ELECTRICITY, validateBill as flwValidateBill, payBill as flwPayBill, verifyBill as flwVerifyBill,
@@ -24,6 +24,7 @@ import {
 import { smmFindService, smmAddOrder, smmOrderStatus } from "../lib/socially";
 import { logoPath } from "../lib/logos";
 import { checkPerTxLimitSync, getUserKycLevel } from "../lib/kycLimits";
+import { ensureUserPayoutWallet } from "../lib/payout-wallet";
 
 const router: IRouter = Router();
 
@@ -44,6 +45,33 @@ function normalizeNgPhone(phone: string): string {
 
 // Mark a previously-successful debit as failed and credit back the same amount.
 // Idempotent: only refunds if the debit row is still in "success" state (CAS via WHERE clause).
+async function fundBillSourceFromUser(userId: number, amount: number, txId: number): Promise<{ barterId: string }> {
+  const payout = await ensureUserPayoutWallet(userId);
+  const providerBalance = await fetchPayoutWalletBalance(payout.accountReference);
+  if (providerBalance < amount) throw new Error("Your available wallet balance is not enough to complete this purchase.");
+  const moved = await movePayoutWalletToMerchant({
+    debitSubaccount: payout.accountReference,
+    amount,
+    reference: flwReference(`SRC${txId}`),
+  });
+  if (!moved.accepted) throw new Error(moved.message || "Could not fund this purchase.");
+  return { barterId: payout.barterId };
+}
+
+async function refundBillSourceToUser(userId: number, amount: number, txId: number): Promise<void> {
+  try {
+    const payout = await ensureUserPayoutWallet(userId);
+    const moved = await moveMerchantToPayoutWallet({
+      payoutBarterId: payout.barterId,
+      amount,
+      reference: flwReference(`REF${txId}`),
+    });
+    if (!moved.accepted) throw new Error(moved.message || "Refund transfer failed");
+  } catch (e: any) {
+    console.error("Flutterwave purchase refund transfer failed", { userId, txId, amount, error: e?.message });
+  }
+}
+
 async function refundFailed(userId: number, txId: number, amount: number, reason: string, type: string): Promise<boolean> {
   const updated = await db.update(transactionsTable)
     .set({ status: "failed", description: reason })
