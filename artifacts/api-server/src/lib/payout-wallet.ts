@@ -1,6 +1,6 @@
 import { db, walletsTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { createPayoutWallet, fetchPayoutStaticAccount, findPayoutWalletByEmail } from "./flutterwave";
+import { createPayoutWallet, updatePayoutWallet, fetchPayoutStaticAccount, findPayoutWalletByEmail } from "./flutterwave";
 
 export async function ensureUserPayoutWallet(userId: number) {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
@@ -17,11 +17,13 @@ export async function ensureUserPayoutWallet(userId: number) {
   let bankName = wallet.flwPsaBankName;
   let bankCode = wallet.flwPsaBankCode;
 
+  const desiredAccountName = `CipherPay - ${user.firstName} ${user.lastName}`.trim();
+
   if (!accountReference) {
     let psa;
     try {
       psa = await createPayoutWallet({
-        accountName: `${user.firstName} ${user.lastName}`.trim(),
+        accountName: desiredAccountName,
         email: user.email,
         phone: user.phone,
       });
@@ -51,6 +53,16 @@ export async function ensureUserPayoutWallet(userId: number) {
       })
       .where(eq(walletsTable.userId, userId))
       .returning();
+  }
+
+  // Keep the actual Flutterwave payout wallet name in sync so bank-app name enquiry
+  // returns the CipherPay-branded beneficiary name, not only our frontend display.
+  if (accountReference) {
+    await updatePayoutWallet(accountReference, {
+      accountName: desiredAccountName,
+      email: user.email,
+      phone: user.phone,
+    });
   }
 
   if (!wallet.flwPsaStaticAccount) {
