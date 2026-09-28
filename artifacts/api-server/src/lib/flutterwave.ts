@@ -357,6 +357,67 @@ export async function verifyByReference(reference: string): Promise<FlwVerifiedC
   };
 }
 
+// ── Payout subaccounts / user wallets ────────────────────────────────────────
+export interface FlwPayoutWalletResult {
+  id: number;
+  accountReference: string;
+  barterId: string;
+  nuban: string | null;
+  bankName: string | null;
+  bankCode: string | null;
+  status: string | null;
+  raw: any;
+}
+
+export async function createPayoutWallet(params: { accountName: string; email: string; phone?: string }): Promise<FlwPayoutWalletResult> {
+  const { status, body } = await flwPost<any>('/payout-subaccounts', {
+    account_name: params.accountName,
+    email: params.email,
+    country: 'NG',
+    ...(params.phone ? { mobilenumber: params.phone } : {}),
+  });
+  const data = body?.data ?? {};
+  if (status < 200 || status >= 300 || body?.status !== 'success' || !data?.account_reference) {
+    throw new Error(body?.message || 'Flutterwave payout wallet creation failed');
+  }
+  return {
+    id: Number(data.id ?? 0),
+    accountReference: String(data.account_reference),
+    barterId: String(data.barter_id ?? ''),
+    nuban: data.nuban ? String(data.nuban) : null,
+    bankName: data.bank_name ? String(data.bank_name) : null,
+    bankCode: data.bank_code ? String(data.bank_code) : null,
+    status: data.status ? String(data.status) : null,
+    raw: body,
+  };
+}
+
+export async function fetchPayoutStaticAccount(accountReference: string): Promise<{ accountNumber: string; bankName: string; bankCode: string; currency: string }> {
+  const path = '/payout-subaccounts/' + encodeURIComponent(accountReference) + '/static-account?currency=NGN&verbose=1';
+  const { status, body } = await flwGet<any>(path);
+  const data = Array.isArray(body?.data) ? (body.data[0] ?? {}) : (body?.data ?? {});
+  if (status < 200 || status >= 300 || body?.status !== 'success' || !data?.static_account) {
+    throw new Error(body?.message || 'Flutterwave static account lookup failed');
+  }
+  return {
+    accountNumber: String(data.static_account),
+    bankName: String(data.bank_name ?? 'Bank'),
+    bankCode: String(data.bank_code ?? ''),
+    currency: String(data.currency ?? 'NGN'),
+  };
+}
+
+export async function fetchPayoutWalletBalance(accountReference: string): Promise<number> {
+  const path = '/payout-subaccounts/' + encodeURIComponent(accountReference) + '/balances';
+  const { status, body } = await flwGet<any>(path);
+  if (status < 200 || status >= 300 || body?.status !== 'success') {
+    throw new Error(body?.message || 'Flutterwave payout wallet balance lookup failed');
+  }
+  const rows = Array.isArray(body?.data) ? body.data : [];
+  const ngn = rows.find((row: any) => String(row?.currency ?? '').toUpperCase() === 'NGN');
+  return Number(ngn?.available_balance ?? ngn?.availableBalance ?? 0);
+}
+
 // ── Subaccounts ───────────────────────────────────────────────────────────────
 // Subaccounts let transfers appear to originate from a specific user identity
 // rather than the main CipherPay merchant account. Pass the returned
