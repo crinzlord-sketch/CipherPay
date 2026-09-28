@@ -998,6 +998,26 @@ function billCategoryIcon(id: string) {
   return <Receipt size={19} />;
 }
 
+
+function PurchaseSuccessPop({ kind, phone, onClose }: { kind: 'airtime' | 'data' | 'bill'; phone?: string; onClose: () => void }) {
+  const title = kind === 'airtime' ? 'Airtime sent' : kind === 'data' ? 'Data bundle sent' : 'Bill payment successful';
+  const detail = kind === 'bill'
+    ? 'Your bill payment has been completed successfully.'
+    : `Your ${kind === 'airtime' ? 'airtime' : 'data bundle'} was delivered${phone ? ` to ${phone}` : ''}.`;
+  return (
+    <div className="purchase-success-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="purchase-success-pop" role="dialog" aria-modal="true" aria-labelledby="purchase-success-title" onMouseDown={(event) => event.stopPropagation()}>
+        <button type="button" className="purchase-success-close" onClick={onClose} aria-label="Close success message"><X size={17} /></button>
+        <div className="purchase-success-icon"><Check size={26} strokeWidth={2.4} /></div>
+        <span className="section-kicker">CIPHERPAY / COMPLETE</span>
+        <h2 id="purchase-success-title">{title}</h2>
+        <p>{detail}</p>
+        <button type="button" className="btn btn-primary purchase-success-button" onClick={onClose}>Done <Check size={16} /></button>
+      </section>
+    </div>
+  );
+}
+
 function Airtime() {
   const networksQuery = useListNetworks();
   const airtime = useBuyAirtime();
@@ -1035,8 +1055,8 @@ function Airtime() {
   return <>
     <PageTitle eyebrow="EVERYDAY / CONNECT" title="Stay connected, without the scramble." detail="Live Nigerian airtime and data bundles, delivered to any network from your CipherPay wallet." />
     <section className="vas-hero vas-hero-connect">
-      <div className="vas-hero-copy"><span className="vas-hero-icon"><Smartphone size={21} /></span><div><span className="eyebrow">LIVE SERVICE RAIL</span><h2>Top up in a few calm steps.</h2><p>Choose a network, confirm the recipient, and Flutterwave handles the live delivery request behind the scenes.</p></div></div>
-      <div className="vas-hero-meta"><span><ShieldCheck size={14} /> Flutterwave live API</span><span><NetworkIcon size={14} /> {networks.length || '—'} networks available</span></div>
+      <div className="vas-hero-copy"><span className="vas-hero-icon"><Smartphone size={21} /></span><div><span className="eyebrow">LIVE SERVICE RAIL</span><h2>Top up in a few calm steps.</h2><p>Choose a network, confirm the recipient, and we’ll handle the delivery securely behind the scenes.</p></div></div>
+      <div className="vas-hero-meta"><span><ShieldCheck size={14} /> Secure delivery rail</span><span><NetworkIcon size={14} /> {networks.length || '—'} networks available</span></div>
     </section>
     <div className="vas-layout">
       <section className="panel service-panel vas-main-card">
@@ -1056,16 +1076,16 @@ function Airtime() {
           <div className="field-row vas-field-row"><Field label="Recipient phone number" type="tel" placeholder="0803 123 4567" value={phone} onChange={(event: any) => setPhone(event.target.value)} required data-testid="input-service-phone" />{tab === 'airtime' ? <div className="field"><span>Quick amount</span><div className="amount-chips">{[100, 200, 500, 1000].map((value) => <button type="button" className={parseGroupedDigits(amount) === value ? 'amount-chip active' : 'amount-chip'} onClick={() => setAmount(formatGroupedDigits(value))} key={value} data-testid={`button-airtime-amount-${value}`}>{money.format(value)}</button>)}</div></div> : <div className="vas-recipient-note"><ShieldCheck size={15} /><span>We send the bundle directly to this number.</span></div>}</div>
           {tab === 'airtime'
             ? <Field label="Airtime amount (₦)" type="text" inputMode="numeric" min="50" placeholder="Enter amount" value={amount} onChange={(event: any) => setAmount(formatGroupedDigits(event.target.value))} required data-testid="input-airtime-amount" />
-            : <div><div className="field-heading"><span className="form-label">Choose a data bundle</span><small>{selectedPlan ? `${selectedPlan.size || selectedPlan.name} selected` : 'Select one live plan'}</small></div>{dataPlans.isLoading ? <div className="loading-inline">Loading current Flutterwave plans…</div> : dataPlans.isError ? <div className="error-box" role="alert">Could not load plans for this network.</div> : plans.length ? <div className="plan-grid vas-plan-grid">{plans.map((plan: any) => <button type="button" className={`plan-card vas-plan-card ${planId === plan.id ? 'selected' : ''}`} onClick={() => setPlanId(plan.id)} key={plan.id} data-testid={`button-plan-${plan.id}`}><span className="plan-card-top"><b>{plan.size || plan.name}</b>{planId === plan.id && <Check size={14} />}</span><small>{plan.validity || 'Provider validity'}</small><strong>{money.format(plan.price)}</strong></button>)}</div> : <div className="loading-inline">No current data plans are available.</div>}</div>}
+            : <div><div className="field-heading"><span className="form-label">Choose a data bundle</span><small>{selectedPlan ? `${selectedPlan.size || selectedPlan.name} selected` : 'Select one live plan'}</small></div>{dataPlans.isLoading ? <div className="loading-inline">Loading current data plans…</div> : dataPlans.isError ? <div className="error-box" role="alert">Could not load plans for this network.</div> : plans.length ? <div className="plan-grid vas-plan-grid">{plans.map((plan: any) => <button type="button" className={`plan-card vas-plan-card ${planId === plan.id ? 'selected' : ''}`} onClick={() => setPlanId(plan.id)} key={plan.id} data-testid={`button-plan-${plan.id}`}><span className="plan-card-top"><b>{plan.size || plan.name}</b>{planId === plan.id && <Check size={14} />}</span><small>{plan.validity || 'Provider validity'}</small><strong>{money.format(plan.price)}</strong></button>)}</div> : <div className="loading-inline">No current data plans are available.</div>}</div>}
           <div className="vas-order-summary"><div><span>Order summary</span><strong>{tab === 'airtime' ? `${selectedNetwork?.name ?? 'Network'} airtime` : selectedPlan?.name || 'Choose a data bundle'}</strong></div><div><span>Deliver to</span><strong>{phone || 'Recipient number'}</strong></div><div><span>Wallet debit</span><strong>{tab === 'airtime' ? (amount ? money.format(parseGroupedDigits(amount)) : '—') : selectedPlan ? money.format(selectedPlan.price) : '—'}</strong></div></div>
           {error && <div className="error-box" role="alert">{error}</div>}
-          {done && <div className="success-box"><Check size={17} /><div><b>Purchase successful</b><span>Your {tab === 'airtime' ? 'airtime' : 'data bundle'} was sent to {phone}.</span></div></div>}
-          <Button type="submit" className="service-submit" disabled={submitting || !networks.length || !phone || (tab === 'airtime' ? !amount : !planId)} data-testid="button-service-submit">{submitting ? 'Processing with Flutterwave…' : `Buy ${tab === 'airtime' ? 'airtime' : 'bundle'}`} <ArrowRight size={17} /></Button>
+          {done &&           <Button type="submit" className="service-submit" disabled={submitting || !networks.length || !phone || (tab === 'airtime' ? !amount : !planId)} data-testid="button-service-submit">{submitting ? 'Processing your purchase…' : `Buy ${tab === 'airtime' ? 'airtime' : 'bundle'}`} <ArrowRight size={17} /></Button>
         </form>
       </section>
+      {done && <PurchaseSuccessPop kind={tab} phone={phone} onClose={() => setDone(false)} />}
       <aside className="vas-side-stack">
         <section className="panel vas-side-card"><span className="section-kicker">HOW IT WORKS</span><h3>Simple on purpose.</h3><div className="vas-step"><span>01</span><div><b>Pick the network</b><small>Use the real provider mark to confirm the carrier.</small></div></div><div className="vas-step"><span>02</span><div><b>Enter the number</b><small>We deliver to the recipient you provide.</small></div></div><div className="vas-step"><span>03</span><div><b>Get confirmation</b><small>Your wallet is charged only when the request is accepted.</small></div></div></section>
-        <section className="vas-trust-card"><ShieldCheck size={18} /><div><b>Provider-backed delivery</b><p>Airtime and data purchases are sent through Flutterwave's Nigeria bill-payment rail.</p></div></section>
+        <section className="vas-trust-card"><ShieldCheck size={18} /><div><b>Secure delivery</b><p>Your purchase is sent through our live service network and confirmed before we finish the request.</p></div></section>
       </aside>
     </div>
   </>;
@@ -1229,7 +1249,7 @@ function Bills() {
     <PageTitle eyebrow="EVERYDAY / BILLS" title="Keep life running." detail="Verify the bill, see who you are paying, then settle it from your wallet with a live provider connection." />
     <section className="vas-hero vas-hero-bills">
       <div className="vas-hero-copy"><span className="vas-hero-icon"><Receipt size={21} /></span><div><span className="eyebrow">BILL PAYMENT DESK</span><h2>Clear details before money moves.</h2><p>Real provider logos, customer verification, and a transparent review step help you avoid paying the wrong account.</p></div></div>
-      <div className="vas-hero-meta"><span><ShieldCheck size={14} /> Flutterwave for electricity</span><span><Check size={14} /> Live provider verification</span></div>
+      <div className="vas-hero-meta"><span><ShieldCheck size={14} /> Secure bill-payment rail</span><span><Check size={14} /> Live provider verification</span></div>
     </section>
     <div className="bill-layout vas-bill-layout">
       <aside className="bill-categories vas-category-list">
@@ -1237,7 +1257,7 @@ function Bills() {
         {categories.map((item: any) => <button type="button" key={item.id} className={`bill-category vas-bill-category ${category === item.id ? 'selected' : ''}`} onClick={() => { setCategory(item.id); setProvider(''); setCustomerId(''); setAmount(''); setValidation(null); setDone(null); setError(''); }} data-testid={`button-bill-category-${item.id}`}><span className="bill-category-icon">{billCategoryIcon(item.id)}</span><span className="bill-category-copy"><b>{item.name}</b><small>{item.description}</small></span><ArrowRight size={15} /></button>)}
       </aside>
       <form className="panel main-form bill-form vas-bill-form" onSubmit={submit}>
-        <div className="service-card-heading"><div><span className="section-kicker">02 / BILL DETAILS</span><h2>{selectedCategory?.name ?? 'Bill'} payment</h2><p>{selectedCategory?.description ?? 'Choose a provider and verify the customer details.'}</p></div>{selectedCategory && <span className="service-route-badge">{category === 'electricity' ? 'Flutterwave live API' : 'Live provider API'}</span>}</div>
+        <div className="service-card-heading"><div><span className="section-kicker">02 / BILL DETAILS</span><h2>{selectedCategory?.name ?? 'Bill'} payment</h2><p>{selectedCategory?.description ?? 'Choose a provider and verify the customer details.'}</p></div>{selectedCategory && <span className="service-route-badge">Live service</span>}</div>
         <div className="provider-grid">
           {providers.isLoading ? <div className="loading-inline">Loading real providers…</div> : availableProviders.map((item: any) => { const code = item.code || item.id; return <button type="button" className={`provider-choice ${provider === code ? 'selected' : ''}`} onClick={() => { setProvider(code); resetBillState(); }} key={item.id} data-testid={`button-bill-provider-${item.id}`}><ProviderLogo logo={item.logo} name={item.name} /><span><b>{item.name}</b><small>{item.description || 'Provider service'}</small></span>{provider === code && <Check size={15} />}</button>; })}
         </div>
@@ -1248,9 +1268,9 @@ function Bills() {
         <div className="field-row"><Field label="Amount (₦)" type="text" inputMode="numeric" min={selectedProvider?.minimumAmount ?? 100} max={selectedProvider?.maximumAmount ?? undefined} placeholder={selectedProvider?.minimumAmount ? `From ${money.format(selectedProvider.minimumAmount)}` : 'Enter amount'} value={amount} onChange={(event: any) => { setAmount(formatGroupedDigits(event.target.value)); setDone(null); }} required data-testid="input-bill-amount" /><div className="vas-limit-note"><span>Provider limits</span><b>{selectedProvider?.minimumAmount ? money.format(selectedProvider.minimumAmount) : '—'} – {selectedProvider?.maximumAmount ? money.format(selectedProvider.maximumAmount) : '—'}</b><small>Amount is confirmed before your wallet is charged.</small></div></div>
          {validation && <div className="vas-order-summary"><div><span>Paying</span><strong>{selectedProvider?.name || 'Selected provider'}</strong></div><div><span>Customer</span><strong>{validation.name}</strong></div><div><span>Wallet debit</span><strong>{amount ? money.format(parseGroupedDigits(amount)) : '—'}</strong></div></div>}
         {error && <div className="error-box" role="alert">{error}</div>}
-        {done && <div className="success-box"><Check size={17} /><div><b>Bill payment accepted</b><span>{done.message || 'Your payment has been recorded.'}{done.token ? ` Token: ${done.token}` : ''}</span></div></div>}
-        <Button type="submit" className="full-btn" disabled={pay.isPending || providers.isLoading || !provider || !validation || !amount} data-testid="button-pay-bill">{pay.isPending ? 'Paying with provider…' : 'Pay this bill'} <ArrowRight size={17} /></Button>
+        <Button type="submit" className="full-btn" disabled={pay.isPending || providers.isLoading || !provider || !validation || !amount} data-testid="button-pay-bill">{pay.isPending ? 'Processing payment…' : 'Pay this bill'} <ArrowRight size={17} /></Button>
       </form>
     </div>
+    {done && <PurchaseSuccessPop kind="bill" onClose={() => setDone(null)} />}
   </>;
 }
