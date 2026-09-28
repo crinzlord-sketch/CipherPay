@@ -24,6 +24,11 @@ interface FlwEvent {
     reference?: string;
     amount?: number;
     currency?: string;
+    debit_currency?: string;
+    account_number?: string;
+    bank_name?: string;
+    fullname?: string;
+    fee?: string | number;
     complete_message?: string;
   };
 }
