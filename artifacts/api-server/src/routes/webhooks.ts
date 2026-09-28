@@ -1,8 +1,9 @@
 import { type Request, type Response } from "express";
 import { eq, and, sql } from "drizzle-orm";
-import { db, transactionsTable, walletsTable, notificationsTable } from "@workspace/db";
+import { db, transactionsTable, walletsTable, notificationsTable, usersTable } from "@workspace/db";
 import { creditWallet, getOrCreateWallet } from "../lib/wallet";
 import { notifyUser } from "../lib/notifications";
+import { getDepositFlagReason } from "../lib/kycLimits";
 
 function verifyHash(header: string | undefined): boolean {
   const expected = process.env.FLW_SECRET_HASH;
@@ -47,6 +48,100 @@ export async function flutterwaveWebhookHandler(req: Request, res: Response): Pr
 async function handleEvent(req: Request, evt: FlwEvent): Promise<void> {
   const eventName = evt.event ?? evt["event.type"] ?? "";
   const data = evt.data ?? {};
+
+  // Payout Subaccount funding webhook. This is the user's permanent virtual
+  // account, so there is no merchant settlement step: the money is already in
+  // that user's Flutterwave wallet.
+  if (eventName === "transfer.completed" && String(data.debit_currency ?? "").toUpperCase() === "PSA") {
+    const accountNumber = String(data.account_number ?? "").trim();
+    const status = String(data.status ?? "").toUpperCase();
+    const amount = Number(data.amount ?? 0);
+    const providerReference = String(data.reference ?? "").trim();
+    if (!accountNumber || !providerReference || amount <= 0) {
+      req.log?.warn?.({ accountNumber, providerReference, amount }, "flw webhook: invalid PSA funding event");
+      return;
+    }
+    if (status !== "SUCCESSFUL") {
+      req.log?.info?.({ providerReference, status }, "flw webhook: PSA funding not successful, ignored");
+      return;
+    }
+
+    const [walletRow] = await db.select({
+      wallet: walletsTable,
+      user: usersTable,
+    }).from(walletsTable).innerJoin(usersTable, eq(usersTable.id, walletsTable.userId))
+      .where(eq(walletsTable.flwPsaStaticAccount, accountNumber));
+    if (!walletRow) {
+      req.log?.warn?.({ accountNumber, providerReference }, "flw webhook: no CipherPay wallet for PSA account");
+      return;
+    }
+
+    const reference = `PSA-${providerReference}`.slice(0, 48);
+    const existing = await db.select({ id: transactionsTable.id, status: transactionsTable.status })
+      .from(transactionsTable).where(eq(transactionsTable.reference, reference));
+    if (existing.length > 0) return;
+
+    const flagReason = getDepositFlagReason(walletRow.user.kycLevel, amount);
+    await getOrCreateWallet(walletRow.user.id);
+
+    const [tx] = await db.insert(transactionsTable).values({
+      userId: walletRow.user.id,
+      type: "fund",
+      amount: amount.toFixed(2),
+      status: flagReason ? "pending" : "success",
+      reference,
+      description: flagReason ? "Wallet funding via personal bank account — held for KYC review" : "Wallet funded via personal bank account",
+      isFlagged: Boolean(flagReason),
+      flagReason,
+      metadata: JSON.stringify({
+        provider: "flutterwave-psa",
+        providerReference,
+        accountNumber,
+        bankName: data.bank_name ?? null,
+        senderName: data.fullname ?? null,
+        receivedAt: new Date().toISOString(),
+        heldForKyc: Boolean(flagReason),
+      }),
+    }).returning();
+
+    if (flagReason) {
+      await notifyUser({
+        userId: walletRow.user.id,
+        type: "warning",
+        title: "Deposit received — KYC review required",
+        body: `Your ₦${amount.toLocaleString()} deposit was received in your personal account but is being held because ${flagReason.toLowerCase()} Complete your KYC and an admin will release it.`,
+        link: `/transactions/${tx.id}`,
+      }).catch(() => {});
+      req.log?.info?.({ txId: tx.id, userId: walletRow.user.id, amount, flagReason }, "flw webhook: PSA deposit held");
+      return;
+    }
+
+    await db.transaction(async (dbtx) => {
+      const [w] = await dbtx.update(walletsTable)
+        .set({
+          balance: sql`${walletsTable.balance} + ${amount}`,
+          ledgerBalance: sql`${walletsTable.ledgerBalance} + ${amount}`,
+        })
+        .where(eq(walletsTable.userId, walletRow.user.id))
+        .returning({ balance: walletsTable.balance });
+      const balanceAfter = parseFloat(w.balance);
+      const balanceBefore = balanceAfter - amount;
+      await dbtx.update(transactionsTable).set({
+        balanceBefore: balanceBefore.toFixed(2),
+        balanceAfter: balanceAfter.toFixed(2),
+      }).where(eq(transactionsTable.id, tx.id));
+    });
+
+    await notifyUser({
+      userId: walletRow.user.id,
+      type: "transaction",
+      title: "Wallet funded ✓",
+      body: `₦${amount.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been added to your CipherPay wallet.`,
+      link: "/transactions",
+    }).catch(() => {});
+    req.log?.info?.({ txId: tx.id, userId: walletRow.user.id, amount, providerReference }, "flw webhook: PSA deposit credited");
+    return;
+  }
 
   if (eventName === "charge.completed") {
     const ref = data.tx_ref;
