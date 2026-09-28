@@ -369,6 +369,30 @@ export interface FlwPayoutWalletResult {
   raw: any;
 }
 
+export async function findPayoutWalletByEmail(email: string): Promise<FlwPayoutWalletResult | null> {
+  const { status, body } = await flwGet<any>(`/payout-subaccounts?email=${encodeURIComponent(email)}&limit=20`);
+  if (status < 200 || status >= 300 || body?.status !== 'success') {
+    throw new Error(body?.message || `Flutterwave payout wallet lookup failed (HTTP ${status})`);
+  }
+  const rows = Array.isArray(body?.data)
+    ? body.data
+    : Array.isArray(body?.data?.payout_subaccounts)
+      ? body.data.payout_subaccounts
+      : [];
+  const match = rows.find((row: any) => String(row?.email ?? '').toLowerCase() === email.trim().toLowerCase() && String(row?.country ?? 'NG').toUpperCase() === 'NG');
+  if (!match?.account_reference) return null;
+  return {
+    id: Number(match.id ?? 0),
+    accountReference: String(match.account_reference),
+    barterId: String(match.barter_id ?? ''),
+    nuban: match.nuban ? String(match.nuban) : null,
+    bankName: match.bank_name ? String(match.bank_name) : null,
+    bankCode: match.bank_code ? String(match.bank_code) : null,
+    status: match.status ? String(match.status) : null,
+    raw: match,
+  };
+}
+
 export async function createPayoutWallet(params: { accountName: string; email: string; phone?: string }): Promise<FlwPayoutWalletResult> {
   const { status, body } = await flwPost<any>('/payout-subaccounts', {
     account_name: params.accountName,
