@@ -15,6 +15,7 @@ import AdminConsole from './pages/AdminConsole';
 import ServicesPage from './pages/ServicesPage';
 import SocialBoostPage from './pages/SocialBoostPage';
 import EmailProPage from './pages/EmailProPage';
+import BillsPage from './pages/BillsPage';
 import { apiRequest, apiUrl } from './pages/page-api';
 import {
   useBuyAirtime, useBuyData, useBuySmsNumber, useChangePassword, useFundWallet,
@@ -1412,7 +1413,9 @@ function App() {
             <Route path="/fund"><ProtectedArea><Fund /></ProtectedArea></Route>
             <Route path="/send"><ProtectedArea><Send /></ProtectedArea></Route>
             <Route path="/airtime"><ProtectedArea><Airtime /></ProtectedArea></Route>
-            <Route path="/bills"><ProtectedArea><Bills /></ProtectedArea></Route>
+            <Route path="/bills/:category/:provider"><ProtectedArea><BillsPage /></ProtectedArea></Route>
+            <Route path="/bills/:category"><ProtectedArea><BillsPage /></ProtectedArea></Route>
+            <Route path="/bills"><ProtectedArea><BillsPage /></ProtectedArea></Route>
             <Route path="/bills/:category/:provider"><ProtectedArea><BillProviderPage /></ProtectedArea></Route>
             <Route path="/sms"><ProtectedArea><SmsVerification /></ProtectedArea></Route>
             <Route path="/temporary-email"><ProtectedArea><TemporaryEmail /></ProtectedArea></Route>
