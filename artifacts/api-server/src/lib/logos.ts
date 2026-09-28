@@ -28,6 +28,6 @@ try {
 export function logoPath(id: string): string | null {
   const f = idToFile.get(id);
   if (!f) return null;
-  const base = (process.env.PUBLIC_API_URL ?? "").trim().replace(/\\/+$/, "");
+  const base = (process.env.PUBLIC_API_URL ?? "").trim().replace(/\/+$/, "");
   return `${base}/api/assets/logos/${f}`;
 }
