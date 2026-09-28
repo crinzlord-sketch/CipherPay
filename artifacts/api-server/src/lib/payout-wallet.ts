@@ -1,6 +1,6 @@
 import { db, walletsTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { createPayoutWallet, fetchPayoutStaticAccount } from "./flutterwave";
+import { createPayoutWallet, fetchPayoutStaticAccount, findPayoutWalletByEmail } from "./flutterwave";
 
 export async function ensureUserPayoutWallet(userId: number) {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
@@ -18,11 +18,23 @@ export async function ensureUserPayoutWallet(userId: number) {
   let bankCode = wallet.flwPsaBankCode;
 
   if (!accountReference) {
-    const psa = await createPayoutWallet({
-      accountName: `${user.firstName} ${user.lastName}`.trim(),
-      email: user.email,
-      phone: user.phone,
-    });
+    let psa;
+    try {
+      psa = await createPayoutWallet({
+        accountName: `${user.firstName} ${user.lastName}`.trim(),
+        email: user.email,
+        phone: user.phone,
+      });
+    } catch (error: any) {
+      const raw = String(error?.message ?? '');
+      if (!/already exists|duplicate/i.test(raw)) throw error;
+      // Flutterwave only allows one payout wallet per email. If a previous
+      // attempt created the PSA but our DB write was lost, recover that wallet
+      // instead of showing the user a duplicate-submission error.
+      const existing = await findPayoutWalletByEmail(user.email);
+      if (!existing) throw error;
+      psa = existing;
+    }
     accountReference = psa.accountReference;
     barterId = psa.barterId;
     psaId = psa.id || null;
