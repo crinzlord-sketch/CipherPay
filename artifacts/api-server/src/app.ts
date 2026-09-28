@@ -7,6 +7,8 @@ import { logger } from "./lib/logger";
 import { verifyToken } from "./lib/auth";
 import { verifyAdminToken } from "./lib/admin-auth";
 import { isSessionActive } from "./lib/sessions";
+import { db, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { LOGOS_DIR } from "./lib/logos";
 
 const app: Express = express();
@@ -178,6 +180,17 @@ app.use("/api", async (req: Request, res: Response, next: NextFunction) => {
     if (!Number.isFinite(claimedId) || claimedId !== tokenUserId) {
       req.log?.warn({ tokenUserId, claimed, path: req.path }, "x-user-id spoof rejected");
       res.status(403).json({ error: "Identity mismatch" });
+      return;
+    }
+  }
+
+  // A deleted account must invalidate even older JWTs or sessions that may
+  // still exist in the sessions table. Checking the user row here also covers
+  // direct database deletion, not just deletion through the admin console.
+  if (userPayload) {
+    const [existingUser] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.id, userPayload.userId)).limit(1);
+    if (!existingUser) {
+      res.status(401).json({ error: "This account no longer exists.", code: "ACCOUNT_DELETED" });
       return;
     }
   }
