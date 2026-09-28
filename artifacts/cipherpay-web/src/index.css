@@ -312,12 +312,26 @@
 }
 
 @layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
   * {
     @apply border-border;
   }
 
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+  }
+
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    overflow-x: hidden;
   }
 }
 
@@ -4467,8 +4481,11 @@ a {
 
   .auth-page {
     display: block;
-    min-height: 100vh;
+    width: 100%;
+    max-width: 100%;
+    min-height: 100dvh;
     background: hsl(var(--background));
+    overflow-x: hidden;
   }
 
   .auth-visual {
@@ -4476,13 +4493,33 @@ a {
   }
 
   .auth-form-wrap {
-    min-height: 100vh;
+    width: 100%;
+    max-width: 100%;
+    min-height: 100dvh;
     align-content: start;
-    padding: 28px 21px 34px;
+    padding: 28px 21px calc(34px + env(safe-area-inset-bottom));
+    overflow-x: hidden;
   }
 
   .auth-form-inner {
+    width: 100%;
+    max-width: 420px;
+    min-width: 0;
     margin: auto 0;
+  }
+
+  .auth-form {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .auth-form .field,
+  .auth-form .field input,
+  .auth-form .field select,
+  .auth-form .password-wrap {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .mobile-auth-brand {
