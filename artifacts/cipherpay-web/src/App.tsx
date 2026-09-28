@@ -817,14 +817,20 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
         </div>
       </div>
 
-      {paymentStatus === 'success' ? (
+      {paymentStatus === 'success' && (
         <div className="success-box transfer-funding-success" role="status">
           <Check size={20} />
           <div><b>Funding successful</b><span>{money.format(amount)} has been added to your CipherPay wallet.</span></div>
         </div>
-      ) : paymentStatus === 'failed' ? (
-        <div className="error-box" role="alert">This funding attempt could not be completed. Your wallet was not credited by this attempt.</div>
-      ) : (
+      )}
+
+      {paymentStatus === 'failed' && (
+        <div className="error-box" role="alert">
+          This funding attempt could not be completed. Your wallet was not credited by this attempt.
+        </div>
+      )}
+
+      {paymentStatus !== 'success' && paymentStatus !== 'failed' && (
         <>
           <div className="transfer-instructions">
             <div className="transfer-instructions-heading"><span className="transfer-info-icon"><FileText size={15} /></span><div><strong>How to complete your deposit</strong><span>Use your bank app</span></div></div>
