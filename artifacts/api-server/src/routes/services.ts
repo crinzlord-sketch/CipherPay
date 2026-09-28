@@ -155,6 +155,7 @@ router.post("/airtime/buy", async (req, res): Promise<void> => {
     const result = await flwBuyAirtime({ phone, amount, reference, network });
     req.log.info({ flwStatus: result.raw?.status, flwMessage: result.raw?.message, flwData: result.raw?.data, reference }, "Flutterwave airtime response");
     if (!result.success) {
+      if (sourceFunded) await refundBillSourceToUser(userId, charge, tx.id);
       await refundFailed(userId, tx.id, charge, `Airtime delivery failed: ${result.message}`, "airtime");
       res.status(502).json({
         error: `Airtime delivery failed. You have been refunded.`,
@@ -170,6 +171,7 @@ router.post("/airtime/buy", async (req, res): Promise<void> => {
     });
     res.json({ success: true, message: "Airtime delivered successfully", transaction: formatTransaction(tx) });
   } catch (e: any) {
+    if (sourceFunded) await refundBillSourceToUser(userId, charge, tx.id);
     await refundFailed(userId, tx.id, charge, `Provider error: ${e.message ?? "unknown"}`, "airtime");
     res.status(502).json({ error: "Provider error. You have been refunded.", details: e.message });
   }
@@ -278,6 +280,7 @@ router.post("/data/buy", async (req, res): Promise<void> => {
     const result = await flwBuyData({ phone, amount: plan.wholesalePrice, itemCode: planId, billerName: plan.billerName, reference });
     req.log.info({ flwStatus: result.raw?.status, flwMessage: result.raw?.message, flwData: result.raw?.data, reference, planId }, "Flutterwave data response");
     if (!result.success) {
+      if (sourceFunded) await refundBillSourceToUser(userId, plan.price, tx.id);
       await refundFailed(userId, tx.id, plan.price, `Data delivery failed: ${result.message || "provider declined"}`, "data");
       res.status(502).json({
         error: "Data delivery failed. You have been refunded.",
@@ -293,6 +296,7 @@ router.post("/data/buy", async (req, res): Promise<void> => {
     });
     res.json({ success: true, message: "Data delivered successfully", transaction: formatTransaction(tx) });
   } catch (e: any) {
+    if (sourceFunded) await refundBillSourceToUser(userId, plan.price, tx.id);
     await refundFailed(userId, tx.id, plan.price, `Provider error: ${e.message ?? "unknown"}`, "data");
     res.status(502).json({ error: "Provider error. You have been refunded.", details: e.message });
   }
