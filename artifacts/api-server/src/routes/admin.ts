@@ -79,7 +79,7 @@ async function getMasterAdminId(): Promise<number | null> {
     const [configured] = await db
       .select({ id: usersTable.id })
       .from(usersTable)
-      .where(and(eq(usersTable.email, configuredMasterEmail), eq(usersTable.isAdmin, true)));
+      .where(eq(usersTable.email, configuredMasterEmail));
     if (configured) return configured.id;
   }
 
@@ -281,8 +281,19 @@ router.post("/admin/users/:id/suspend", requireAdmin, async (req, res): Promise<
 router.post("/admin/users/:id/set-admin", requireAdmin, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   const { isAdmin } = req.body ?? {};
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid user id" }); return; }
+
+  const [target] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  if (!target) { res.status(404).json({ error: "User not found" }); return; }
+
+  if (!isAdmin) {
+    const masterId = await getMasterAdminId();
+    if (id === masterId) {
+      res.status(403).json({ error: "The master admin cannot be demoted." }); return;
+    }
+  }
+
   const [u] = await db.update(usersTable).set({ isAdmin: !!isAdmin }).where(eq(usersTable.id, id)).returning();
-  if (!u) { res.status(404).json({ error: "User not found" }); return; }
   res.json({ success: true, isAdmin: u.isAdmin });
 });
 
