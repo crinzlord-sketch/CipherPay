@@ -31,6 +31,16 @@ async function flwPost<T = any>(path: string, payload: Record<string, unknown>):
   return { status: res.status, body };
 }
 
+async function flwPut<T = any>(path: string, payload: Record<string, unknown>): Promise<{ status: number; body: T }> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${secretKey()}`, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = (await res.json().catch(() => ({}))) as T;
+  return { status: res.status, body };
+}
+
 // Flutterwave airtime type constant — all NG networks share biller_name "AIRTIME";
 // the network is auto-detected from the phone number. No per-network catalog fetch needed.
 
@@ -414,6 +424,18 @@ export async function createPayoutWallet(params: { accountName: string; email: s
     status: data.status ? String(data.status) : null,
     raw: body,
   };
+}
+
+export async function updatePayoutWallet(accountReference: string, params: { accountName: string; email: string; phone?: string }): Promise<void> {
+  const { status, body } = await flwPut<any>(`/payout-subaccounts/${encodeURIComponent(accountReference)}`, {
+    account_name: params.accountName,
+    email: params.email,
+    country: "NG",
+    ...(params.phone ? { mobilenumber: params.phone } : {}),
+  });
+  if (status < 200 || status >= 300 || body?.status !== "success") {
+    throw new Error(body?.message || "Flutterwave payout wallet update failed");
+  }
 }
 
 export async function fetchPayoutStaticAccount(accountReference: string): Promise<{ accountNumber: string; bankName: string; bankCode: string; currency: string }> {
