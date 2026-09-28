@@ -791,7 +791,7 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
         <div className="transfer-amount-note"><Banknote size={16} /><span>Wallet credit</span></div>
       </div>
 
-      <div className="transfer-account-card">
+      {paymentStatus !== 'success' && <div className="transfer-account-card">
         <div className="transfer-bank-heading">
           <span className="transfer-bank-icon"><Landmark size={18} /></span>
           <div><span>Send to this account</span><strong>Flutterwave FMB</strong></div>
