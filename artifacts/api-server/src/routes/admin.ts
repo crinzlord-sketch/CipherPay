@@ -772,9 +772,14 @@ router.post("/admin/deposits/:id/approve", requireAdmin, async (req: AdminReques
   // admin is vouching that the money landed in our fixed account. Card
   // (provider:"flutterwave") deposits are still re-verified before crediting.
   let isManual = false;
-  try { isManual = tx.metadata ? JSON.parse(tx.metadata).provider === "manual-bank-transfer" : false; } catch { /* ignore */ }
+  let isPsa = false;
+  try {
+    const meta = tx.metadata ? JSON.parse(tx.metadata) : {};
+    isManual = meta.provider === "manual-bank-transfer";
+    isPsa = meta.provider === "flutterwave-psa";
+  } catch { /* ignore */ }
 
-  if (!isManual) {
+  if (!isManual && !isPsa) {
     // Verify the charge with Flutterwave before crediting anything.
     const { verifyByReference } = await import("../lib/flutterwave.js");
     let flwTx;
