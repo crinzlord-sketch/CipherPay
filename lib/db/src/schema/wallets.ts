@@ -12,6 +12,13 @@ export const walletsTable = pgTable("wallets", {
   // Funded via split payments; debited via debit_subaccount on withdrawals.
   // Allows the withdrawal route to decide whether to use debit_subaccount.
   flwSubaccountBalance: numeric("flw_subaccount_balance", { precision: 18, scale: 2 }).notNull().default("0"),
+  // Flutterwave Payout Subaccount (PSA) — the user's actual provider wallet.
+  flwPsaId: integer("flw_psa_id"),
+  flwPsaAccountReference: text("flw_psa_account_reference"),
+  flwPsaBarterId: text("flw_psa_barter_id"),
+  flwPsaStaticAccount: text("flw_psa_static_account"),
+  flwPsaBankCode: text("flw_psa_bank_code"),
+  flwPsaBankName: text("flw_psa_bank_name"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
