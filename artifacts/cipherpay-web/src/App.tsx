@@ -967,6 +967,7 @@ function Send() {
   const [resolving, setResolving] = useState(false);
   const [sendingBank, setSendingBank] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [resultStatus, setResultStatus] = useState<'pending' | 'success' | 'failed'>('pending');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -1019,12 +1020,13 @@ function Send() {
     event.preventDefault();
     setError('');
     setResult(null);
+    setResultStatus('pending');
 
     if (mode === 'cipherpay') {
       mutation.mutate(
         { data: { ...form, amount: parseGroupedDigits(form.amount) } as any },
         {
-          onSuccess: (value: any) => setResult(value),
+          onSuccess: (value: any) => { setResult(value); setResultStatus('success'); },
           onError: (reason: any) => setError(reason?.message ?? 'The transfer could not be completed.'),
         },
       );
@@ -1058,9 +1060,25 @@ function Send() {
         },
       });
       setResult(payload);
+      setResultStatus('pending');
       void queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
+      const txId = Number(payload?.transaction?.id);
+      if (Number.isFinite(txId) && txId > 0) {
+        let settled = false;
+        for (let attempt = 0; attempt < 12; attempt += 1) {
+          await new Promise((resolve) => window.setTimeout(resolve, 2500));
+          try {
+            const statusPayload = await apiRequest<any>('/api/wallet/withdraw/refresh/' + txId, { method: 'POST' });
+            if (statusPayload?.status === 'success') { settled = true; setResultStatus('success'); void queryClient.invalidateQueries({ queryKey: ['/api/wallet'] }); break; }
+            if (statusPayload?.status === 'failed') { settled = true; setResultStatus('failed'); setError(statusPayload?.message ?? 'The bank transfer failed and your funds were refunded.'); break; }
+          } catch { }
+        }
+        if (!settled) setResultStatus('pending');
+      }
     } catch (e: any) {
       setError(e?.message ?? 'The bank transfer could not be completed.');
+      setResult(null);
+      setResultStatus('failed');
     } finally {
       setSendingBank(false);
     }
@@ -1147,13 +1165,12 @@ function Send() {
 
         {resolving && <div className="muted-line">Verifying account details…</div>}
         {error && <div className="error-box" role="alert">{error}</div>}
-        {result && mode === 'bank' && <div className="success-box"><Check size={17} /><div><b>Bank transfer submitted</b><span>{result.message || 'Your transfer is being processed.'}</span></div></div>}
-        {result && mode === 'cipherpay' && <div className="success-box"><Check size={17} /><div><b>Transfer complete</b><span>{result.message || 'Your money is on its way.'}</span></div></div>}
 
         {(mode === 'cipherpay' || bankForm.accountName) && <Button type="submit" className="full-btn" disabled={busy || resolving} data-testid="button-send-submit">
           {busy ? 'Sending…' : mode === 'bank' ? 'Send to bank' : 'Review and send'} <ArrowRight size={17} />
         </Button>}
       </form>
+      {result && <TransferResultPop status={resultStatus} mode={mode} amount={parseGroupedDigits(form.amount)} message={result.message} onClose={() => { if (resultStatus !== 'pending') { setResult(null); setError(''); } }} />}
       <div className="side-note violet">
         <span className="side-note-icon"><SendIcon size={20} /></span>
         <h3>{mode === 'bank' ? 'Straight to their bank.' : 'From your wallet to theirs.'}</h3>
@@ -1197,6 +1214,27 @@ function PurchaseSuccessPop({ kind, phone, onClose }: { kind: 'airtime' | 'data'
   );
 }
 
+function TransferResultPop({ status, mode, amount, message, onClose }: { status: 'pending' | 'success' | 'failed'; mode: 'bank' | 'cipherpay'; amount?: number; message?: string; onClose: () => void }) {
+  const success = status === 'success';
+  const failed = status === 'failed';
+  const title = failed ? 'Transfer failed' : success ? 'Money sent' : mode === 'bank' ? 'Sending to your bank' : 'Transfer started';
+  const detail = failed ? (message || 'The transfer could not be completed.') : success ? (mode === 'bank' ? '₦' + Number(amount || 0).toLocaleString('en-NG') + ' has been sent to the destination account.' : (message || 'The money has been delivered to the recipient.')) : 'Your withdrawal has been submitted and we’re checking the bank transfer status automatically.';
+  return (
+    <div className="transfer-result-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && (success || failed)) onClose(); }}>
+      <section className="transfer-result-pop" role="dialog" aria-modal="true" aria-labelledby="transfer-result-title">
+        <button type="button" className="transfer-result-close" onClick={onClose} aria-label="Close transfer message"><X size={17} /></button>
+        <div className={'transfer-result-icon ' + (success ? 'success' : failed ? 'failed' : 'pending')}>
+          {success ? <Check size={27} strokeWidth={2.5} /> : failed ? <X size={25} strokeWidth={2.5} /> : <RefreshCw size={24} />}
+        </div>
+        <span className="section-kicker">CIPHERPAY / TRANSFER</span>
+        <h2 id="transfer-result-title">{title}</h2>
+        <p>{detail}</p>
+        {status === 'pending' && <div className="transfer-result-status"><span className="transfer-result-spinner" />Checking transfer status…</div>}
+        <button type="button" className="btn btn-primary transfer-result-button" onClick={onClose} disabled={status === 'pending'}>{status === 'pending' ? 'Please wait…' : failed ? 'Close' : 'Done'} {status !== 'pending' && <Check size={16} />}</button>
+      </section>
+    </div>
+  );
+}
 function Airtime() {
   const networksQuery = useListNetworks();
   const airtime = useBuyAirtime();
