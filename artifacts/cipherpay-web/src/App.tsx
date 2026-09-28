@@ -738,14 +738,17 @@ function ErrorPage({ retry }: { retry: () => void }) { return <div className="ce
 function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose, onReset }: { result: any; requestedAmount: number; paymentStatus: 'waiting' | 'success' | 'failed'; onClose: () => void; onReset: () => void }) {
   const [copiedField, setCopiedField] = useState('');
   const account = result.account;
+  const permanent = Boolean(account.permanent);
   const amount = Number(account.amount ?? requestedAmount);
-  const paymentStatusLabel = paymentStatus === 'success' ? 'Payment received' : paymentStatus === 'failed' ? 'Payment failed' : 'Awaiting payment';
+  const paymentStatusLabel = paymentStatus === 'success' ? 'Payment received' : paymentStatus === 'failed' ? 'Payment failed' : permanent ? 'Personal account' : 'Awaiting payment';
   const paymentMessage = paymentStatus === 'success'
     ? 'Flutterwave confirmed your transfer and the money has been added to your wallet.'
     : paymentStatus === 'failed'
       ? 'Flutterwave could not confirm this transfer. Please start a new deposit or contact support if money left your bank.'
-      : 'Send the exact amount below. We are checking Flutterwave automatically and will update your wallet when the transfer settles.';
-  const expiresAt = account.expiresAt
+      : permanent
+        ? 'This is your permanent CipherPay deposit account. You can use it anytime and send any amount; successful transfers are credited automatically.'
+        : 'Send the exact amount below. We are checking Flutterwave automatically and will update your wallet when the transfer settles.';
+  const expiresAt = permanent ? 'Permanent' : account.expiresAt
     ? new Date(account.expiresAt).toLocaleString('en-NG', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
     : 'Until payment is received';
   const copyField = async (field: string, value: string) => {
@@ -777,7 +780,7 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
         <span className={`transfer-success-mark ${paymentStatus}`}><Check size={18} /></span>
         <div>
           <span className="eyebrow">{paymentStatus === 'success' ? 'BANK TRANSFER / SUCCESS' : paymentStatus === 'failed' ? 'BANK TRANSFER / ATTENTION' : 'BANK TRANSFER / READY'}</span>
-          <h2 id="transfer-account-title">{paymentStatus === 'success' ? 'Funding successful' : paymentStatus === 'failed' ? 'Funding needs attention' : 'Transfer account generated'}</h2>
+          <h2 id="transfer-account-title">{paymentStatus === 'success' ? 'Funding successful' : paymentStatus === 'failed' ? 'Funding needs attention' : permanent ? 'Your personal deposit account' : 'Transfer account generated'}</h2>
           <p>{paymentStatus === 'success' ? 'Your payment was confirmed and your wallet has been credited.' : paymentStatus === 'failed' ? 'This funding attempt could not be completed.' : paymentMessage}</p>
         </div>
         <span className={`transfer-status transfer-status-${paymentStatus}`}>{paymentStatusLabel}</span>
@@ -794,7 +797,7 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
       {paymentStatus !== 'success' && <div className="transfer-account-card">
         <div className="transfer-bank-heading">
           <span className="transfer-bank-icon"><Landmark size={18} /></span>
-          <div><span>Send to this account</span><strong>Flutterwave FMB</strong></div>
+          <div><span>Send to this account</span><strong>{account.bankName || "Flutterwave MFB"}</strong></div>
           <span className="transfer-live-dot"><i /> Live account</span>
         </div>
         <div className="transfer-detail-list">
@@ -806,10 +809,10 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
             <span>Account number</span>
             <div><strong className="transfer-account-number">{account.accountNumber}</strong>{copyButton('account', String(account.accountNumber), 'account number')}</div>
           </div>
-          <div className="transfer-detail-row">
+          {!permanent && <div className="transfer-detail-row">
             <span>Transfer reference</span>
             <div><strong className="transfer-reference">{result.reference || 'Generated automatically'}</strong>{result.reference && copyButton('reference', String(result.reference), 'transfer reference')}</div>
-          </div>
+          </div>}
           <div className="transfer-detail-row">
             <span>Account availability</span>
             <div><strong>{expiresAt}</strong></div>
@@ -840,7 +843,7 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
               <li><span>03</span><p>Keep this page open while we confirm the payment and credit your wallet.</p></li>
             </ol>
           </div>
-          <div className="transfer-warning"><ShieldCheck size={16} /><p>{account.note || 'Only send the exact amount shown. Do not send money to this account after it expires.'}</p></div>
+          <div className="transfer-warning"><ShieldCheck size={16} /><p>{account.note || (permanent ? 'This account belongs to your CipherPay wallet. Use it for future deposits too.' : 'Only send the exact amount shown. Do not send money to this account after it expires.')}</p></div>
         </>
       )}
 
