@@ -124,7 +124,12 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     kycLevel: 0,
   }).returning();
 
-  await getOrCreateWallet(user.id);
+  // Do not block account creation on wallet provisioning. The wallet is created
+  // immediately in the background, and the authenticated /api/wallet endpoint
+  // also uses the same idempotent helper if the first attempt is delayed.
+  void getOrCreateWallet(user.id).catch((e: any) => {
+    req.log?.warn?.({ userId: user.id, err: e?.message }, "initial CipherPay wallet provisioning failed");
+  });
 
   // Provision the user's permanent Flutterwave payout wallet in the background.
   // Registration must still succeed if Flutterwave temporarily rejects or delays
@@ -137,16 +142,18 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   const REFERRAL_BONUS_REFERRER = 200;
   const REFERRAL_BONUS_REFEREE = 150;
   if (referralCode) {
-    try {
-      const [referrer] = await db.select().from(usersTable).where(eq(usersTable.referralCode, referralCode));
-      if (referrer) {
-        await creditWallet(referrer.id, REFERRAL_BONUS_REFERRER, `Referral bonus — ${firstName} joined CipherPay`, "referral", { referredUserId: user.id });
-        await creditWallet(user.id, REFERRAL_BONUS_REFEREE, "Welcome bonus — you joined via a referral", "referral", { referrerId: referrer.id });
-        await notifyUser({ userId: referrer.id, title: "Referral bonus 🎉", body: `You earned ₦${REFERRAL_BONUS_REFERRER.toLocaleString()} for inviting ${firstName} to CipherPay!`, type: "success" });
+    void (async () => {
+      try {
+        const [referrer] = await db.select().from(usersTable).where(eq(usersTable.referralCode, referralCode));
+        if (referrer) {
+          await creditWallet(referrer.id, REFERRAL_BONUS_REFERRER, `Referral bonus — ${firstName} joined CipherPay`, "referral", { referredUserId: user.id });
+          await creditWallet(user.id, REFERRAL_BONUS_REFEREE, "Welcome bonus — you joined via a referral", "referral", { referrerId: user.id });
+          await notifyUser({ userId: referrer.id, title: "Referral bonus 🎉", body: `You earned ₦${REFERRAL_BONUS_REFERRER.toLocaleString()} for inviting ${firstName} to CipherPay!`, type: "success" });
+        }
+      } catch (e: any) {
+        req.log.warn({ err: e?.message, referralCode }, "referral bonus credit failed — non-fatal");
       }
-    } catch (e: any) {
-      req.log.warn({ err: e?.message, referralCode }, "referral bonus credit failed — non-fatal");
-    }
+    })();
   }
 
   // Auto-send an email OTP so the user can verify their inbox before they finish
