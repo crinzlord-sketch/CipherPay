@@ -107,6 +107,43 @@ function Shell({ children }: { children: ReactNode }) {
   }, [mobileOpen]);
   useEffect(() => {
     let active = true;
+    const checkSession = async () => {
+      const token = useToken();
+      if (!token) return;
+      try {
+        const response = await fetch(apiUrl('/api/auth/me'), {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include',
+          cache: 'no-store',
+        });
+        if (response.status === 401) {
+          localStorage.removeItem('cipherpay_token');
+          sessionStorage.removeItem('cipherpay_admin_token');
+          queryClient.clear();
+          if (active) setLocation('/login');
+        }
+      } catch {
+        // Do not log users out on a temporary network failure.
+      }
+    };
+    void checkSession();
+    const interval = window.setInterval(() => void checkSession(), 10_000);
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === 'cipherpay_token' && event.newValue === null) {
+        queryClient.clear();
+        setLocation('/login');
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [setLocation]);
+
+  useEffect(() => {
+    let active = true;
     const loadUnreadCount = async () => {
       if (!useToken()) {
         if (active) setUnreadNotifications(0);
