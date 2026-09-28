@@ -122,7 +122,12 @@ export async function sendMail(to: string, subject: string, html: string, text?:
   if (process.env.RESEND_API_KEY) {
     try {
       const { replyTo, from } = emailConfig();
-      const resendFrom = process.env.RESEND_FROM ?? from;
+      const resendFromRaw = process.env.RESEND_FROM?.trim() || from;
+      const resendFrom = resendFromRaw.includes("<")
+        ? resendFromRaw
+        : /@/.test(resendFromRaw)
+          ? `CipherPay <${resendFromRaw}>`
+          : resendFromRaw;
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
