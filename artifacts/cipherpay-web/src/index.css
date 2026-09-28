@@ -5428,12 +5428,35 @@ html[data-route-transition="auth-switch"]::after {
 }
 
 @media (max-width: 600px) {
-  /* iOS Safari zooms focused form controls when their text is below 16px. Keep every editable control at 16px on mobile so focusing a field does not zoom the page. */
+  /* Keep iOS Safari from changing the visual scale while editing auth fields. */
+  html,
+  body,
+  #root {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   input,
   textarea,
-  select,
+  select {
+    font-size: 16px !important;
+    line-height: 1.25;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   button {
     font-size: 16px;
+  }
+
+  .auth-form-inner {
+    transform: none !important;
+  }
+
+  .auth-form .field input,
+  .auth-form .password-wrap input {
+    font-size: 16px !important;
+    transform: none !important;
   }
 
   .auth-page::before { left: 0; background: linear-gradient(180deg, hsla(28, 98%, 59%, .05), transparent 32%); }
