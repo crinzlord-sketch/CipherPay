@@ -1143,16 +1143,16 @@ function Send() {
             ? <Field label="Note (optional)" placeholder="What's this for?" value={form.note} onChange={(event: any) => setForm({ ...form, note: event.target.value })} data-testid="input-send-note" />
             : <Field label="Narration (optional)" placeholder="What is this for?" value={bankForm.narration} onChange={(event: any) => setBankForm((current) => ({ ...current, narration: event.target.value.slice(0, 120) }))} data-testid="input-bank-narration" />
           }
-        </div>
+        </div>}
 
         {resolving && <div className="muted-line">Verifying account details…</div>}
         {error && <div className="error-box" role="alert">{error}</div>}
         {result && mode === 'bank' && <div className="success-box"><Check size={17} /><div><b>Bank transfer submitted</b><span>{result.message || 'Your transfer is being processed.'}</span></div></div>}
         {result && mode === 'cipherpay' && <div className="success-box"><Check size={17} /><div><b>Transfer complete</b><span>{result.message || 'Your money is on its way.'}</span></div></div>}
 
-        <Button type="submit" className="full-btn" disabled={busy || resolving} data-testid="button-send-submit">
-          {busy ? 'Sending…' : mode === 'bank' ? (bankForm.accountName ? 'Send to bank' : 'Verify account') : 'Review and send'} <ArrowRight size={17} />
-        </Button>
+        {(mode === 'cipherpay' || bankForm.accountName) && <Button type="submit" className="full-btn" disabled={busy || resolving} data-testid="button-send-submit">
+          {busy ? 'Sending…' : mode === 'bank' ? 'Send to bank' : 'Review and send'} <ArrowRight size={17} />
+        </Button>}
       </form>
       <div className="side-note violet">
         <span className="side-note-icon"><SendIcon size={20} /></span>
