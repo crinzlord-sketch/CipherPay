@@ -147,7 +147,10 @@ router.post("/airtime/buy", async (req, res): Promise<void> => {
     res.status(400).json({ error: e.message }); return;
   }
 
+  let sourceFunded = false;
   try {
+    await fundBillSourceFromUser(userId, charge, tx.id);
+    sourceFunded = true;
     const reference = flwReference(`AIR${tx.id}`);
     const result = await flwBuyAirtime({ phone, amount, reference, network });
     req.log.info({ flwStatus: result.raw?.status, flwMessage: result.raw?.message, flwData: result.raw?.data, reference }, "Flutterwave airtime response");
@@ -267,7 +270,10 @@ router.post("/data/buy", async (req, res): Promise<void> => {
     res.status(400).json({ error: e.message }); return;
   }
 
+  let sourceFunded = false;
   try {
+    await fundBillSourceFromUser(userId, plan.price, tx.id);
+    sourceFunded = true;
     const reference = flwReference(`DAT${tx.id}`);
     const result = await flwBuyData({ phone, amount: plan.wholesalePrice, itemCode: planId, billerName: plan.billerName, reference });
     req.log.info({ flwStatus: result.raw?.status, flwMessage: result.raw?.message, flwData: result.raw?.data, reference, planId }, "Flutterwave data response");
@@ -370,7 +376,10 @@ router.post("/bills/pay", async (req, res): Promise<void> => {
   // Electricity → Flutterwave (amount-based, prepaid or postpaid).
   if (flwElec) {
     const item = flwElec[meterType];
+    let sourceFunded = false;
     try {
+      await fundBillSourceFromUser(userId, amount, tx.id);
+      sourceFunded = true;
       const reference = flwReference(`BIL${tx.id}`);
       // Look up the live biller_name — POST /v3/bills requires `type` = biller_name, not biller code
       const billerName = await getElecBillerName(flwElec.biller, item);
