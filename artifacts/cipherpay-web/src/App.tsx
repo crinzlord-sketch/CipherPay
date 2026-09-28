@@ -385,7 +385,7 @@ function Login() {
       setOtpResendPending(false);
     }
   };
-  return <AuthLayout title={otpRequired ? 'Verify your sign-in.' : 'Welcome back.'} detail={otpRequired ? 'Enter the one-time code to finish signing in.' : 'Your account is ready when you are.'}>
+  return <AuthLayout title={otpRequired ? 'Verify your sign-in.' : 'Welcome back.'} detail={otpRequired ? 'Enter the one-time code to finish signing in.' : 'Sign in to continue to CipherPay.'}>
     {otpRequired
        ? <form className="auth-form" onSubmit={verifyLogin}>
          <AuthBuddy key={`login-buddy-${faceReaction}`} field="idle" hasText gaze={{ x: 0, y: 0 }} mood={faceMood} buddyRef={buddyRef} />
