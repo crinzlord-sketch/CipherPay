@@ -147,7 +147,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
         const [referrer] = await db.select().from(usersTable).where(eq(usersTable.referralCode, referralCode));
         if (referrer) {
           await creditWallet(referrer.id, REFERRAL_BONUS_REFERRER, `Referral bonus — ${firstName} joined CipherPay`, "referral", { referredUserId: user.id });
-          await creditWallet(user.id, REFERRAL_BONUS_REFEREE, "Welcome bonus — you joined via a referral", "referral", { referrerId: user.id });
+          await creditWallet(user.id, REFERRAL_BONUS_REFEREE, "Welcome bonus — you joined via a referral", "referral", { referrerId: referrer.id });
           await notifyUser({ userId: referrer.id, title: "Referral bonus 🎉", body: `You earned ₦${REFERRAL_BONUS_REFERRER.toLocaleString()} for inviting ${firstName} to CipherPay!`, type: "success" });
         }
       } catch (e: any) {
