@@ -5,6 +5,7 @@ import { ensureAdminUser } from "./lib/admin-seed";
 import { startElectricityTokenJob } from "./lib/electricity-token-job";
 import { startTemporaryInboxRenewal } from "./lib/temporary-email";
 import { isEmailConfigured, verifyEmailTransport } from "./lib/email";
+import { startPayoutFundingPoller } from "./lib/payout-funding-poller";
 
 // Route ALL outbound fetch requests through a fixed-IP proxy (e.g. Fixie) so
 // the server's egress IP is stable and can be whitelisted in Flutterwave.
@@ -47,4 +48,5 @@ app.listen(port, (err) => {
   void ensureAdminUser();
   startElectricityTokenJob();
   startTemporaryInboxRenewal();
+  startPayoutFundingPoller();
 });
