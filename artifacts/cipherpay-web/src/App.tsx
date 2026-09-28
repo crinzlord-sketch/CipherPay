@@ -980,31 +980,38 @@ function Send() {
     return () => { active = false; };
   }, [mode, banks.length]);
 
-  const filteredBanks = banks.filter((bank) =>
-    String(bank.name ?? '').toLowerCase().includes(bankSearch.trim().toLowerCase()),
-  );
+  const bankQuery = bankSearch.trim().toLowerCase();
+  const filteredBanks = banks
+    .filter((bank) => String(bank.name ?? '').toLowerCase().includes(bankQuery))
+    .sort((a, b) => {
+      const an = String(a.name ?? '').toLowerCase();
+      const bn = String(b.name ?? '').toLowerCase();
+      const as = an === bankQuery ? 0 : an.startsWith(bankQuery) ? 1 : 2;
+      const bs = bn === bankQuery ? 0 : bn.startsWith(bankQuery) ? 1 : 2;
+      return as - bs || an.localeCompare(bn);
+    });
 
-  const resolveBankAccount = async () => {
-    if (bankForm.bankCode && /^\\d{10}$/.test(bankForm.accountNumber)) {
-      setError('');
-      setResolving(true);
-      try {
-        const payload = await apiRequest<{ accountName: string; accountNumber: string; bankCode: string }>(
-          '/api/bank/resolve',
-          { method: 'POST', body: { bankCode: bankForm.bankCode, accountNumber: bankForm.accountNumber } },
-        );
-        setBankForm((current) => ({
-          ...current,
-          accountName: payload.accountName,
-          accountNumber: payload.accountNumber,
-          bankCode: payload.bankCode,
-        }));
-      } catch (e: any) {
-        setBankForm((current) => ({ ...current, accountName: '' }));
-        setError(e?.message ?? 'Could not verify that account.');
-      } finally {
-        setResolving(false);
-      }
+  const resolveBankAccount = async (bankCode = bankForm.bankCode, accountNumber = bankForm.accountNumber) => {
+    const digits = String(accountNumber ?? '').replace(/\\D/g, '').slice(0, 10);
+    if (!bankCode || digits.length !== 10) return;
+    setError('');
+    setResolving(true);
+    try {
+      const payload = await apiRequest<{ accountName: string; accountNumber: string; bankCode: string }>(
+        '/api/bank/resolve',
+        { method: 'POST', body: { bankCode, accountNumber: digits } },
+      );
+      setBankForm((current) => ({
+        ...current,
+        accountName: payload.accountName,
+        accountNumber: payload.accountNumber,
+        bankCode: payload.bankCode,
+      }));
+    } catch (e: any) {
+      setBankForm((current) => ({ ...current, accountName: '' }));
+      setError(e?.message ?? 'Could not verify account.');
+    } finally {
+      setResolving(false);
     }
   };
 
@@ -1098,6 +1105,9 @@ function Send() {
                     <button type="button" key={bank.code} className="bank-picker-option" onClick={() => {
                       setBankForm((current) => ({ ...current, bankCode: String(bank.code), bankName: String(bank.name), accountName: '' }));
                       setBankOpen(false);
+                      if (bankForm.accountNumber.replace(/\\D/g, '').length === 10) {
+                        void resolveBankAccount(String(bank.code), bankForm.accountNumber);
+                      }
                       setBankSearch('');
                     }}>{bank.name}</button>
                   ))}
@@ -1112,8 +1122,14 @@ function Send() {
               maxLength={10}
               placeholder="0123456789"
               value={bankForm.accountNumber}
-              onChange={(event: any) => setBankForm((current) => ({ ...current, accountNumber: event.target.value.replace(/\\D/g, '').slice(0, 10), accountName: '' }))}
-              onBlur={resolveBankAccount}
+              onChange={(event: any) => {
+                const digits = event.target.value.replace(/\\D/g, '').slice(0, 10);
+                setBankForm((current) => ({ ...current, accountNumber: digits, accountName: '' }));
+                if (digits.length === 10 && bankForm.bankCode) {
+                  void resolveBankAccount(bankForm.bankCode, digits);
+                }
+              }}
+              onBlur={() => resolveBankAccount()}
               required
               data-testid="input-bank-account-number"
             />
@@ -1121,7 +1137,7 @@ function Send() {
           </>
         )}
 
-        <div className="field-row">
+        {(mode === 'cipherpay' || (mode === 'bank' && Boolean(bankForm.accountName) && !resolving)) && <div className="field-row">
           <Field label="Amount (₦)" type="text" inputMode="numeric" min="1" placeholder="0.00" value={form.amount} onChange={(event: any) => setForm({ ...form, amount: formatGroupedDigits(event.target.value) })} required data-testid="input-send-amount" />
           {mode === 'cipherpay'
             ? <Field label="Note (optional)" placeholder="What's this for?" value={form.note} onChange={(event: any) => setForm({ ...form, note: event.target.value })} data-testid="input-send-note" />
