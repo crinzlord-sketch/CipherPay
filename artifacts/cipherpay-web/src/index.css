@@ -3990,6 +3990,130 @@ a {
   color: hsl(var(--primary));
 }
 
+.send-tabs {
+  margin-bottom: 2px;
+}
+
+.bank-picker {
+  position: relative;
+}
+
+.bank-picker-trigger {
+  display: flex;
+  width: 100%;
+  min-height: 45px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 13px;
+  border: 1px solid hsl(var(--input));
+  border-radius: 10px;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  font-size: .78rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bank-picker-arrow {
+  flex: 0 0 auto;
+  transform: rotate(90deg);
+  transition: transform 160ms ease;
+}
+
+.bank-picker-arrow.open {
+  transform: rotate(-90deg);
+}
+
+.bank-picker-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  border-radius: 13px;
+  background: hsl(var(--card));
+  box-shadow: 0 18px 45px hsl(var(--foreground) / .14);
+}
+
+.bank-search-input {
+  width: 100%;
+  height: 43px;
+  padding: 0 12px;
+  border: 0;
+  border-bottom: 1px solid hsl(var(--border));
+  outline: 0;
+  background: transparent;
+  color: hsl(var(--foreground));
+  font-size: 16px;
+}
+
+.bank-picker-list {
+  max-height: 270px;
+  overflow: auto;
+  padding: 5px;
+}
+
+.bank-picker-option {
+  display: block;
+  width: 100%;
+  padding: 10px 9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: hsl(var(--foreground));
+  font-size: .74rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bank-picker-option:hover {
+  background: hsl(var(--accent));
+}
+
+.bank-picker-empty {
+  padding: 15px 10px;
+  color: hsl(var(--muted-foreground));
+  font-size: .73rem;
+  text-align: center;
+}
+
+.resolved-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid hsl(var(--chart-3) / .22);
+  border-radius: 11px;
+  background: hsl(var(--chart-3) / .07);
+}
+
+.resolved-account > svg {
+  flex: 0 0 auto;
+  color: hsl(var(--chart-3));
+}
+
+.resolved-account div {
+  display: grid;
+  gap: 2px;
+}
+
+.resolved-account small {
+  color: hsl(var(--muted-foreground));
+  font-size: .64rem;
+}
+
+.resolved-account b {
+  font-size: .79rem;
+}
+
+.muted-line {
+  color: hsl(var(--muted-foreground));
+  font-size: .73rem;
+}
+
 .choice-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
