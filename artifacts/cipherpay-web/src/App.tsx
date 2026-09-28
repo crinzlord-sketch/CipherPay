@@ -803,7 +803,7 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
         <div className="transfer-detail-list">
           <div className="transfer-detail-row">
             <span>Account name</span>
-            <div><strong>CipherPay Wallet Funding</strong></div>
+            <div><strong>{account.accountName || 'CipherPay'}</strong></div>
           </div>
           <div className="transfer-detail-row transfer-detail-highlight">
             <span>Account number</span>
@@ -839,7 +839,7 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
             <div className="transfer-instructions-heading"><span className="transfer-info-icon"><FileText size={15} /></span><div><strong>How to complete your deposit</strong><span>Use your bank app</span></div></div>
             <ol>
               <li><span>01</span><p>Open your bank app and choose <b>Transfer</b>.</p></li>
-              <li><span>02</span><p>Enter the account details above and send <b>{money.format(amount)}</b>.</p></li>
+              <li><span>02</span><p>Enter the account details above and send <b>{permanent && amount <= 0 ? 'any amount' : money.format(amount)}</b>.</p></li>
               <li><span>03</span><p>Keep this page open while we confirm the payment and credit your wallet.</p></li>
             </ol>
           </div>
