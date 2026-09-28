@@ -160,10 +160,15 @@ router.post("/auth/register", async (req, res): Promise<void> => {
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
       markOtpIssued(user.email, "verification");
       await db.insert(otpTable).values({ target: user.email, code, purpose: "verification", expiresAt });
-      await sendOtpEmail(user.email, code, "verification");
       otpDelivery = "email";
+      // Never hold account creation open on the mail provider. Some SMTP relays
+      // can take a long time to connect or time out, so deliver the OTP in the
+      // background after the signup response can complete immediately.
+      void sendOtpEmail(user.email, code, "verification").catch((e: any) => {
+        req.log.error({ err: e?.message, userId: user.id }, "signup OTP email failed");
+      });
     } catch (e: any) {
-      req.log.error({ err: e?.message, userId: user.id }, "signup OTP email failed");
+      req.log.error({ err: e?.message, userId: user.id }, "signup OTP setup failed");
       // Don't fail the registration — let the user request a resend from the verify screen.
     }
   } else {
