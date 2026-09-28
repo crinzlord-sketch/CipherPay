@@ -817,16 +817,27 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
         </div>
       </div>
 
-      <div className="transfer-instructions">
-        <div className="transfer-instructions-heading"><span className="transfer-info-icon"><FileText size={15} /></span><div><strong>How to complete your deposit</strong><span>Use your bank app</span></div></div>
-        <ol>
-          <li><span>01</span><p>Open your bank app and choose <b>Transfer</b>.</p></li>
-          <li><span>02</span><p>Enter the account details above and send <b>{money.format(amount)}</b>.</p></li>
-          <li><span>03</span><p>Keep this page open while we confirm the payment and credit your wallet.</p></li>
-        </ol>
-      </div>
+      {paymentStatus === 'success' ? (
+        <div className="success-box transfer-funding-success" role="status">
+          <Check size={20} />
+          <div><b>Funding successful</b><span>{money.format(amount)} has been added to your CipherPay wallet.</span></div>
+        </div>
+      ) : paymentStatus === 'failed' ? (
+        <div className="error-box" role="alert">This funding attempt could not be completed. Your wallet was not credited by this attempt.</div>
+      ) : (
+        <>
+          <div className="transfer-instructions">
+            <div className="transfer-instructions-heading"><span className="transfer-info-icon"><FileText size={15} /></span><div><strong>How to complete your deposit</strong><span>Use your bank app</span></div></div>
+            <ol>
+              <li><span>01</span><p>Open your bank app and choose <b>Transfer</b>.</p></li>
+              <li><span>02</span><p>Enter the account details above and send <b>{money.format(amount)}</b>.</p></li>
+              <li><span>03</span><p>Keep this page open while we confirm the payment and credit your wallet.</p></li>
+            </ol>
+          </div>
+          <div className="transfer-warning"><ShieldCheck size={16} /><p>{account.note || 'Only send the exact amount shown. Do not send money to this account after it expires.'}</p></div>
+        </>
+      )}
 
-      <div className="transfer-warning"><ShieldCheck size={16} /><p>{account.note || 'Only send the exact amount shown. Do not send money to this account after it expires.'}</p></div>
       <div className="transfer-panel-footer"><span>Reference: <b>{result.reference || '—'}</b></span><button type="button" className="transfer-new-button" onClick={onReset}>Start another deposit <ArrowRight size={14} /></button></div>
     </section>
   );
