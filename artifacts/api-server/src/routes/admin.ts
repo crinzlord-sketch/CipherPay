@@ -15,6 +15,7 @@ import {
   savedAccountsTable,
   supportChatsTable,
   supportMessagesTable,
+  sessionsTable,
 } from "@workspace/db";
 import { gt, ne } from "drizzle-orm";
 import { signAdminToken, requireAdmin, type AdminRequest } from "../lib/admin-auth";
@@ -145,6 +146,10 @@ router.delete("/admin/admins/:id", requireAdmin, async (req: AdminRequest, res):
   }
 
   await db.transaction(async (trx) => {
+    // Revoke every device session before deleting the account. The auth middleware
+    // checks this table on every authenticated request, so existing JWTs stop
+    // working immediately instead of remaining valid until expiry.
+    await trx.update(sessionsTable).set({ revoked: true }).where(eq(sessionsTable.userId, id));
     await trx.delete(transactionsTable).where(eq(transactionsTable.userId, id));
     await trx.delete(socialOrdersTable).where(eq(socialOrdersTable.userId, id));
     await trx.delete(smsActivationsTable).where(eq(smsActivationsTable.userId, id));
