@@ -1,0 +1,2133 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: CipherPay Fintech API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: wallet
+    description: Wallet operations
+  - name: transactions
+    description: Transaction history
+  - name: bills
+    description: Bill payments
+  - name: airtime
+    description: Airtime top-up
+  - name: data
+    description: Data bundle purchases
+  - name: social
+    description: Social media boost services
+  - name: sms
+    description: SMS verification services
+  - name: bank
+    description: Bank transfer operations
+  - name: kyc
+    description: KYC and identity verification
+  - name: temporaryEmail
+    description: User-owned temporary email inboxes
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # ── AUTH ──────────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/send-otp:
+    post:
+      operationId: sendOtp
+      tags: [auth]
+      summary: Send OTP to email or phone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendOtpInput"
+      responses:
+        "200":
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/verify-otp:
+    post:
+      operationId: verifyOtp
+      tags: [auth]
+      summary: Verify OTP code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyOtpInput"
+      responses:
+        "200":
+          description: Verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user profile
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/update-profile:
+    patch:
+      operationId: updateProfile
+      tags: [auth]
+      summary: Update user profile
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change user password
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid current password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── WALLET ────────────────────────────────────────────────────────────────
+  /wallet:
+    get:
+      operationId: getWallet
+      tags: [wallet]
+      summary: Get wallet balance and details
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Wallet info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+
+  /wallet/fund:
+    post:
+      operationId: fundWallet
+      tags: [wallet]
+      summary: Initialize wallet funding (returns payment link)
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FundWalletInput"
+      responses:
+        "200":
+          description: Payment initialized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentInitResponse"
+
+  /wallet/fund/bank-transfer:
+    post:
+      operationId: fundWalletBankTransfer
+      tags: [wallet]
+      summary: Generate a temporary bank-transfer deposit account
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FundWalletInput"
+      responses:
+        "200":
+          description: Deposit account generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankTransferFundResponse"
+
+  /wallet/fund/verify:
+    post:
+      operationId: verifyFunding
+      tags: [wallet]
+      summary: Verify a funding transaction
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyPaymentInput"
+      responses:
+        "200":
+          description: Payment resolved (success or terminal failure). Authenticated owners also receive their updated wallet fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FundVerifyResult"
+        "202":
+          description: Payment not yet confirmed — keep polling; the webhook will credit once it settles.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FundVerifyPending"
+
+  /wallet/transfer:
+    post:
+      operationId: walletTransfer
+      tags: [wallet]
+      summary: Transfer funds to another CipherPay user
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WalletTransferInput"
+      responses:
+        "200":
+          description: Transfer successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResult"
+        "400":
+          description: Insufficient balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /wallet/withdraw:
+    post:
+      operationId: withdrawFunds
+      tags: [wallet]
+      summary: Withdraw funds to a bank account
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawInput"
+      responses:
+        "200":
+          description: Withdrawal initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResult"
+        "400":
+          description: Insufficient balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /wallet/stats:
+    get:
+      operationId: getWalletStats
+      tags: [wallet]
+      summary: Get wallet spending stats summary
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Wallet stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletStats"
+
+  /wallet/deposit-account:
+    get:
+      operationId: getDepositAccount
+      tags: [wallet]
+      summary: Get the fixed CipherPay bank account for manual deposits
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deposit account details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DepositAccount"
+
+  /wallet/deposit/claim:
+    post:
+      operationId: claimDeposit
+      tags: [wallet]
+      summary: Submit a manual bank-transfer deposit for admin confirmation
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimDepositInput"
+      responses:
+        "200":
+          description: Deposit claim submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResult"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── TRANSACTIONS ──────────────────────────────────────────────────────────
+  /transactions:
+    get:
+      operationId: listTransactions
+      tags: [transactions]
+      summary: List user transactions with filters
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Transaction list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionListResponse"
+
+  /transactions/{id}:
+    get:
+      operationId: getTransaction
+      tags: [transactions]
+      summary: Get single transaction details
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Transaction details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── BANK ──────────────────────────────────────────────────────────────────
+  /bank/list:
+    get:
+      operationId: listBanks
+      tags: [bank]
+      summary: List available banks
+      responses:
+        "200":
+          description: Banks list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankListResponse"
+
+  /bank/resolve:
+    post:
+      operationId: resolveAccount
+      tags: [bank]
+      summary: Resolve/verify a bank account number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveAccountInput"
+      responses:
+        "200":
+          description: Account resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResolvedAccount"
+        "400":
+          description: Invalid account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bank/saved-accounts:
+    get:
+      operationId: getSavedAccounts
+      tags: [bank]
+      summary: Get user's saved bank accounts
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Saved accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SavedAccount"
+    post:
+      operationId: saveAccount
+      tags: [bank]
+      summary: Save a bank account for future use
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveAccountInput"
+      responses:
+        "201":
+          description: Account saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedAccount"
+
+  /bank/saved-accounts/{id}:
+    delete:
+      operationId: deleteSavedAccount
+      tags: [bank]
+      summary: Delete a saved bank account
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── AIRTIME ───────────────────────────────────────────────────────────────
+  /airtime/networks:
+    get:
+      operationId: listNetworks
+      tags: [airtime]
+      summary: List available mobile networks
+      responses:
+        "200":
+          description: Networks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Network"
+
+  /airtime/buy:
+    post:
+      operationId: buyAirtime
+      tags: [airtime]
+      summary: Purchase airtime
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuyAirtimeInput"
+      responses:
+        "200":
+          description: Airtime purchased
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResult"
+        "400":
+          description: Failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── DATA BUNDLES ──────────────────────────────────────────────────────────
+  /data/plans:
+    get:
+      operationId: listDataPlans
+      tags: [data]
+      summary: List data bundle plans for a network
+      parameters:
+        - name: network
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Data plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataPlan"
+
+  /data/buy:
+    post:
+      operationId: buyData
+      tags: [data]
+      summary: Purchase data bundle
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuyDataInput"
+      responses:
+        "200":
+          description: Data purchased
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResult"
+        "400":
+          description: Failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── BILLS ─────────────────────────────────────────────────────────────────
+  /bills/categories:
+    get:
+      operationId: listBillCategories
+      tags: [bills]
+      summary: List bill payment categories
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BillCategory"
+
+  /bills/providers:
+    get:
+      operationId: listBillProviders
+      tags: [bills]
+      summary: List providers for a bill category
+      parameters:
+        - name: category
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Providers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BillProvider"
+
+  /bills/validate:
+    post:
+      operationId: validateBill
+      tags: [bills]
+      summary: Validate a bill payment customer ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidateBillInput"
+      responses:
+        "200":
+          description: Validated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillValidation"
+        "400":
+          description: Invalid customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bills/pay:
+    post:
+      operationId: payBill
+      tags: [bills]
+      summary: Pay a bill
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayBillInput"
+      responses:
+        "200":
+          description: Bill paid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResult"
+        "400":
+          description: Failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── SOCIAL MEDIA BOOST ────────────────────────────────────────────────────
+  /social/categories:
+    get:
+      operationId: listSocialCategories
+      tags: [social]
+      summary: List social media boost categories
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SocialCategory"
+
+  /social/services:
+    get:
+      operationId: listSocialServices
+      tags: [social]
+      summary: List services for a social platform/category
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: platform
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SocialService"
+
+  /social/order:
+    post:
+      operationId: placeSocialOrder
+      tags: [social]
+      summary: Place a social media boost order
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SocialOrderInput"
+      responses:
+        "200":
+          description: Order placed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SocialOrderResult"
+        "400":
+          description: Failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /social/orders:
+    get:
+      operationId: listSocialOrders
+      tags: [social]
+      summary: List user's social boost orders
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Orders
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SocialOrderListResponse"
+
+  /social/orders/{id}/status:
+    get:
+      operationId: getSocialOrderStatus
+      tags: [social]
+      summary: Get status of a social boost order
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SocialOrder"
+
+  # ── SMS VERIFICATION ──────────────────────────────────────────────────────
+  /sms/countries:
+    get:
+      operationId: listSmsCountries
+      tags: [sms]
+      summary: List countries for SMS verification
+      responses:
+        "200":
+          description: Countries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SmsCountry"
+
+  /sms/services:
+    get:
+      operationId: listSmsServices
+      tags: [sms]
+      summary: List services available for SMS verification
+      parameters:
+        - name: country
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: SMS services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SmsService"
+
+  /sms/buy-number:
+    post:
+      operationId: buySmsNumber
+      tags: [sms]
+      summary: Buy a virtual number for SMS verification
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuySmsNumberInput"
+      responses:
+        "200":
+          description: Number assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SmsNumberResult"
+        "400":
+          description: Failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /sms/check-sms/{activationId}:
+    get:
+      operationId: checkSmsCode
+      tags: [sms]
+      summary: Check if SMS code has arrived
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+        - name: activationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: SMS status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SmsCodeResult"
+
+  /sms/cancel/{activationId}:
+    post:
+      operationId: cancelSmsActivation
+      tags: [sms]
+      summary: Cancel an SMS activation and refund after the waiting window
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+        - name: activationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Activation cancelled and wallet refunded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SmsCancelResult"
+        "400":
+          description: Cancellation is not yet eligible or activation is not pending
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /sms/history:
+    get:
+      operationId: listSmsHistory
+      tags: [sms]
+      summary: List user's SMS activation history
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: History
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SmsActivation"
+
+  # ── KYC ───────────────────────────────────────────────────────────────────
+  /kyc/status:
+    get:
+      operationId: getKycStatus
+      tags: [kyc]
+      summary: Get user KYC verification status
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: KYC status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycStatus"
+
+  /kyc/submit:
+    post:
+      operationId: submitKyc
+      tags: [kyc]
+      summary: Submit KYC information
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KycInput"
+      responses:
+        "200":
+          description: Submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycStatus"
+
+  # ── TEMPORARY EMAIL ───────────────────────────────────────────────────────
+  /temporary-email/inboxes:
+    get:
+      operationId: listTemporaryInboxes
+      tags: [temporaryEmail]
+      summary: List the signed-in user's temporary inboxes
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User's active temporary inboxes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemporaryInboxList"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createTemporaryInbox
+      tags: [temporaryEmail]
+      summary: Create a temporary inbox for the signed-in user
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Inbox created and stored for this account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemporaryInbox"
+        "409":
+          description: The user already has two inboxes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Temporary email provider unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /temporary-email/inboxes/{id}:
+    delete:
+      operationId: deleteTemporaryInbox
+      tags: [temporaryEmail]
+      summary: Remove an inbox and stop its automatic renewal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Inbox removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemporaryInboxRemoval"
+        "404":
+          description: Inbox not found for this user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── DASHBOARD ─────────────────────────────────────────────────────────────
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [wallet]
+      summary: Get dashboard summary with recent activity
+      parameters:
+        - name: x-user-id
+          in: header
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    # ── AUTH ────────────────────────────────────────────────────────────────
+    RegisterInput:
+      type: object
+      required: [email, password, firstName, lastName, phone]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        referralCode:
+          type: ["string", "null"]
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    SendOtpInput:
+      type: object
+      required: [target, type]
+      properties:
+        target:
+          type: string
+        type:
+          type: string
+          enum: [email, phone]
+        purpose:
+          type: string
+          enum: [verification, reset, login]
+
+    VerifyOtpInput:
+      type: object
+      required: [target, code]
+      properties:
+        target:
+          type: string
+        code:
+          type: string
+
+    ProfileUpdate:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+
+    ChangePasswordInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 6
+
+    AuthResponse:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+
+    User:
+      type: object
+      required: [id, email, firstName, lastName, phone, walletBalance, isVerified, kycLevel, referralCode, createdAt]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        walletBalance:
+          type: number
+        isVerified:
+          type: boolean
+        kycLevel:
+          type: integer
+        referralCode:
+          type: string
+        createdAt:
+          type: string
+
+    # ── WALLET ──────────────────────────────────────────────────────────────
+    FundWalletInput:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+        channel:
+          type: string
+          enum: [card, bank_transfer]
+        email:
+          type: string
+
+    BankTransferFundResponse:
+      type: object
+      required: [reference, account]
+      properties:
+        reference:
+          type: string
+        account:
+          type: object
+          required: [accountNumber, bankName, amount, beneficiaryName]
+          properties:
+            accountNumber:
+              type: string
+            bankName:
+              type: string
+            amount:
+              type: number
+            beneficiaryName:
+              type: string
+            expiresAt:
+              type: ["string", "null"]
+            note:
+              type: ["string", "null"]
+
+    FundVerifyResult:
+      type: object
+      required: [status, reference]
+      properties:
+        status:
+          type: string
+          enum: [success, failed]
+        reference:
+          type: string
+        # Authenticated owners also receive their updated wallet fields inline.
+        balance:
+          type: number
+        ledgerBalance:
+          type: number
+        accountNumber:
+          type: string
+
+    FundVerifyPending:
+      type: object
+      required: [status, reference]
+      properties:
+        status:
+          type: string
+          enum: [pending]
+        reference:
+          type: string
+        error:
+          type: string
+
+    VerifyPaymentInput:
+      type: object
+      required: [reference]
+      properties:
+        reference:
+          type: string
+
+    WalletTransferInput:
+      type: object
+      required: [recipientEmail, amount]
+      properties:
+        recipientEmail:
+          type: string
+        amount:
+          type: number
+        note:
+          type: ["string", "null"]
+
+    WithdrawInput:
+      type: object
+      required: [amount, bankCode, accountNumber, accountName]
+      properties:
+        amount:
+          type: number
+        bankCode:
+          type: string
+        accountNumber:
+          type: string
+        accountName:
+          type: string
+        narration:
+          type: ["string", "null"]
+
+    Wallet:
+      type: object
+      required: [id, userId, balance, ledgerBalance, currency, updatedAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        balance:
+          type: number
+        ledgerBalance:
+          type: number
+        currency:
+          type: string
+        updatedAt:
+          type: string
+
+    WalletStats:
+      type: object
+      required: [totalFunded, totalSpent, totalWithdrawn, totalTransfers, monthlySpend, categoryBreakdown]
+      properties:
+        totalFunded:
+          type: number
+        totalSpent:
+          type: number
+        totalWithdrawn:
+          type: number
+        totalTransfers:
+          type: number
+        monthlySpend:
+          type: number
+        categoryBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategorySpend"
+
+    CategorySpend:
+      type: object
+      required: [category, amount, count]
+      properties:
+        category:
+          type: string
+        amount:
+          type: number
+        count:
+          type: integer
+
+    PaymentInitResponse:
+      type: object
+      required: [reference, authorizationUrl, accessCode]
+      properties:
+        reference:
+          type: string
+        authorizationUrl:
+          type: string
+        accessCode:
+          type: string
+
+    DepositAccount:
+      type: object
+      required: [configured, bankName, accountNumber, accountName]
+      properties:
+        configured:
+          type: boolean
+        bankName:
+          type: string
+        accountNumber:
+          type: string
+        accountName:
+          type: string
+
+    ClaimDepositInput:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+
+    TransactionResult:
+      type: object
+      required: [success, message, transaction]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        transaction:
+          $ref: "#/components/schemas/Transaction"
+
+    # ── TRANSACTIONS ────────────────────────────────────────────────────────
+    Transaction:
+      type: object
+      required: [id, userId, type, amount, status, reference, description, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        type:
+          type: string
+        amount:
+          type: number
+        fee:
+          type: ["number", "null"]
+        status:
+          type: string
+        reference:
+          type: string
+        description:
+          type: string
+        metadata:
+          type: ["string", "null"]
+        balanceBefore:
+          type: ["number", "null"]
+        balanceAfter:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+
+    TransactionListResponse:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    # ── BANK ────────────────────────────────────────────────────────────────
+    BankListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Bank"
+
+    Bank:
+      type: object
+      required: [name, code, slug]
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        slug:
+          type: string
+        logo:
+          type: ["string", "null"]
+
+    ResolveAccountInput:
+      type: object
+      required: [accountNumber, bankCode]
+      properties:
+        accountNumber:
+          type: string
+        bankCode:
+          type: string
+
+    ResolvedAccount:
+      type: object
+      required: [accountName, accountNumber, bankCode]
+      properties:
+        accountName:
+          type: string
+        accountNumber:
+          type: string
+        bankCode:
+          type: string
+
+    SaveAccountInput:
+      type: object
+      required: [accountNumber, accountName, bankCode, bankName]
+      properties:
+        accountNumber:
+          type: string
+        accountName:
+          type: string
+        bankCode:
+          type: string
+        bankName:
+          type: string
+
+    SavedAccount:
+      type: object
+      required: [id, userId, accountNumber, accountName, bankCode, bankName, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        accountNumber:
+          type: string
+        accountName:
+          type: string
+        bankCode:
+          type: string
+        bankName:
+          type: string
+        createdAt:
+          type: string
+
+    # ── AIRTIME ─────────────────────────────────────────────────────────────
+    Network:
+      type: object
+      required: [id, name, code, logo]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        code:
+          type: string
+        logo:
+          type: string
+
+    BuyAirtimeInput:
+      type: object
+      required: [network, phone, amount]
+      properties:
+        network:
+          type: string
+        phone:
+          type: string
+        amount:
+          type: number
+
+    # ── DATA ─────────────────────────────────────────────────────────────────
+    DataPlan:
+      type: object
+      required: [id, name, size, validity, price, network]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        size:
+          type: string
+        validity:
+          type: string
+        price:
+          type: number
+        network:
+          type: string
+
+    BuyDataInput:
+      type: object
+      required: [network, phone, planId]
+      properties:
+        network:
+          type: string
+        phone:
+          type: string
+        planId:
+          type: string
+
+    # ── BILLS ────────────────────────────────────────────────────────────────
+    BillCategory:
+      type: object
+      required: [id, name, icon]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        icon:
+          type: string
+        description:
+          type: ["string", "null"]
+
+    BillProvider:
+      type: object
+      required: [id, name, code, category]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        code:
+          type: string
+        category:
+          type: string
+        logo:
+          type: ["string", "null"]
+        minimumAmount:
+          type: ["number", "null"]
+        maximumAmount:
+          type: ["number", "null"]
+
+    ValidateBillInput:
+      type: object
+      required: [provider, customerId]
+      properties:
+        provider:
+          type: string
+        customerId:
+          type: string
+        type:
+          type: string
+
+    BillValidation:
+      type: object
+      required: [name, customerId, provider]
+      properties:
+        name:
+          type: string
+        customerId:
+          type: string
+        provider:
+          type: string
+        address:
+          type: ["string", "null"]
+        amount:
+          type: ["number", "null"]
+
+    PayBillInput:
+      type: object
+      required: [provider, customerId, amount]
+      properties:
+        provider:
+          type: string
+        customerId:
+          type: string
+        amount:
+          type: number
+        customerName:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+
+    # ── SOCIAL ───────────────────────────────────────────────────────────────
+    SocialCategory:
+      type: object
+      required: [id, name, icon, platforms]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        icon:
+          type: string
+        platforms:
+          type: array
+          items:
+            type: string
+
+    SocialService:
+      type: object
+      required: [id, name, platform, category, pricePerUnit, minQuantity, maxQuantity, unit, description]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        platform:
+          type: string
+        category:
+          type: string
+        pricePerUnit:
+          type: number
+        minQuantity:
+          type: integer
+        maxQuantity:
+          type: integer
+        unit:
+          type: string
+        description:
+          type: string
+        deliveryTime:
+          type: ["string", "null"]
+        quality:
+          type: ["string", "null"]
+
+    SocialOrderInput:
+      type: object
+      required: [serviceId, link, quantity]
+      properties:
+        serviceId:
+          type: string
+        link:
+          type: string
+        quantity:
+          type: integer
+        note:
+          type: ["string", "null"]
+
+    SocialOrder:
+      type: object
+      required: [id, userId, serviceId, serviceName, platform, link, quantity, amount, status, startCount, remainsCount, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        serviceId:
+          type: string
+        serviceName:
+          type: string
+        platform:
+          type: string
+        link:
+          type: string
+        quantity:
+          type: integer
+        amount:
+          type: number
+        status:
+          type: string
+        startCount:
+          type: integer
+        remainsCount:
+          type: integer
+        externalOrderId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    SocialOrderResult:
+      type: object
+      required: [success, message, order]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        order:
+          $ref: "#/components/schemas/SocialOrder"
+
+    SocialOrderListResponse:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SocialOrder"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    # ── SMS ──────────────────────────────────────────────────────────────────
+    SmsCountry:
+      type: object
+      required: [code, name, prefix]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        flag:
+          type: ["string", "null"]
+
+    SmsService:
+      type: object
+      required: [id, name, price, country]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+        country:
+          type: string
+        count:
+          type: ["integer", "null"]
+
+    BuySmsNumberInput:
+      type: object
+      required: [country, service]
+      properties:
+        country:
+          type: string
+        service:
+          type: string
+
+    SmsNumberResult:
+      type: object
+      required: [activationId, number, status, expiresAt, createdAt]
+      properties:
+        activationId:
+          type: string
+        number:
+          type: string
+        status:
+          type: string
+        expiresAt:
+          type: string
+        createdAt:
+          type: string
+
+    SmsCancelResult:
+      type: object
+      required: [activationId, status, refunded, amount]
+      properties:
+        activationId:
+          type: string
+        status:
+          type: string
+        refunded:
+          type: boolean
+        amount:
+          type: number
+
+    SmsCodeResult:
+      type: object
+      required: [activationId, status]
+      properties:
+        activationId:
+          type: string
+        status:
+          type: string
+        code:
+          type: ["string", "null"]
+        fullSms:
+          type: ["string", "null"]
+
+    SmsActivation:
+      type: object
+      required: [id, userId, activationId, number, service, country, amount, status, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        activationId:
+          type: string
+        number:
+          type: string
+        service:
+          type: string
+        country:
+          type: string
+        amount:
+          type: number
+        status:
+          type: string
+        code:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    # ── KYC ──────────────────────────────────────────────────────────────────
+    KycStatus:
+      type: object
+      required: [userId, level, status, submittedAt]
+      properties:
+        userId:
+          type: integer
+        level:
+          type: integer
+        status:
+          type: string
+        verificationType:
+          type: ["string", "null"]
+          enum: [basic, advanced, null]
+        documentType:
+          type: ["string", "null"]
+        bvn:
+          type: ["string", "null"]
+        nin:
+          type: ["string", "null"]
+        submittedAt:
+          type: ["string", "null"]
+        verifiedAt:
+          type: ["string", "null"]
+        rejectionReason:
+          type: ["string", "null"]
+
+    KycInput:
+      type: object
+      required: [verificationType, documentType]
+      properties:
+        verificationType:
+          type: string
+          enum: [basic, advanced]
+        documentType:
+          type: string
+          enum: [bvn, nin, passport, drivers_license, national_id, voters_card]
+        documentNumber:
+          type: string
+        bvn:
+          type: ["string", "null"]
+        nin:
+          type: ["string", "null"]
+
+    # ── DASHBOARD ─────────────────────────────────────────────────────────────
+    DashboardSummary:
+      type: object
+      required: [wallet, recentTransactions, quickStats]
+      properties:
+        wallet:
+          $ref: "#/components/schemas/Wallet"
+        recentTransactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+        quickStats:
+          $ref: "#/components/schemas/WalletStats"
+
+    TemporaryInbox:
+      type: object
+      required: [id, address, inboxId, expiresAt, status, createdAt]
+      properties:
+        id:
+          type: integer
+        address:
+          type: string
+        inboxId:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [active, unavailable]
+        createdAt:
+          type: string
+          format: date-time
+
+    TemporaryInboxList:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TemporaryInbox"
+
+    TemporaryInboxRemoval:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean

@@ -1,0 +1,65 @@
+modules = ["nodejs-24", "python-3.11", "postgresql-16"]
+
+[deployment]
+router = "application"
+deploymentTarget = "autoscale"
+
+[deployment.postBuild]
+args = ["pnpm", "store", "prune"]
+env = { "CI" = "true" }
+
+[workflows]
+runButton = "Project"
+
+[agent]
+stack = "PNPM_WORKSPACE"
+expertMode = true
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
+
+[[ports]]
+localPort = 8080
+externalPort = 80
+
+[[ports]]
+localPort = 8081
+externalPort = 8081
+
+[[ports]]
+localPort = 8082
+externalPort = 3001
+
+[[ports]]
+localPort = 21791
+externalPort = 3000
+
+[[ports]]
+localPort = 24731
+externalPort = 3002
+
+[[ports]]
+localPort = 24732
+externalPort = 3003
+
+[userenv]
+
+[userenv.shared]
+ADMIN_EMAIL = "eteowoudo@gmail.com"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = "587"
+EMAIL_FROM = "CipherPay <gglteam.2025@gmail.com>"
+ADMIN_ALERT_EMAIL = "eteowoudo@gmail.com"
+SUPPORT_INBOX_EMAIL = "gglteam.2025@gmail.com"
+SUPPORT_REPLY_TO = "gglteam.2025@gmail.com"
+ENABLE_LOGIN_OTP = "true"
+FLUTTERWAVE_PUBLIC_KEY = "FLWPUBK-b35732e34c863f747b8b25502bdc3fdf-X"
+EMAIL_USER = "gglteam.2025@gmail.com"
+
+[userenv.development]
+EXPO_PUBLIC_DOMAIN = "726c8d13-661b-48a3-9dba-e084f286b64d-00-2v4xw6l3hxjj1.picard.replit.dev"
+
+[nix]
+channel = "stable-25_05"
+packages = ["railway"]

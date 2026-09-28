@@ -1,0 +1,14 @@
+[build]
+  base = "/"
+  command = "pnpm --filter @workspace/cipherpay-web run build"
+  publish = "artifacts/cipherpay-web/dist/public"
+
+[build.environment]
+  BASE_PATH = "/"
+  NODE_VERSION = "24"
+  PORT = "19169"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "CipherPay Web"
+description = "A browser-based CipherPay wallet for Nigerian users to fund wallets, send money, buy digital services, manage temporary email inboxes, and review account activity from any device."
+version = "1.0.0"
+id = "artifacts/cipherpay-web"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19169
+
+[services.development]
+run = "pnpm --filter @workspace/cipherpay-web run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/cipherpay-web", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/cipherpay-web/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19169"
+BASE_PATH = "/"

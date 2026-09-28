@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "qFaoMki_kUEeQUKVeNBQb"
+uri = "file://cipherpay-netlify-upload.zip"
+type = "unspecified"
+title = "CipherPay Netlify upload"
+description = "Upload this ZIP to Netlify Drop. It contains the built frontend files; the separate API still needs its own public server URL for login and payments."
+logical_id = "a66597e0-ce31-43bf-806f-ea5bc79e3eb4"
+content_hash = "sha256:276740681f72b4fafe247caceed121ff31a441982f899422775f4315e49e2392"
+size = 205871
+mtime_ms = 1790557082753
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:80758e8e-346d-44c3-99c8-d1a980415bfa/a66597e0-ce31-43bf-806f-ea5bc79e3eb4/3f6a3d72-b930-4ab6-8b2a-38866cb71984"
+storage_version_token = "1790557096464750"
+content_type = "application/octet-stream"

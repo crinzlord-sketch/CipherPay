@@ -1,0 +1,19 @@
+- [Lib typecheck staleness](lib-typecheck-staleness.md) — after editing a `lib/*` schema, per-package `--filter ... typecheck` reads a stale `.d.ts`; rebuild libs first.
+- [socially.ng reference format](socially-reference-format.md) — data buy requires reference to be EXACTLY 25 numeric digits, else 422 + auto-refund.
+- [VAS profit margin](vas-profit-margin.md) — flat ₦50 markup on data + airtime; keep debit and all refund paths on the same charge amount.
+- [Flutterwave VAS](flutterwave-vas.md) — airtime, data, and electricity use Flutterwave; bill payments need egress-IP whitelisting and strict provider error handling.
+- [Login OTP 2FA](login-otp-2fa.md) — retained behind `ENABLE_LOGIN_OTP`; default login now mints a session directly, while email verification remains separate.
+- [Flutterwave funding](flutterwave-funding.md) — bank-transfer vs card flow, money-safe DB-before-provider ordering, and the /wallet/fund/verify status contract clients must branch on.
+- [Self-hosted VAS logos](vas-logos.md) — networks + bill providers served from api-server `/api/assets/logos/<file>`; filename stem must match the VAS id EXACTLY (case-sensitive).
+- [NowPayments rate fix](nowpayments-rate.md) — `rate_from` is null/0 for NGN fiat pairs; compute ngnPerCoin = amountNgn / estimatedAmount instead. Never invert in the route layer.
+- [Flutterwave subaccount debit](flw-subaccount-debit.md) — debit_subaccount in POST /v3/transfers needs the numeric id, NOT the RS_xxx string; store flwSubaccountNumericId (integer) on the user row.
+- [Withdrawal notification link](withdrawal-notification-link.md) — initial notifyUser must use `/transactions/${tx.id}` (not `/transactions`) or the webhook's UPDATE WHERE link=... never matches and status stays "processing" forever.
+- [Temporary email retention](temporary-email-retention.md) — account renewal improves continuity, but the upstream disposable-email provider can still purge inboxes.
+- [Theme ownership](theme-ownership.md) — web theme class is applied by the app root; settings only persists explicit light/dark choices.
+- [Email runtime configuration](email-runtime-configuration.md) — SMTP credentials must be present in the API process; startup transport verification makes missing or rejected mail config visible.
+- [Admin master guard](admin-master-guard.md) — bootstrap admin stays protected; delegated admins can be removed but the current session cannot remove itself.
+- [Email Pro delivery signals](email-pro-delivery-signals.md) — SMTP acceptance is measurable; inbox delivery is not universal, and open tracking depends on remote image loading.
+- [Email Pro visual direction](email-pro-visual-direction.md) — Email Pro needs an authored, compact console treatment with explicitly separate dark and light surfaces.
+- [SMS cancellation refunds](sms-cancel-refund.md) — cancellation is server-gated at 15 minutes, rechecks SMSPool, and refunds through the original debit transaction.
+- [SMSPool purchase offers](smspool-purchase-offers.md) — a listed pool can go stale before purchase; retry without pool at the same max price to avoid false failures or overcharging.
+- [Managed API secret injection](managed-api-secret-injection.md) — secure entries can exist while the artifact API workflow still starts without them; verify process startup, not just secret existence.

@@ -1,0 +1,32 @@
+import { Router, type IRouter } from "express";
+import healthRouter from "./health";
+import authRouter from "./auth";
+import usersRouter from "./users";
+import walletRouter from "./wallet";
+import bankRouter from "./bank";
+import servicesRouter from "./services";
+import adminRouter from "./admin";
+import notificationsRouter from "./notifications";
+import kycRouter from "./kyc";
+import supportRouter from "./support";
+import adsRouter from "./ads";
+import temporaryEmailRouter from "./temporary-email";
+import emailRouter from "./email";
+
+const router: IRouter = Router();
+
+router.use(healthRouter);
+router.use(authRouter);
+router.use(usersRouter);
+router.use(walletRouter);
+router.use(bankRouter);
+router.use(servicesRouter);
+router.use(adminRouter);
+router.use(notificationsRouter);
+router.use(kycRouter);
+router.use(supportRouter);
+router.use(adsRouter);
+router.use(temporaryEmailRouter);
+router.use(emailRouter);
+
+export default router;

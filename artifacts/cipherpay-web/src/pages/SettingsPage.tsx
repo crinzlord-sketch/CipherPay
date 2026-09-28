@@ -1,0 +1,26 @@
+import { Check, Moon, ShieldCheck, Sun } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useChangePassword } from '@workspace/api-client-react';
+import { Button, Notice, PageHeading } from './PagePieces';
+
+export function SettingsPage() {
+  const password = useChangePassword();
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [notice, setNotice] = useState<{ text: string; tone: 'success' | 'error' } | null>(null);
+  useEffect(() => { const stored = window.localStorage.getItem('cipherpay_theme'); setTheme(stored === 'dark' ? 'dark' : 'light'); }, []);
+  const chooseTheme = (next: 'light' | 'dark') => { setTheme(next); window.localStorage.setItem('cipherpay_theme', next); document.documentElement.classList.toggle('dark', next === 'dark'); };
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault(); setNotice(null);
+    if (form.newPassword.length < 6) { setNotice({ text: 'Use at least 6 characters for your new password.', tone: 'error' }); return; }
+    if (form.newPassword !== form.confirmPassword) { setNotice({ text: 'The new passwords do not match.', tone: 'error' }); return; }
+    password.mutate({ data: { currentPassword: form.currentPassword, newPassword: form.newPassword } }, { onSuccess: () => { setForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); setNotice({ text: 'Password changed successfully.', tone: 'success' }); }, onError: (reason: any) => setNotice({ text: reason?.message ?? 'Could not change your password.', tone: 'error' }) });
+  };
+  return <div className="cp-page">
+    <PageHeading eyebrow="CIPHERPAY / PREFERENCES" title="Settings." detail="Choose how CipherPay looks and keep your account access secure." />
+    <div className="cp-grid cp-grid-two">
+      <section className="cp-card cp-card-pad"><div className="cp-card-head"><div><h2>Appearance</h2><p>Your preference is saved on this device.</p></div></div><div className="cp-preference-row"><div><h3>Theme</h3><p>Light is bright and open. Dark is softer after hours.</p></div><div className="cp-segmented" role="group" aria-label="Theme preference"><button className={theme === 'light' ? 'active' : ''} type="button" onClick={() => chooseTheme('light')} data-testid="button-theme-light"><Sun size={14} /> Light</button><button className={theme === 'dark' ? 'active' : ''} type="button" onClick={() => chooseTheme('dark')} data-testid="button-theme-dark"><Moon size={14} /> Dark</button></div></div></section>
+      <section className="cp-card cp-card-pad"><div className="cp-card-head"><div><h2>Change password</h2><p>Use a password you do not reuse elsewhere.</p></div><ShieldCheck size={19} color="hsl(var(--primary))" /></div><form className="cp-form" onSubmit={submit}><label className="cp-field"><span>Current password</span><input type="password" autoComplete="current-password" value={form.currentPassword} onChange={(event) => setForm({ ...form, currentPassword: event.target.value })} required data-testid="input-current-password" /></label><label className="cp-field"><span>New password</span><input type="password" autoComplete="new-password" minLength={6} value={form.newPassword} onChange={(event) => setForm({ ...form, newPassword: event.target.value })} required data-testid="input-new-password" /></label><label className="cp-field"><span>Confirm new password</span><input type="password" autoComplete="new-password" minLength={6} value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} required data-testid="input-confirm-password" /></label>{notice && <Notice tone={notice.tone}>{notice.text}</Notice>}<Button type="submit" disabled={password.isPending} data-testid="button-change-password">{password.isPending ? 'Changing password…' : 'Change password'} <Check size={15} /></Button></form></section>
+    </div>
+  </div>;
+}

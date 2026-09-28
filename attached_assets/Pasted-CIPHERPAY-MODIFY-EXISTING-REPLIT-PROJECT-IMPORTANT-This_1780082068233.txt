@@ -1,0 +1,398 @@
+CIPHERPAY — MODIFY EXISTING REPLIT PROJECT
+
+IMPORTANT:
+
+This is NOT a new project.
+
+I already have a working CipherPay project built on Replit and I will upload the FULL ZIP FILE of the existing source code into this new Replit account.
+
+You must MODIFY and IMPROVE the existing project.
+
+DO NOT rebuild from scratch unless necessary.
+
+Preserve existing working systems and improve them professionally.
+
+MAIN GOAL
+
+Convert the app from:
+
+Sandbox/demo fintech app
+TO:
+REAL production-ready fintech platform
+
+Remove all test APIs and sandbox systems.
+
+Use REAL APIs only.
+
+VERY IMPORTANT
+
+The old app used:
+
+Paystack TEST mode
+
+Now switch EVERYTHING to:
+
+REAL MODE
+LIVE APIs
+PRODUCTION KEYS
+
+I will provide:
+
+Real API keys
+Real provider credentials
+Real email credentials
+
+DO NOT use placeholders after implementation.
+
+PLATFORM REQUIREMENTS
+
+Make CipherPay work as:
+
+Mobile app
+Web app
+
+Users must NOT need Expo Go to use the app.
+
+Build it properly for:
+
+Android APK/AAB
+iOS-ready structure
+Web deployment
+
+The web version must work directly from a browser link.
+
+UI/UX IMPROVEMENTS
+
+Improve the entire design professionally.
+
+Theme:
+
+Purple
+White
+Small orange accents
+
+Style:
+
+Premium fintech UI
+Smooth animations
+Clean spacing
+Modern cards
+Beautiful typography
+Fast performance
+Soft shadows
+Rounded UI
+
+DO NOT overdesign.
+
+Keep it modern and realistic like:
+
+PalmPay
+Opay
+Cash App
+Monzo
+REAL MANUAL DEPOSIT SYSTEM
+
+REMOVE:
+
+Screenshot upload requirement
+
+NEW FLOW:
+
+User clicks “Fund Wallet”
+Show:
+Bank name
+Account number
+Account name
+Generate UNIQUE reference code
+User sends money manually
+User clicks:
+“I Have Made Payment”
+Then user enters:
+Sender account name
+Amount sent
+Reference code
+Deposit status becomes:
+pending
+Admin receives:
+Email notification
+Push notification
+In-app notification
+Admin manually confirms payment
+User wallet is credited AFTER charges are removed
+DEPOSIT CHARGES
+
+Add automatic deposit charges.
+
+Example:
+
+If user sends:
+₦1000
+
+System automatically calculates charges and credits:
+₦970 or any configured amount after charges.
+
+Admin should see:
+
+Original amount
+Charges removed
+Final credited amount
+
+Make deposit charges configurable in admin settings.
+
+WITHDRAWAL CHARGES
+
+Add automatic withdrawal charges too.
+
+System should:
+
+Deduct fees automatically
+Show fee preview before withdrawal
+Show final receivable amount
+
+Admin can configure:
+
+Fixed fees
+Percentage fees
+Minimum fees
+PROFIT SYSTEM
+
+VERY IMPORTANT:
+
+Increase prices slightly above provider prices.
+
+Example:
+If provider charges ₦950,
+app may sell for ₦1000.
+
+Apply this logic to:
+
+Airtime
+Data
+Gift cards
+Social boost services
+Bills payment
+
+Create PROFIT MARGIN settings in admin dashboard.
+
+Admin can configure:
+
+Percentage markup
+Fixed markup
+OTP LOGIN SYSTEM
+
+Add OTP verification during login.
+
+Requirements:
+
+Email OTP
+OR
+SMS OTP
+
+Flow:
+
+User enters email/password
+OTP is sent
+User verifies OTP
+Login completes
+
+Add:
+
+OTP expiration
+Resend OTP
+Rate limiting
+LIVE SUPPORT SYSTEM
+
+Improve AI + live support flow.
+
+Current flow:
+
+User chats with AI bot
+User clicks:
+“Talk To A Live Agent”
+Support request is created
+
+NEW REQUIREMENTS:
+
+When user requests live support:
+
+Admin must receive:
+
+Email notification
+Push notification
+In-app notification
+
+Admin support emails go to:
+gglteam.2025@gmail.com
+
+LIVE CHAT FEATURES
+
+Create REAL support chat system.
+
+Features:
+
+Real-time messaging
+Admin joins conversation
+User sees:
+“Support has joined the chat”
+File uploads
+Image uploads
+Read receipts
+Typing indicators
+Push notifications
+CHAT RESOLUTION FLOW
+
+When admin closes support conversation:
+
+Chat status changes to:
+resolved
+User receives email:
+“Your issue has been successfully resolved.”
+EMAIL SYSTEM
+
+Use:
+
+My email
+My app password
+
+via Nodemailer.
+
+ALL admin notifications must send to:
+gglteam.2025@gmail.com
+
+Admin should receive emails for:
+
+Deposit attempts
+Withdrawal requests
+KYC requests
+Support requests
+Suspicious activity
+
+Users receive emails for:
+
+Login OTP
+Deposits
+Withdrawals
+KYC updates
+Support updates
+Security alerts
+
+Create beautiful HTML email templates.
+
+ADMIN LOGIN
+
+Admin credentials:
+
+Email:
+admin@cipherpay.com
+
+Password:
+CipherPay#Admin2026!
+
+Protect admin routes securely.
+
+Use role-based access.
+
+HOMEPAGE IMPROVEMENTS
+
+Add a SMALL SLIDING BANNER SECTION on homepage/dashboard.
+
+Purpose:
+
+Advertise app features
+Promote services
+Display announcements
+Show promotions
+
+It should behave like:
+
+Smooth auto-sliding fintech promo banners
+
+Example slides:
+
+Buy Gift Cards Instantly
+Fast Airtime & Data
+Secure Wallet System
+Social Boost Services
+Refer & Earn
+
+Keep it elegant and not too large.
+
+SETTINGS PAGE
+
+Add:
+
+About Page
+Privacy Policy
+Security Settings
+
+Security settings should include:
+
+Change password
+Change PIN
+Device sessions
+Biometric settings
+Login history
+PROVIDER INTEGRATIONS
+
+I will provide REAL APIs.
+
+NO SANDBOX.
+
+Integrate:
+
+Reloadly
+Social boost provider APIs
+Airtime/data providers
+SMS verification providers
+
+Build APIs professionally with:
+
+Retry handling
+Error handling
+Logging
+Secure environment variables
+FIREBASE / DATABASE
+
+Keep existing database logic if possible.
+
+Improve:
+
+Structure
+Security
+Performance
+Real-time syncing
+IMPORTANT DEVELOPMENT RULES
+
+DO NOT:
+
+Generate fake data
+Hardcode balances
+Use mock APIs
+Use sandbox mode
+Break existing working features
+
+DO:
+
+Improve existing codebase
+Refactor where necessary
+Keep production structure
+Use reusable components
+Optimize performance
+FINAL REQUIREMENTS
+
+After modifications:
+
+The app must feel like a REAL fintech startup product.
+
+Everything must:
+
+Work properly
+Be connected
+Be responsive
+Be scalable
+Be production-ready
+Be deployable
+
+DO NOT stop halfway.
+
+Finish every feature completely before moving to the next.
