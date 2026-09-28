@@ -53,11 +53,8 @@ function StatCard({ icon: Icon, label, value, detail, tone = 'orange' }: { icon:
 
 export default function AdminConsole() {
   const { confirm, prompt } = useAnimatedDialog();
-  const [token, setToken] = useState(() => typeof window === 'undefined' ? '' : sessionStorage.getItem('cipherpay_admin_token') ?? '');
+  const [token, setToken] = useState(() => typeof window === 'undefined' ? '' : localStorage.getItem('cipherpay_token') ?? '');
   const [tab, setTab] = useState<Tab>(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'support' ? 'support' : 'overview');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [unlocking, setUnlocking] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -156,29 +153,6 @@ export default function AdminConsole() {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'The action could not be completed.');
       return null;
-    }
-  };
-
-  const unlock = async (event: FormEvent) => {
-    event.preventDefault();
-    setUnlocking(true);
-    setError('');
-    try {
-      const result = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
-      });
-      const payload = await result.json().catch(() => null);
-      if (!result.ok) throw new Error(payload?.error ?? 'Invalid admin credentials.');
-      sessionStorage.setItem('cipherpay_admin_token', payload.token);
-      setToken(payload.token);
-      setPassword('');
-      setNotice('Admin console unlocked.');
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'The console could not be unlocked.');
-    } finally {
-      setUnlocking(false);
     }
   };
 
@@ -368,11 +342,11 @@ export default function AdminConsole() {
   }, [supportChats]);
 
   if (!token) {
-    return <main className="cp-page admin-console"><div className="cp-heading"><div><div className="cp-kicker">CipherPay / operations</div><h1>Unlock the admin console.</h1><p>Review users, money movement, verification, and support from one controlled workspace.</p></div></div><section className="cp-card cp-card-pad admin-unlock"><div className="admin-unlock-icon"><ShieldCheck size={24} /></div><h2>Administrator verification required</h2><p>Use an admin email and password to issue a short-lived console token.</p><form className="cp-form" onSubmit={unlock}><label className="cp-field"><span>Admin email</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="admin@example.com" /></label><label className="cp-field"><span>Admin password</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="Your admin password" /></label>{error && <div className="cp-notice cp-notice-error">{error}</div>}<button className="admin-btn admin-btn-primary" type="submit" disabled={unlocking}>{unlocking ? 'Unlocking…' : 'Unlock console'} <ChevronRight size={16} /></button></form></section></main>;
+    return <main className="cp-page admin-console"><section className="cp-card cp-card-pad admin-unlock"><div className="admin-unlock-icon"><ShieldCheck size={24} /></div><h2>Admin session unavailable</h2><p>Your normal CipherPay admin sign-in is no longer active. Sign in again to continue.</p>{error && <div className="cp-notice cp-notice-error">{error}</div>}<button className="admin-btn admin-btn-primary" type="button" onClick={() => { localStorage.removeItem('cipherpay_token'); window.location.href = '/login'; }}>Back to sign in <ChevronRight size={16} /></button></section></main>;
   }
 
   return <main className="cp-page admin-console cp-page-reveal">
-    <div className="cp-heading admin-heading"><div><div className="cp-kicker">CipherPay / operations</div><h1>Admin command center.</h1><p>Every user, payment, verification queue, and support request in one place.</p></div><div className="admin-heading-actions"><AdminButton onClick={() => void loadAll()}><RefreshCw size={15} className={loading ? 'admin-spin' : ''} /> Refresh</AdminButton><AdminButton variant="quiet" onClick={() => { sessionStorage.removeItem('cipherpay_admin_token'); setToken(''); }}>Lock console</AdminButton></div></div>
+    <div className="cp-heading admin-heading"><div><div className="cp-kicker">CipherPay / operations</div><h1>Admin command center.</h1><p>Every user, payment, verification queue, and support request in one place.</p></div><div className="admin-heading-actions"><AdminButton onClick={() => void loadAll()}><RefreshCw size={15} className={loading ? 'admin-spin' : ''} /> Refresh</AdminButton></div></div>
     {error && <div className="cp-notice cp-notice-error admin-notice"><AlertTriangle size={16} />{error}</div>}
     {notice && <div className="cp-notice cp-notice-success admin-notice"><CheckCircle2 size={16} />{notice}<button type="button" onClick={() => setNotice('')} aria-label="Dismiss notice"><X size={15} /></button></div>}
     <nav className="admin-tabs" aria-label="Admin areas">{([
