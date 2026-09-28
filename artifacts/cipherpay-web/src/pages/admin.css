@@ -140,3 +140,13 @@
   .admin-chat-messages { padding: 16px 12px; }
   .admin-message { max-width: 90%; }
 }
+
+.admin-money-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:28px;border:1px solid rgba(255,255,255,.08);border-radius:24px;background:linear-gradient(135deg,rgba(255,255,255,.055),rgba(255,255,255,.018));margin-bottom:18px}
+.admin-money-hero h2{margin:5px 0 7px;font-size:clamp(24px,3vw,38px);letter-spacing:-.04em}.admin-money-hero p{margin:0;max-width:680px;opacity:.65}
+.admin-money-refresh{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:inherit;border-radius:12px;padding:10px 14px;cursor:pointer}
+.admin-money-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}.admin-money-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.admin-money-list{display:grid;gap:10px}.admin-money-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:15px;border:1px solid rgba(255,255,255,.07);border-radius:16px;background:rgba(255,255,255,.025)}
+.admin-money-main{display:flex;gap:11px;min-width:0}.admin-money-main>div{min-width:0;display:grid;gap:3px}.admin-money-main b,.admin-money-main small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.admin-money-main small{opacity:.55}.admin-money-avatar{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:rgba(255,255,255,.06);flex:none}.admin-money-amount{font-size:15px;white-space:nowrap}.admin-money-actions{grid-column:1/-1;display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+.admin-money-empty{min-height:190px;display:grid;place-items:center;text-align:center;align-content:center;gap:8px;opacity:.58}.admin-money-empty span{font-size:13px}
+@media(max-width:900px){.admin-money-stats{grid-template-columns:1fr 1fr}.admin-money-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.admin-money-hero{align-items:flex-start;flex-direction:column}.admin-money-stats{grid-template-columns:1fr}.admin-money-row{grid-template-columns:1fr}.admin-money-actions{justify-content:flex-start}}
