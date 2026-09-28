@@ -954,33 +954,193 @@ function Fund() {
 
 function Send() {
   const mutation = useWalletTransfer();
+  const [mode, setMode] = useState<'cipherpay' | 'bank'>('cipherpay');
   const [form, setForm] = useState({ recipientEmail: '', amount: '', note: '' });
+  const [bankForm, setBankForm] = useState({ bankCode: '', bankName: '', accountNumber: '', accountName: '', narration: '' });
+  const [banks, setBanks] = useState<any[]>([]);
+  const [bankSearch, setBankSearch] = useState('');
+  const [bankOpen, setBankOpen] = useState(false);
+  const [loadingBanks, setLoadingBanks] = useState(false);
+  const [resolving, setResolving] = useState(false);
+  const [sendingBank, setSendingBank] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
-  const submit = (event: React.FormEvent) => {
+
+  useEffect(() => {
+    if (mode !== 'bank' || banks.length) return;
+    let active = true;
+    setLoadingBanks(true);
+    apiRequest<{ data: any[] }>('/api/bank/list')
+      .then((payload) => { if (active) setBanks(payload.data ?? []); })
+      .catch((e: any) => { if (active) setError(e?.message ?? 'Could not load banks.'); })
+      .finally(() => { if (active) setLoadingBanks(false); });
+    return () => { active = false; };
+  }, [mode, banks.length]);
+
+  const filteredBanks = banks.filter((bank) =>
+    String(bank.name ?? '').toLowerCase().includes(bankSearch.trim().toLowerCase()),
+  );
+
+  const resolveBankAccount = async () => {
+    if (bankForm.bankCode && /^\\d{10}$/.test(bankForm.accountNumber)) {
+      setError('');
+      setResolving(true);
+      try {
+        const payload = await apiRequest<{ accountName: string; accountNumber: string; bankCode: string }>(
+          '/api/bank/resolve',
+          { method: 'POST', body: { bankCode: bankForm.bankCode, accountNumber: bankForm.accountNumber } },
+        );
+        setBankForm((current) => ({
+          ...current,
+          accountName: payload.accountName,
+          accountNumber: payload.accountNumber,
+          bankCode: payload.bankCode,
+        }));
+      } catch (e: any) {
+        setBankForm((current) => ({ ...current, accountName: '' }));
+        setError(e?.message ?? 'Could not verify that account.');
+      } finally {
+        setResolving(false);
+      }
+    }
+  };
+
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
     setResult(null);
-    mutation.mutate(
-      { data: { ...form, amount: parseGroupedDigits(form.amount) } as any },
-      {
-        onSuccess: (value: any) => setResult(value),
-        onError: (reason: any) => setError(reason?.message ?? 'The transfer could not be completed.'),
-      },
-    );
+
+    if (mode === 'cipherpay') {
+      mutation.mutate(
+        { data: { ...form, amount: parseGroupedDigits(form.amount) } as any },
+        {
+          onSuccess: (value: any) => setResult(value),
+          onError: (reason: any) => setError(reason?.message ?? 'The transfer could not be completed.'),
+        },
+      );
+      return;
+    }
+
+    if (!bankForm.bankCode || !/^\\d{10}$/.test(bankForm.accountNumber)) {
+      setError('Choose a bank and enter a valid 10-digit account number.');
+      return;
+    }
+    if (!bankForm.accountName) {
+      await resolveBankAccount();
+      return;
+    }
+    const amount = parseGroupedDigits(form.amount);
+    if (!(amount > 0)) {
+      setError('Enter an amount to send.');
+      return;
+    }
+
+    setSendingBank(true);
+    try {
+      const payload = await apiRequest<any>('/api/wallet/withdraw', {
+        method: 'POST',
+        body: {
+          amount,
+          bankCode: bankForm.bankCode,
+          accountNumber: bankForm.accountNumber,
+          accountName: bankForm.accountName,
+          narration: bankForm.narration || undefined,
+        },
+      });
+      setResult(payload);
+      void queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
+    } catch (e: any) {
+      setError(e?.message ?? 'The bank transfer could not be completed.');
+    } finally {
+      setSendingBank(false);
+    }
   };
+
+  const busy = mutation.isPending || sendingBank;
   return <>
-    <PageTitle eyebrow="MONEY / SEND" title="Send money, simply." detail="Move funds to any CipherPay wallet in a few seconds." />
+    <PageTitle
+      eyebrow="MONEY / SEND"
+      title="Send money, simply."
+      detail="Move funds to another CipherPay user or send directly to any Nigerian bank account."
+    />
     <div className="form-layout">
       <form className="panel main-form" onSubmit={submit}>
-        <div className="form-section-title"><span className="step">01</span><div><h2>Who are you sending to?</h2><p>Use their CipherPay email address.</p></div></div>
-        <Field label="Recipient email" type="email" placeholder="friend@example.com" value={form.recipientEmail} onChange={(event: any) => setForm({ ...form, recipientEmail: event.target.value })} required data-testid="input-recipient-email" />
-        <div className="field-row"><Field label="Amount (₦)" type="text" inputMode="numeric" min="1" placeholder="0.00" value={form.amount} onChange={(event: any) => setForm({ ...form, amount: formatGroupedDigits(event.target.value) })} required data-testid="input-send-amount" /><Field label="Note (optional)" placeholder="What's this for?" value={form.note} onChange={(event: any) => setForm({ ...form, note: event.target.value })} data-testid="input-send-note" /></div>
+        <div className="tabs send-tabs">
+          <button type="button" className={`tab ${mode === 'cipherpay' ? 'active' : ''}`} onClick={() => { setMode('cipherpay'); setError(''); setResult(null); }}>
+            CipherPay user
+          </button>
+          <button type="button" className={`tab ${mode === 'bank' ? 'active' : ''}`} onClick={() => { setMode('bank'); setError(''); setResult(null); }}>
+            Bank account
+          </button>
+        </div>
+
+        {mode === 'cipherpay' ? (
+          <>
+            <div className="form-section-title"><span className="step">01</span><div><h2>Who are you sending to?</h2><p>Use their CipherPay email address.</p></div></div>
+            <Field label="Recipient email" type="email" placeholder="friend@example.com" value={form.recipientEmail} onChange={(event: any) => setForm({ ...form, recipientEmail: event.target.value })} required data-testid="input-recipient-email" />
+          </>
+        ) : (
+          <>
+            <div className="form-section-title"><span className="step">01</span><div><h2>Where should it go?</h2><p>Choose a Nigerian bank and verify the account before sending.</p></div></div>
+            <div className="bank-picker">
+              <label className="field"><span>Bank</span>
+                <button type="button" className="bank-picker-trigger" onClick={() => setBankOpen((open) => !open)}>
+                  <span>{bankForm.bankName || (loadingBanks ? 'Loading banks…' : 'Select a bank')}</span><ArrowRight size={15} className={bankOpen ? 'bank-picker-arrow open' : 'bank-picker-arrow'} />
+                </button>
+              </label>
+              {bankOpen && <div className="bank-picker-menu">
+                <input autoFocus className="bank-search-input" placeholder="Search banks…" value={bankSearch} onChange={(event) => setBankSearch(event.target.value)} />
+                <div className="bank-picker-list">
+                  {filteredBanks.map((bank) => (
+                    <button type="button" key={bank.code} className="bank-picker-option" onClick={() => {
+                      setBankForm((current) => ({ ...current, bankCode: String(bank.code), bankName: String(bank.name), accountName: '' }));
+                      setBankOpen(false);
+                      setBankSearch('');
+                    }}>{bank.name}</button>
+                  ))}
+                  {!filteredBanks.length && <div className="bank-picker-empty">No banks match that search.</div>}
+                </div>
+              </div>}
+            </div>
+            <Field
+              label="Account number"
+              type="text"
+              inputMode="numeric"
+              maxLength={10}
+              placeholder="0123456789"
+              value={bankForm.accountNumber}
+              onChange={(event: any) => setBankForm((current) => ({ ...current, accountNumber: event.target.value.replace(/\\D/g, '').slice(0, 10), accountName: '' }))}
+              onBlur={resolveBankAccount}
+              required
+              data-testid="input-bank-account-number"
+            />
+            {bankForm.accountName && <div className="resolved-account"><Check size={16} /><div><small>Account name</small><b>{bankForm.accountName}</b></div></div>}
+          </>
+        )}
+
+        <div className="field-row">
+          <Field label="Amount (₦)" type="text" inputMode="numeric" min="1" placeholder="0.00" value={form.amount} onChange={(event: any) => setForm({ ...form, amount: formatGroupedDigits(event.target.value) })} required data-testid="input-send-amount" />
+          {mode === 'cipherpay'
+            ? <Field label="Note (optional)" placeholder="What's this for?" value={form.note} onChange={(event: any) => setForm({ ...form, note: event.target.value })} data-testid="input-send-note" />
+            : <Field label="Narration (optional)" placeholder="What is this for?" value={bankForm.narration} onChange={(event: any) => setBankForm((current) => ({ ...current, narration: event.target.value.slice(0, 120) }))} data-testid="input-bank-narration" />
+          }
+        </div>
+
+        {resolving && <div className="muted-line">Verifying account details…</div>}
         {error && <div className="error-box" role="alert">{error}</div>}
-        {result && <div className="success-box"><Check size={17} /><div><b>Transfer complete</b><span>{result.message || 'Your money is on its way.'}</span></div></div>}
-        <Button type="submit" className="full-btn" disabled={mutation.isPending} data-testid="button-send-submit">{mutation.isPending ? 'Sending…' : 'Review and send'} <ArrowRight size={17} /></Button>
+        {result && mode === 'bank' && <div className="success-box"><Check size={17} /><div><b>Bank transfer submitted</b><span>{result.message || 'Your transfer is being processed.'}</span></div></div>}
+        {result && mode === 'cipherpay' && <div className="success-box"><Check size={17} /><div><b>Transfer complete</b><span>{result.message || 'Your money is on its way.'}</span></div></div>}
+
+        <Button type="submit" className="full-btn" disabled={busy || resolving} data-testid="button-send-submit">
+          {busy ? 'Sending…' : mode === 'bank' ? (bankForm.accountName ? 'Send to bank' : 'Verify account') : 'Review and send'} <ArrowRight size={17} />
+        </Button>
       </form>
-      <div className="side-note violet"><span className="side-note-icon"><SendIcon size={20} /></span><h3>From your wallet to theirs.</h3><p>No bank details needed. CipherPay users receive funds instantly.</p><div className="side-rule" /><span className="mono">TRANSFER / FAST-02</span></div>
+      <div className="side-note violet">
+        <span className="side-note-icon"><SendIcon size={20} /></span>
+        <h3>{mode === 'bank' ? 'Straight to their bank.' : 'From your wallet to theirs.'}</h3>
+        <p>{mode === 'bank' ? 'Bank transfers are sent from the customer wallet assigned to your CipherPay account. The recipient sees the sender name registered on that wallet.' : 'No bank details needed. CipherPay users receive funds instantly.'}</p>
+        <div className="side-rule" /><span className="mono">{mode === 'bank' ? 'BANK / DIRECT-01' : 'TRANSFER / FAST-02'}</span>
+      </div>
     </div>
   </>;
 }
