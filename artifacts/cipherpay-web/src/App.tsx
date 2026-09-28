@@ -815,7 +815,7 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
             <div><strong>{expiresAt}</strong></div>
           </div>
         </div>
-      </div>
+      </div>}
 
       {paymentStatus === 'success' && (
         <div className="success-box transfer-funding-success" role="status">
