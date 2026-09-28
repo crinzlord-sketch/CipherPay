@@ -181,7 +181,7 @@ function MobileWelcome() {
     <div className="mobile-welcome-grid" aria-hidden="true" />
     <div className="mobile-welcome-ring mobile-welcome-ring-one" aria-hidden="true" />
     <div className="mobile-welcome-ring mobile-welcome-ring-two" aria-hidden="true" />
-    <div className="mobile-welcome-status" aria-hidden="true"><span className="signal-pulse" /><span>ready when you are</span><b>CP / 01</b></div>
+    
     <div className="mobile-welcome-inner">
       <Logo />
       <div className="mobile-welcome-copy">
