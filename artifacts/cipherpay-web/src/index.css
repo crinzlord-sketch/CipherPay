@@ -5768,3 +5768,18 @@ html[data-route-transition="auth-switch"]::after {
 @media (max-width: 600px) {
   .mobile-welcome-actions { margin-top: 38px; }
 }
+
+/* Bank transfer result */
+.transfer-result-backdrop { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 20px; background: hsla(263, 36%, 10%, .58); backdrop-filter: blur(14px); animation: purchase-success-fade 180ms ease both; }
+.transfer-result-pop { position: relative; width: min(100%, 430px); padding: 32px 28px 26px; border: 1px solid hsl(var(--border)); border-radius: 24px; background: hsl(var(--card)); color: hsl(var(--foreground)); text-align: center; box-shadow: 0 28px 90px hsla(263, 45%, 10%, .3); animation: purchase-success-in 320ms cubic-bezier(.16,.8,.2,1) both; }
+.transfer-result-close { position: absolute; top: 14px; right: 14px; display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid hsl(var(--border)); border-radius: 50%; background: hsl(var(--muted) / .55); color: hsl(var(--muted-foreground)); cursor: pointer; }
+.transfer-result-icon { display: grid; width: 72px; height: 72px; margin: 0 auto 18px; place-items: center; border-radius: 50%; border: 1px solid hsl(150 55% 42% / .28); background: hsl(150 55% 42% / .12); color: hsl(150 55% 38%); }
+.transfer-result-icon.pending { border-color: hsl(var(--primary) / .25); background: hsl(var(--primary) / .12); color: hsl(var(--primary)); animation: transfer-result-spin 1.1s linear infinite; }
+.transfer-result-icon.failed { border-color: hsl(var(--destructive) / .28); background: hsl(var(--destructive) / .1); color: hsl(var(--destructive)); }
+.transfer-result-pop h2 { margin: 0; font-size: 1.5rem; letter-spacing: -.04em; }
+.transfer-result-pop p { margin: 9px auto 20px; max-width: 330px; color: hsl(var(--muted-foreground)); font-size: .8rem; line-height: 1.55; }
+.transfer-result-status { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 20px; color: hsl(var(--muted-foreground)); font-size: .72rem; }
+.transfer-result-spinner { width: 8px; height: 8px; border-radius: 50%; background: hsl(var(--primary)); animation: transfer-result-pulse 1s ease-in-out infinite; }
+.transfer-result-button { width: 100%; justify-content: center; }
+@keyframes transfer-result-spin { to { transform: rotate(360deg); } }
+@keyframes transfer-result-pulse { 50% { opacity: .35; transform: scale(.7); } }
