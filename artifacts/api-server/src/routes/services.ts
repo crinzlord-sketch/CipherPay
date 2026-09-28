@@ -388,6 +388,7 @@ router.post("/bills/pay", async (req, res): Promise<void> => {
       // Look up the live biller_name — POST /v3/bills requires `type` = biller_name, not biller code
       const billerName = await getElecBillerName(flwElec.biller, item);
       if (!billerName) {
+        if (sourceFunded) await refundBillSourceToUser(userId, amount, tx.id);
         await refundFailed(userId, tx.id, amount, "Electricity biller not found in Flutterwave catalog", "bill");
         req.log.warn({ provider, biller: flwElec.biller, item }, "Electricity biller not found in catalog — cannot pay");
         res.status(502).json({ error: "Bill payment failed. You have been refunded.", details: "Biller not found in catalog" });
@@ -396,6 +397,7 @@ router.post("/bills/pay", async (req, res): Promise<void> => {
       const result = await flwPayBill({ billerName, item, customer: customerId, amount, reference });
       req.log.info({ flwStatus: result.raw?.status, flwMessage: result.raw?.message, flwRef: result.flwRef, reference, provider, item, billerName }, "Flutterwave electricity bill response");
       if (!result.success) {
+        if (sourceFunded) await refundBillSourceToUser(userId, amount, tx.id);
         await refundFailed(userId, tx.id, amount, `Bill payment failed: ${result.message}`, "bill");
         // Surface actionable Flutterwave messages (min/max amount) directly; genericise the rest
         const rawMsg = result.message ?? "";
@@ -430,6 +432,7 @@ router.post("/bills/pay", async (req, res): Promise<void> => {
         units: null,
       });
     } catch (e: any) {
+      if (sourceFunded) await refundBillSourceToUser(userId, amount, tx.id);
       await refundFailed(userId, tx.id, amount, `Provider error: ${e.message ?? "unknown"}`, "bill");
       res.status(502).json({ error: "Provider error. You have been refunded.", details: e.message });
     }
