@@ -107,18 +107,60 @@ function brandWrap(title: string, contentHtml: string, previewText: string): str
 
 export async function sendMail(to: string, subject: string, html: string, text?: string, replyToOverride?: string): Promise<void> {
   if (!isEmailConfigured()) {
-    logger.warn({ to, subject }, "Email skipped — EMAIL_USER / EMAIL_PASS not configured");
+    logger.warn({ to, subject }, "Email skipped — no email provider configured");
     throw new Error("Email service not configured. Please contact support.");
   }
+
+  const plainText = text ?? html
+    .replace(/<style[\\s\\S]*?<\\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\\s+/g, " ")
+    .trim();
+
+  // Resend uses HTTPS, so it works from Render Free where outbound SMTP
+  // ports are blocked. Keep SMTP as a fallback for local/legacy environments.
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const { replyTo, from } = emailConfig();
+      const resendFrom = process.env.RESEND_FROM ?? from;
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: resendFrom,
+          to: [to],
+          subject,
+          html,
+          text: plainText,
+          ...(replyToOverride ?? replyTo ? { reply_to: replyToOverride ?? replyTo } : {}),
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.message ?? `Resend API returned HTTP ${response.status}`);
+      }
+
+      logger.info({ to, subject, messageId: payload?.id }, "email sent via Resend");
+      return;
+    } catch (e: any) {
+      logger.error({ err: e?.message, to, subject }, "Resend email send failed");
+      throw new Error(`Could not send email: ${e?.message ?? "unknown"}`);
+    }
+  }
+
   try {
     const { replyTo, from } = emailConfig();
     const info = await transporter().sendMail({
       from,
       replyTo: replyToOverride ?? replyTo,
       to, subject, html,
-      text: text ?? html.replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
+      text: plainText,
     });
-    logger.info({ to, subject, messageId: info.messageId }, "email sent");
+    logger.info({ to, subject, messageId: info.messageId }, "email sent via SMTP");
   } catch (e: any) {
     logger.error({ err: e?.message, to, subject }, "email send failed");
     throw new Error(`Could not send email: ${e?.message ?? "unknown"}`);
@@ -182,7 +224,7 @@ export async function sendAdminAlertEmail(subject: string, body: string): Promis
     return;
   }
   if (!isEmailConfigured()) {
-    logger.warn({ subject }, "Admin alert email skipped — EMAIL_USER / EMAIL_PASS not configured");
+    logger.warn({ subject }, "Admin alert email skipped — no email provider configured");
     return;
   }
   const safeBody = escapeHtml(body).replace(/\r?\n/g, "<br>");
