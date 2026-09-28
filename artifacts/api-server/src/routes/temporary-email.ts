@@ -26,7 +26,11 @@ const router: IRouter = Router();
 router.get("/temporary-email/inboxes", async (req, res): Promise<void> => {
   const id = userId(req);
   if (!id) { res.status(401).json({ error: "Unauthorized" }); return; }
-  await renewDueTemporaryInboxes();
+  // Renewal is handled by the background sweep. Do not make the inbox page
+  // depend on a provider/network call before it can render existing inboxes.
+  void renewDueTemporaryInboxes().catch((error: any) => {
+    req.log?.warn?.({ err: error?.message }, "temporary inbox background renewal failed");
+  });
   const rows = await db.select().from(temporaryInboxesTable)
     .where(eq(temporaryInboxesTable.userId, id))
     .orderBy(asc(temporaryInboxesTable.slot));
