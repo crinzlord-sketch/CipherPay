@@ -776,9 +776,9 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
       <div className="transfer-panel-heading">
         <span className={`transfer-success-mark ${paymentStatus}`}><Check size={18} /></span>
         <div>
-          <span className="eyebrow">BANK TRANSFER / READY</span>
-          <h2 id="transfer-account-title">Transfer account generated</h2>
-          <p>{paymentMessage}</p>
+          <span className="eyebrow">{paymentStatus === 'success' ? 'BANK TRANSFER / SUCCESS' : paymentStatus === 'failed' ? 'BANK TRANSFER / ATTENTION' : 'BANK TRANSFER / READY'}</span>
+          <h2 id="transfer-account-title">{paymentStatus === 'success' ? 'Funding successful' : paymentStatus === 'failed' ? 'Funding needs attention' : 'Transfer account generated'}</h2>
+          <p>{paymentStatus === 'success' ? 'Your payment was confirmed and your wallet has been credited.' : paymentStatus === 'failed' ? 'This funding attempt could not be completed.' : paymentMessage}</p>
         </div>
         <span className={`transfer-status transfer-status-${paymentStatus}`}>{paymentStatusLabel}</span>
       </div>
