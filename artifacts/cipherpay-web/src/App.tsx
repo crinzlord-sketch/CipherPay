@@ -992,7 +992,7 @@ function Send() {
     });
 
   const resolveBankAccount = async (bankCode = bankForm.bankCode, accountNumber = bankForm.accountNumber) => {
-    const digits = String(accountNumber ?? '').replace(/\\D/g, '').slice(0, 10);
+    const digits = String(accountNumber ?? '').replace(/\D/g, '').slice(0, 10);
     if (!bankCode || digits.length !== 10) return;
     setError('');
     setResolving(true);
@@ -1031,7 +1031,7 @@ function Send() {
       return;
     }
 
-    if (!bankForm.bankCode || !/^\\d{10}$/.test(bankForm.accountNumber)) {
+    if (!bankForm.bankCode || !/^\d{10}$/.test(bankForm.accountNumber)) {
       setError('Choose a bank and enter a valid 10-digit account number.');
       return;
     }
@@ -1105,7 +1105,7 @@ function Send() {
                     <button type="button" key={bank.code} className="bank-picker-option" onClick={() => {
                       setBankForm((current) => ({ ...current, bankCode: String(bank.code), bankName: String(bank.name), accountName: '' }));
                       setBankOpen(false);
-                      if (bankForm.accountNumber.replace(/\\D/g, '').length === 10) {
+                      if (bankForm.accountNumber.replace(/\D/g, '').length === 10) {
                         void resolveBankAccount(String(bank.code), bankForm.accountNumber);
                       }
                       setBankSearch('');
@@ -1123,7 +1123,7 @@ function Send() {
               placeholder="0123456789"
               value={bankForm.accountNumber}
               onChange={(event: any) => {
-                const digits = event.target.value.replace(/\\D/g, '').slice(0, 10);
+                const digits = event.target.value.replace(/\D/g, '').slice(0, 10);
                 setBankForm((current) => ({ ...current, accountNumber: digits, accountName: '' }));
                 if (digits.length === 10 && bankForm.bankCode) {
                   void resolveBankAccount(bankForm.bankCode, digits);
