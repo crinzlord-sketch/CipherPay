@@ -65,6 +65,12 @@ export function formatWallet(wallet: typeof walletsTable.$inferSelect) {
     balance: parseFloat(wallet.balance),
     ledgerBalance: parseFloat(wallet.ledgerBalance),
     currency: wallet.currency,
+    depositAccount: wallet.flwPsaStaticAccount ? {
+      accountNumber: wallet.flwPsaStaticAccount,
+      bankName: wallet.flwPsaBankName ?? "Flutterwave",
+      bankCode: wallet.flwPsaBankCode ?? "",
+      permanent: true,
+    } : null,
     updatedAt: wallet.updatedAt.toISOString(),
   };
 }
