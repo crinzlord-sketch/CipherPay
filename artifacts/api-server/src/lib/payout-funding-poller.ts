@@ -1,6 +1,6 @@
 import { isNotNull, eq, sql } from "drizzle-orm";
 import { db, walletsTable, transactionsTable, usersTable } from "@workspace/db";
-import { fetchPayoutWalletTransactions } from "./flutterwave";
+import { fetchPayoutWalletTransactions, movePayoutWalletToMerchant } from "./flutterwave";
 import { handleEvent } from "../routes/webhooks";
 import { logger } from "./logger";
 import { getDepositFlagReason } from "./kycLimits";
@@ -21,6 +21,16 @@ export function startPayoutFundingPoller(): void {
         try {
           const transactions = await fetchPayoutWalletTransactions(row.accountReference);
           logger.info({ accountReference: row.accountReference, transactionCount: transactions.length, transactions: transactions.map((tx: any) => ({ id: tx?.id, status: tx?.status, debitCurrency: tx?.debit_currency, currency: tx?.currency, amount: tx?.amount, reference: tx?.reference, accountNumber: tx?.account_number, narration: tx?.narration })) }, "payout funding poll checked wallet");
+          // Flutterwave can expose a separate small positive history row for the
+          // funding fee with the same reference as the actual deposit. When the
+          // classification fields are missing, only reconcile the largest amount
+          // for that reference; never turn the provider fee into wallet credit.
+          const largestAmountByReference = new Map<string, number>();
+          for (const item of transactions) {
+            const ref = String(item?.reference ?? "").trim();
+            const amount = Number(item?.amount ?? 0);
+            if (ref && amount > 0) largestAmountByReference.set(ref, Math.max(largestAmountByReference.get(ref) ?? 0, amount));
+          }
           for (const tx of transactions) {
             const status = String(tx?.status ?? "").toUpperCase();
             const debitCurrency = String(tx?.debit_currency ?? "").toUpperCase();
@@ -50,7 +60,8 @@ export function startPayoutFundingPoller(): void {
               !debitCurrency &&
               !narration &&
               Boolean(reference) &&
-              !reference.toUpperCase().startsWith("CP-");
+              !reference.toUpperCase().startsWith("CP-") &&
+              amount >= (largestAmountByReference.get(reference) ?? amount);
 
             const isWalletFunding = explicitlyWalletFunding || unclassifiedIncomingTransfer;
 
@@ -153,6 +164,35 @@ export function startPayoutFundingPoller(): void {
           }
         } catch (e: any) {
           logger.warn({ err: e?.message, accountReference: row.accountReference }, "payout funding poll failed");
+        }
+      }
+
+      // Move every successfully charged withdrawal fee from the user's PSA to
+      // CipherPay's main Flutterwave/F4B wallet. This is retried automatically
+      // until it succeeds, so a temporary provider/IP-whitelist failure does not
+      // leave platform fees stranded inside customer PSAs.
+      const successfulWithdrawals = await db.select()
+        .from(transactionsTable)
+        .where(sql`type = 'withdraw' AND status = 'success' AND fee IS NOT NULL AND fee > 0`);
+      for (const tx of successfulWithdrawals) {
+        let meta: any = {};
+        try { meta = JSON.parse(tx.metadata ?? "{}"); } catch { continue; }
+        const fee = Number(meta.fee ?? tx.fee ?? 0);
+        const debitSubaccount = String(meta.payoutSubaccount ?? "").trim();
+        if (!Number.isFinite(fee) || fee <= 0 || !debitSubaccount || meta.feeTransferId) continue;
+        const reference = `CP-FEE-${tx.id}`.slice(0, 48);
+        try {
+          const transfer = await movePayoutWalletToMerchant({ debitSubaccount, amount: fee, reference });
+          if (transfer.accepted) {
+            await db.update(transactionsTable).set({
+              metadata: JSON.stringify({ ...meta, feeTransferId: transfer.id, feeTransferReference: reference, feeTransferStatus: "success" }),
+            }).where(eq(transactionsTable.id, tx.id));
+            logger.info({ txId: tx.id, fee, transferId: transfer.id }, "withdrawal fee swept to merchant wallet");
+          } else {
+            logger.warn({ txId: tx.id, fee, message: transfer.message }, "withdrawal fee sweep not completed; will retry");
+          }
+        } catch (e: any) {
+          logger.warn({ txId: tx.id, fee, err: e?.message }, "withdrawal fee sweep failed; will retry");
         }
       }
     } catch (e: any) {
