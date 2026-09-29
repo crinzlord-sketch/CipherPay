@@ -22,10 +22,25 @@ export function startPayoutFundingPoller(): void {
           for (const tx of transactions) {
             const status = String(tx?.status ?? "").toUpperCase();
             const debitCurrency = String(tx?.debit_currency ?? "").toUpperCase();
-            if (status !== "SUCCESSFUL" || debitCurrency !== "PSA") continue;
+            const narration = String(tx?.narration ?? "").trim().toUpperCase();
+
+            // The PSA transaction-history endpoint does not reliably include
+            // debit_currency, even though the wallet-funding webhook does.
+            // Because this query is already scoped to a specific PSA wallet,
+            // use Flutterwave's WALLET FUNDING narration as the fallback signal.
+            // This prevents legitimate bank deposits from being silently skipped.
+            const isWalletFunding =
+              narration === "WALLET FUNDING" ||
+              debitCurrency === "PSA";
+
+            if (status !== "SUCCESSFUL" || !isWalletFunding) continue;
+
             await handleEvent({ log: logger } as any, {
               event: "transfer.completed",
-              data: tx,
+              data: {
+                ...tx,
+                debit_currency: debitCurrency || "PSA",
+              },
             }, row.accountReference);
           }
         } catch (e: any) {
