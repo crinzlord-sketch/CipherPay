@@ -18,3 +18,5 @@ export * from "./temporary-inboxes";
 export * from "./email-pro";
 
 export * from "./email-pro-subscriptions";
+
+export * from "./user-email-events";
