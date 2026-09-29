@@ -193,9 +193,9 @@ router.get("/admin/egress-ip", requireAdmin, async (req, res): Promise<void> => 
 });
 
 router.post("/admin/email/test", requireAdmin, async (req: AdminRequest, res): Promise<void> => {
-  const recipient = String(process.env.ADMIN_ALERT_EMAIL ?? process.env.EMAIL_USER ?? "").trim();
+  const recipient = String(req.admin?.email ?? "").trim();
   if (!recipient) {
-    res.status(503).json({ error: "Admin alert email recipient is not configured." });
+    res.status(503).json({ error: "Your admin email is not configured." });
     return;
   }
 
