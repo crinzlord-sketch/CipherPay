@@ -1,6 +1,6 @@
 import { isNotNull, eq, sql } from "drizzle-orm";
 import { db, walletsTable, transactionsTable, usersTable } from "@workspace/db";
-import { fetchPayoutWalletTransactions, movePayoutWalletToMerchant } from "./flutterwave";
+import { fetchPayoutWalletTransactions, movePayoutWalletToMerchant, findTransferByReference } from "./flutterwave";
 import { handleEvent } from "../routes/webhooks";
 import { logger } from "./logger";
 import { getDepositFlagReason } from "./kycLimits";
