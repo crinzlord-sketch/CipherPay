@@ -77,6 +77,17 @@ async function flwPut<T = any>(path: string, payload: Record<string, unknown>): 
   return { status: res.status, body };
 }
 
+// Current Flutterwave bill-payments API. Use biller/item codes from the live catalog.
+async function flwBillPayment<T = any>(billerCode: string, itemCode: string, payload: Record<string, unknown>): Promise<{ status: number; body: T }> {
+  const res = await flwFetch(BASE + `/billers/${encodeURIComponent(billerCode)}/items/${encodeURIComponent(itemCode)}/payment`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${secretKey()}`, "Content-Type": "application/json", accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = (await res.json().catch(() => ({}))) as T;
+  return { status: res.status, body };
+}
+
 // Flutterwave airtime type constant — all NG networks share biller_name "AIRTIME";
 // the network is auto-detected from the phone number. No per-network catalog fetch needed.
 
@@ -122,14 +133,7 @@ function parsePayResult(status: number, body: any, reference: string, acceptPend
 // ── Airtime ────────────────────────────────────────────────────────────────
 // Flutterwave auto-detects the carrier from the phone number when type = "AIRTIME".
 export async function buyAirtime(params: { phone: string; amount: number; reference: string; network: string }): Promise<FlwResult> {
-  const { status, body } = await flwPost("/bills", {
-    country: "NG",
-    customer: params.phone,
-    amount: params.amount,
-    type: "AIRTIME",
-    reference: params.reference,
-    recurrence: "ONCE",
-  });
+  const { status, body } = await flwBillPayment("BIL099", "AT099", { country: "NG", customer_id: params.phone, amount: params.amount, reference: params.reference });
   const initial = parsePayResult(status, body, params.reference, true);
   if (!initial.success || !initial.pending) return initial;
   for (let attempt = 0; attempt < 10; attempt++) {
@@ -187,16 +191,8 @@ export async function dataPlans(): Promise<FlwDataPlan[]> {
 
 // Pay for a data bundle. `type` must be the plan's biller_name from the catalog
 // (Flutterwave maps this to the specific plan); item_code is included for disambiguation.
-export async function buyData(params: { phone: string; amount: number; itemCode: string; billerName: string; reference: string }): Promise<FlwResult> {
-  const { status, body } = await flwPost("/bills", {
-    country: "NG",
-    customer: params.phone,
-    amount: params.amount,
-    type: params.billerName,
-    reference: params.reference,
-    recurrence: "ONCE",
-    item_code: params.itemCode,
-  });
+export async function buyData(params: { phone: string; amount: number; itemCode: string; billerName: string; billerCode?: string; reference: string }): Promise<FlwResult> {
+  const { status, body } = await flwBillPayment(params.billerCode || "", params.itemCode, { country: "NG", customer_id: params.phone, amount: params.amount, reference: params.reference });
   const initial = parsePayResult(status, body, params.reference, true);
   if (!initial.success || !initial.pending) return initial;
 
@@ -275,7 +271,7 @@ export async function electricityPlans(): Promise<FlwElecPlan[]> {
 // Flutterwave POST /v3/bills requires:
 //   type      = billerName from the live catalog (e.g. "EKEDC Prepaid") — NOT biller/item codes
 //   item_code = item code from the catalog (e.g. "UB157")
-export async function payBill(params: { billerName: string; item: string; customer: string; amount: number; reference: string }): Promise<FlwResult> {
+export async function payBill(params: { billerName: string; billerCode?: string; item: string; customer: string; amount: number; reference: string }): Promise<FlwResult> {
   const { status, body } = await flwPost("/bills", {
     country: "NG",
     customer: params.customer,
