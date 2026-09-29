@@ -613,9 +613,13 @@ router.post("/social/order", async (req, res): Promise<void> => {
     res.status(400).json({ error: e.message }); return;
   }
 
+  let sourceFunded = false;
   try {
+    await fundBillSourceFromUser(userId, amount, tx.id);
+    sourceFunded = true;
     const sociallyService = await smmFindService(service.keywords, quantity);
     if (!sociallyService) {
+      if (sourceFunded) await refundBillSourceToUser(userId, amount, tx.id);
       await refundFailed(userId, tx.id, amount, `No socially.ng service matches "${service.keywords.join(" ")}" for quantity ${quantity}`, "social");
       res.status(502).json({ error: "No matching provider service available right now. You have been refunded." });
       return;
@@ -623,6 +627,7 @@ router.post("/social/order", async (req, res): Promise<void> => {
 
     const result = await smmAddOrder({ service: sociallyService.service, link, quantity });
     if (!result.ok || !result.orderId) {
+      if (sourceFunded) await refundBillSourceToUser(userId, amount, tx.id);
       await refundFailed(userId, tx.id, amount, `Social order failed: ${result.error ?? "unknown"}`, "social");
       res.status(502).json({ error: `Social order failed. You have been refunded.`, details: result.error });
       return;
@@ -646,6 +651,7 @@ router.post("/social/order", async (req, res): Promise<void> => {
         : { externalOrderId: String(result.orderId), status: "processing", amount, quantity, link, serviceId, transactionId: tx.id },
     });
   } catch (e: any) {
+    if (sourceFunded) await refundBillSourceToUser(userId, amount, tx.id);
     await refundFailed(userId, tx.id, amount, `Provider error: ${e.message ?? "unknown"}`, "social");
     res.status(502).json({ error: "Provider error. You have been refunded.", details: e.message });
   }
@@ -801,9 +807,12 @@ router.post("/sms/buy-number", async (req, res): Promise<void> => {
     res.status(400).json({ error: e.message }); return;
   }
 
+  let sourceFunded = false;
   let purchasedOrderId: string | null = null;
   let purchasedNumber: string | null = null;
   try {
+    await fundBillSourceFromUser(userId, price, tx.id);
+    sourceFunded = true;
     const result = await orderSmsPoolNumber(offer);
     purchasedOrderId = result.orderId;
     purchasedNumber = result.number;
@@ -848,6 +857,9 @@ router.post("/sms/buy-number", async (req, res): Promise<void> => {
         });
         return;
       }
+      if (sourceFunded) await refundBillSourceToUser(userId, price, tx.id);
+    } else if (sourceFunded) {
+      await refundBillSourceToUser(userId, price, tx.id);
     }
     await refundFailed(userId, tx.id, price, `Provider error: ${e.message ?? "unknown"}`, "sms");
     req.log.warn({ txId: tx.id, err: e?.message }, "SMS purchase failed after wallet debit");
