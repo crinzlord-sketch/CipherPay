@@ -18,7 +18,7 @@ import {
 } from "../lib/email-pro";
 
 const router: IRouter = Router();
-async function requireEmailPro(req: any, res: any): Promise<number | null> { const userId = getUserId(req); if (!userId) { res.status(401).json({ error: "Unauthorized" }); return null; } if (!(await hasActiveEmailPro(userId))) { res.status(402).json({ error: "Email Pro is locked. Unlock it for ₦5,000, then ₦5,000 monthly.", code: "EMAIL_PRO_LOCKED" }); return null; } return userId; }
+async function requireEmailPro(req: any, res: any): Promise<number | null> { const userId = getUserId(req); if (!userId) { res.status(401).json({ error: "Unauthorized" }); return null; } if (!(await hasActiveEmailPro(userId))) { res.status(402).json({ error: "Email Pro is locked. Unlock it for ₦3,000, then ₦3,000 monthly.", code: "EMAIL_PRO_LOCKED" }); return null; } return userId; }
 const MAX_RECIPIENTS = 150;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PROVIDERS = new Set(["gmail", "outlook", "custom"]);
@@ -84,13 +84,10 @@ function containsHeaderBreak(value: string): boolean {
   return /[\r\n]/.test(value);
 }
 
-router.get("/email/pro", async (req, res): Promise<void> => { const userId = getUserId(req); if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; } const subscription = await getEmailProSubscription(userId); res.json({ unlocked: subscription?.status === "active" && subscription.nextBillingAt > new Date(), status: subscription?.status ?? "locked", nextBillingAt: subscription?.nextBillingAt?.toISOString() ?? null, unlockFee: 5000, monthlyFee: 5000 }); });
+router.get("/email/pro", async (req, res): Promise<void> => { const userId = getUserId(req); if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; } const subscription = await getEmailProSubscription(userId); res.json({ unlocked: subscription?.status === "active" && subscription.nextBillingAt > new Date(), status: subscription?.status ?? "locked", nextBillingAt: subscription?.nextBillingAt?.toISOString() ?? null, unlockFee: 3000, monthlyFee: 3000 }); });
 router.post("/email/pro/unlock", async (req, res): Promise<void> => { const userId = getUserId(req); if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; } try { const result = await unlockEmailPro(userId); res.json({ success: true, unlocked: true, nextBillingAt: result.nextBillingAt.toISOString() }); } catch (e: any) { res.status(400).json({ error: e?.message ?? "Could not unlock Email Pro." }); } });
 router.get("/email/accounts", async (req, res): Promise<void> => {
-  const proUserId = await requireEmailPro(req, res);
-  if (!proUserId) return;
-  const userId = getUserId(req);
-  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const userId = getUserId(req);  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   const rows = await db.select().from(emailAccountsTable)
     .where(eq(emailAccountsTable.userId, userId))
     .orderBy(desc(emailAccountsTable.updatedAt));
@@ -295,10 +292,7 @@ router.post("/email/send", async (req, res): Promise<void> => {
 });
 
 router.get("/email/sent", async (req, res): Promise<void> => {
-  const proUserId = await requireEmailPro(req, res);
-  if (!proUserId) return;
-  const userId = getUserId(req);
-  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const userId = getUserId(req);  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "30"), 10) || 30, 1), 100);
   const offset = Math.max(parseInt(String(req.query.offset ?? "0"), 10) || 0, 0);
   const rows = await db.select().from(emailCampaignsTable).where(eq(emailCampaignsTable.userId, userId))
@@ -307,10 +301,7 @@ router.get("/email/sent", async (req, res): Promise<void> => {
 });
 
 router.get("/email/sent/:id", async (req, res): Promise<void> => {
-  const proUserId = await requireEmailPro(req, res);
-  if (!proUserId) return;
-  const userId = getUserId(req);
-  const campaignId = parseInt(String(req.params.id), 10);
+  const userId = getUserId(req);  const campaignId = parseInt(String(req.params.id), 10);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   if (!Number.isInteger(campaignId) || campaignId < 1) { res.status(400).json({ error: "Invalid campaign." }); return; }
 
