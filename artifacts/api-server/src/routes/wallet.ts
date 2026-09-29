@@ -681,7 +681,7 @@ router.get("/transactions", async (req, res): Promise<void> => {
   const limit = params.success ? (params.data.limit ?? 20) : 20;
   const offset = (page - 1) * limit;
 
-  const conditions = [eq(transactionsTable.userId, userId)];
+  const conditions = [eq(transactionsTable.userId, userId), eq(transactionsTable.status, "success")];
   // Support comma-separated types e.g. "fund,transfer_in" for merged filter chips
   const rawType = params.success ? (params.data.type ?? "") : "";
   if (rawType) {
