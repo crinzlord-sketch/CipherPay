@@ -54,6 +54,7 @@ app.listen(port, (err) => {
       if (!recipient) throw new Error("MAILJET_TEST_RECIPIENT is not set");
       const { sendMail } = await import("./lib/email");
       await sendMail({
+        from: process.env["MAILJET_FROM"] || process.env["EMAIL_FROM"] || "support@cipherpay.it.com",
         to: recipient,
         subject: "CipherPay test",
         text: "This is a simple CipherPay Mailjet delivery test.",
