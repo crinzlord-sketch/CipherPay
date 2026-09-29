@@ -192,6 +192,27 @@ router.get("/admin/egress-ip", requireAdmin, async (req, res): Promise<void> => 
   res.status(502).json({ error: "Could not determine egress IP. Please try again." });
 });
 
+router.post("/admin/email/test", requireAdmin, async (req: AdminRequest, res): Promise<void> => {
+  const recipient = String(process.env.ADMIN_ALERT_EMAIL ?? process.env.EMAIL_USER ?? "").trim();
+  if (!recipient) {
+    res.status(503).json({ error: "Admin alert email recipient is not configured." });
+    return;
+  }
+
+  try {
+    await sendAdminAlertEmail(
+      "Brevo delivery test",
+      "This is a live CipherPay email transport test. If you received this message, the Brevo transactional email integration is working.",
+    );
+    req.log.info({ recipient, provider: process.env.BREVO_API_KEY ? "brevo" : "fallback" }, "Admin email test sent");
+    res.json({ success: true, recipient });
+  } catch (error: any) {
+    req.log.error({ err: error?.message, recipient }, "Admin email test failed");
+    res.status(502).json({ error: error?.message || "The email provider rejected the test email." });
+  }
+});
+
+
 // ── DASHBOARD STATS ──────────────────────────────────────────────────────────
 router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
   const [
