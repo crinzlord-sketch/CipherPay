@@ -431,12 +431,13 @@ export async function fetchPayoutWalletTransactions(accountReference: string): P
   const from = new Date(now.getTime() - 48 * 60 * 60 * 1000);
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
   const { status, body } = await flwGet<any>(
-    `/payout-subaccounts/${encodeURIComponent(accountReference)}/transactions?from=${fmt(from)}&to=${fmt(now)}&limit=100`,
+    `/payout-subaccounts/${encodeURIComponent(accountReference)}/transactions?from=${fmt(from)}&to=${fmt(now)}&currency=NGN&page=1&fetch_limit=100`,
   );
   if (status < 200 || status >= 300 || body?.status !== "success") {
     throw new Error(body?.message || `Flutterwave payout transactions lookup failed (HTTP ${status})`);
   }
-  return Array.isArray(body?.data) ? body.data : [];
+  const rows = Array.isArray(body?.data) ? body.data : Array.isArray(body?.data?.transactions) ? body.data.transactions : Array.isArray(body?.data?.data) ? body.data.data : [];
+  return rows;
 }
 
 export async function updatePayoutWallet(accountReference: string, params: { accountName: string; email: string; phone?: string }): Promise<void> {
