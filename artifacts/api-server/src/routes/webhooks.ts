@@ -1,7 +1,9 @@
 import { type Request, type Response } from "express";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { db, transactionsTable, walletsTable, notificationsTable, usersTable } from "@workspace/db";
 import { creditWallet, getOrCreateWallet } from "../lib/wallet";
+import { ensureUserPayoutWallet } from "../lib/payout-wallet";
+import { moveMerchantToPayoutWallet } from "../lib/flutterwave";
 import { notifyUser } from "../lib/notifications";
 import { getDepositFlagReason } from "../lib/kycLimits";
 
@@ -30,6 +32,9 @@ interface FlwEvent {
     fullname?: string;
     fee?: string | number;
     complete_message?: string;
+    customer?: string;
+    network?: string;
+    batch_reference?: string | null;
   };
 }
 
@@ -53,6 +58,92 @@ export async function flutterwaveWebhookHandler(req: Request, res: Response): Pr
 export async function handleEvent(req: Request, evt: FlwEvent, psaAccountReference?: string): Promise<void> {
   const eventName = evt.event ?? evt["event.type"] ?? "";
   const data = evt.data ?? {};
+
+  // Flutterwave bill-payment completion webhook. Airtime/data are asynchronous:
+  // a create request can be accepted as pending and later become success/failure.
+  // We only finalize a CipherPay debit here; we never create a second provider bill.
+  if (eventName === "singlebillpayment.status") {
+    const reference = String(data.tx_ref ?? "").trim();
+    const status = String(data.status ?? "").toLowerCase();
+    if (!reference) {
+      req.log?.warn?.("flw webhook: bill status missing tx_ref");
+      return;
+    }
+
+    const [tx] = await db.select().from(transactionsTable)
+      .where(and(eq(transactionsTable.reference, reference), inArray(transactionsTable.type, ["airtime", "data"])));
+    if (!tx || !["pending", "success"].includes(String(tx.status))) {
+      return;
+    }
+
+    if (["success", "successful", "completed"].includes(status)) {
+      const oldMeta = tx.metadata ? (() => { try { return JSON.parse(tx.metadata); } catch { return {}; } })() : {};
+      const [updated] = await db.update(transactionsTable)
+        .set({
+          status: "success",
+          metadata: JSON.stringify({
+            ...oldMeta,
+            providerRef: data.flw_ref ?? null,
+            providerStatus: data.message ?? status,
+            providerCustomer: data.customer ?? null,
+            providerNetwork: data.network ?? null,
+          }),
+        })
+        .where(and(eq(transactionsTable.id, tx.id), eq(transactionsTable.status, "pending")))
+        .returning();
+      if (updated) {
+        await notifyUser({
+          userId: tx.userId,
+          type: "success",
+          title: tx.type === "airtime" ? "Airtime delivered" : "Data delivered",
+          body: tx.type === "airtime"
+            ? "Your airtime purchase has been delivered successfully."
+            : "Your data purchase has been delivered successfully.",
+          link: "/transactions",
+        });
+      }
+      return;
+    }
+
+    if (["failed", "fail", "cancelled", "canceled", "reversed"].includes(status)) {
+      // Return the provider-source funds to the user's payout wallet first. If
+      // that external refund cannot be completed, keep the ledger pending so we
+      // never give the user duplicate value.
+      const gross = Math.abs(parseFloat(tx.amount));
+      try {
+        const payout = await ensureUserPayoutWallet(tx.userId);
+        const moved = await moveMerchantToPayoutWallet({
+          payoutBarterId: payout.barterId,
+          amount: gross,
+          reference: "CP-BILL-REF-" + tx.id,
+        });
+        if (!moved.accepted) throw new Error(moved.message || "Source refund transfer failed");
+      } catch (e: any) {
+        req.log?.error?.({ txId: tx.id, reference, error: e?.message }, "flw webhook: bill failed but source refund is pending");
+        return;
+      }
+
+      const [failed] = await db.update(transactionsTable)
+        .set({ status: "failed", description: (tx.description ?? "Bill purchase") + " — " + (data.message ?? "provider failed") })
+        .where(and(eq(transactionsTable.id, tx.id), eq(transactionsTable.status, "pending")))
+        .returning();
+      if (!failed) return;
+
+      await creditWallet(tx.userId, gross, "Refund: " + tx.type + " purchase failed (tx #" + tx.id + ")", "refund", {
+        originalTxId: tx.id,
+        type: tx.type,
+        providerReference: data.flw_ref ?? null,
+      });
+      await notifyUser({
+        userId: tx.userId,
+        type: "error",
+        title: tx.type === "airtime" ? "Airtime purchase failed — refunded" : "Data purchase failed — refunded",
+        body: "The provider did not deliver your purchase. Your wallet has been refunded.",
+        link: "/transactions",
+      });
+    }
+    return;
+  }
 
   // Payout Subaccount funding webhook. This is the user's permanent virtual
   // account, so there is no merchant settlement step: the money is already in
