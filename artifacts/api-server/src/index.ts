@@ -47,6 +47,20 @@ app.listen(port, (err) => {
   startPayoutFundingPoller();
   void renewDueEmailProSubscriptions();
   setInterval(() => void renewDueEmailProSubscriptions(), 60_000);
+  if (process.env.MAILJET_RUN_TEST_ON_BOOT === "true") {
+    const recipient = process.env.MAILJET_TEST_RECIPIENT?.trim();
+    if (recipient) {
+      void import("./lib/email").then(async ({ sendMail }) => {
+        await sendMail(
+          recipient,
+          "CipherPay · Gmail sender test",
+          "<p>This is a simple CipherPay Mailjet test using the Gmail sender address.</p>",
+          "This is a simple CipherPay Mailjet test using the Gmail sender address."
+        );
+        logger.info({ recipient }, "Mailjet Gmail-sender test sent");
+      }).catch((err: any) => logger.error({ err: err?.message }, "Mailjet Gmail-sender test failed"));
+    }
+  }
   setTimeout(() => void sendWeeklyUserEmails(), 30_000);
   setInterval(() => void sendWeeklyUserEmails(), 6 * 60 * 60 * 1000);
 });
