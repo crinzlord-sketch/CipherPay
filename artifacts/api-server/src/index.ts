@@ -4,7 +4,7 @@ import { logger } from "./lib/logger";
 import { ensureAdminUser } from "./lib/admin-seed";
 import { startElectricityTokenJob } from "./lib/electricity-token-job";
 import { startTemporaryInboxRenewal } from "./lib/temporary-email";
-import { isEmailConfigured, verifyEmailTransport, sendMail } from "./lib/email";
+import { isEmailConfigured, verifyEmailTransport } from "./lib/email";
 import { startPayoutFundingPoller } from "./lib/payout-funding-poller";
 import { renewDueEmailProSubscriptions } from "./lib/email-pro-subscription";
 import { sendWeeklyUserEmails } from "./lib/user-email-job";
@@ -36,25 +36,7 @@ app.listen(port, (err) => {
   logger.info({ port }, "Server listening");
   if (isEmailConfigured()) {
     void verifyEmailTransport()
-      .then(async () => {
-        logger.info("Email transport verified");
-        if (process.env.MAILJET_RUN_TEST_ON_BOOT === "true") {
-          const recipient = String(process.env.MAILJET_TEST_RECIPIENT ?? "eteowoudo@gmail.com").trim();
-          if (recipient) {
-            try {
-              await sendMail(
-                recipient,
-                "CipherPay · Mailjet delivery test",
-                "<div style=\"font-family:Arial,sans-serif;padding:24px;color:#1f2937\"><h2>CipherPay Mailjet test</h2><p>This is a live delivery test from CipherPay using the Mailjet transport.</p></div>",
-                "This is a live delivery test from CipherPay using the Mailjet transport.",
-              );
-              logger.info({ recipient }, "Mailjet delivery test sent");
-            } catch (err: any) {
-              logger.error({ err: err?.message, recipient }, "Mailjet delivery test failed");
-            }
-          }
-        }
-      })
+      .then(() => logger.info("Email transport verified"))
       .catch((err: any) => logger.error({ err: err?.message }, "Email transport verification failed"));
   } else {
     logger.warn("Email transport unavailable — set EMAIL_USER and EMAIL_PASS");
