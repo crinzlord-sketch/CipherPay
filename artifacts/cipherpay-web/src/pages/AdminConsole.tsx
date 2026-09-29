@@ -77,6 +77,7 @@ export default function AdminConsole() {
   const [smsActivations, setSmsActivations] = useState<any[]>([]);
   const [socialOrders, setSocialOrders] = useState<any[]>([]);
   const [egressIp, setEgressIp] = useState('');
+  const [testingEmail, setTestingEmail] = useState(false);
   const [broadcast, setBroadcast] = useState({ title: '', body: '', filter: 'all', email: false });
   const [broadcasting, setBroadcasting] = useState(false);
   const [supportDraft, setSupportDraft] = useState('');
@@ -157,6 +158,21 @@ export default function AdminConsole() {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'The action could not be completed.');
       return null;
+    }
+  };
+
+  const testAdminEmail = async () => {
+    if (!token || testingEmail) return;
+    setTestingEmail(true);
+    setError('');
+    setNotice('');
+    try {
+      const result = await adminRequest<any>('/api/admin/email/test', token, { method: 'POST' });
+      setNotice(`Live test email sent to ${result.recipient}. Check the inbox and spam folder.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'The test email could not be sent.');
+    } finally {
+      setTestingEmail(false);
     }
   };
 
@@ -435,6 +451,7 @@ export default function AdminConsole() {
         <section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">Broadcast desk</span><h2>Reach your users</h2><p>Send an in-app notice to a chosen audience, with optional email delivery.</p></div><Send size={19} /></div><form className="cp-form admin-form" onSubmit={broadcastNotice}><label className="cp-field"><span>Title</span><input value={broadcast.title} onChange={(event) => setBroadcast({ ...broadcast, title: event.target.value })} required placeholder="Scheduled maintenance" /></label><label className="cp-field"><span>Message</span><textarea value={broadcast.body} onChange={(event) => setBroadcast({ ...broadcast, body: event.target.value })} required placeholder="Write the message users should see." /></label><div className="admin-form-row"><label className="cp-field"><span>Audience</span><select value={broadcast.filter} onChange={(event) => setBroadcast({ ...broadcast, filter: event.target.value })}><option value="all">Everyone</option><option value="verified">Verified users</option><option value="active">Users with wallet balance</option></select></label><label className="admin-check"><input type="checkbox" checked={broadcast.email} onChange={(event) => setBroadcast({ ...broadcast, email: event.target.checked })} /> Also email them</label></div><AdminButton variant="primary" disabled={broadcasting}>{broadcasting ? 'Broadcasting…' : 'Send broadcast'} <Send size={15} /></AdminButton></form></section>
         <section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">Queues at a glance</span><h2>What needs you now</h2><p>Jump straight into the highest-impact work.</p></div><Zap size={19} /></div><div className="admin-queue-list"><button type="button" onClick={() => setTab('support')}><LifeBuoy size={17} /><span><b>{supportChats.length} open support conversations</b><small>Join the oldest request first</small></span><ChevronRight size={16} /></button><button type="button" onClick={() => setTab('verification')}><ClipboardCheck size={17} /><span><b>{kycRows.length} KYC submissions</b><small>Review identity documents</small></span><ChevronRight size={16} /></button><button type="button" onClick={() => setTab('money')}><CreditCard size={17} /><span><b>{deposits.length} deposits waiting</b><small>Confirm or decline funding</small></span><ChevronRight size={16} /></button><button type="button" onClick={() => setTab('activity')}><Flag size={17} /><span><b>{stats?.flaggedTransactions ?? 0} flagged transactions</b><small>Inspect unusual activity</small></span><ChevronRight size={16} /></button></div></section>
       </div>
+      <section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">Email delivery</span><h2>Brevo test</h2><p>Send one real transactional email through the configured CipherPay sender.</p></div><Mail size={19} /></div><AdminButton variant="primary" onClick={() => void testAdminEmail()} disabled={testingEmail}>{testingEmail ? 'Sending test…' : 'Send test email'} <Send size={15} /></AdminButton></section>
       <section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">Infrastructure</span><h2>Runtime diagnostics</h2><p>Check the outbound address used for provider allowlists.</p></div><button type="button" className="admin-btn admin-btn-soft" onClick={async () => { try { const result = await adminRequest<any>('/api/admin/egress-ip', token); setEgressIp(result.ip); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Could not check egress IP.'); } }}>Check egress IP</button></div>{egressIp && <div className="admin-code-value">{egressIp}</div>}</section>
     </section>}
 
