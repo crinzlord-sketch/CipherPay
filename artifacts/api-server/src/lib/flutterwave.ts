@@ -229,7 +229,7 @@ export interface FlwValidateResult {
 
 export async function validateBill(params: { biller: string; item: string; customer: string }): Promise<FlwValidateResult> {
   const { status, body } = await flwGet<any>(
-    `/bill-items/${encodeURIComponent(params.item)}/validate?code=${encodeURIComponent(params.biller)}&customer=${encodeURIComponent(params.customer)}`,
+    `/bill-items/${encodeURIComponent(params.item)}/validate?customer=${encodeURIComponent(params.customer)}`,
   );
   // Distinguish a provider/auth/transport failure (throw -> 502 upstream) from a
   // genuine "no such customer" (resolves with name=null -> 400 upstream). Without
