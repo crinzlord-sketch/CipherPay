@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { sendMail } from "../lib/email";\nimport { Router, type IRouter } from "express";
 import { getEmailProSubscription, hasActiveEmailPro, unlockEmailPro } from "../lib/email-pro-subscription";
 import { and, desc, eq } from "drizzle-orm";
 import {
@@ -327,4 +327,18 @@ router.get("/email/sent/:id", async (req, res): Promise<void> => {
   });
 });
 
+
+// Temporary Mailjet delivery test endpoint. Protected by a short-lived Render env token and intended for operator verification only.
+router.get("/email/test-mailjet", async (req, res): Promise<void> => {
+  const expected = String(process.env.MAILJET_TEST_TOKEN ?? "").trim();
+  const provided = String(req.query.token ?? "").trim();
+  if (!expected || !provided || provided !== expected) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const recipient = "eteowoudo@gmail.com";
+  try {
+    await sendMail(recipient, "CipherPay · Mailjet delivery test", brandWrap("Mailjet delivery test", "<p style=\"margin:0;color:#4e5c74;font-size:15px;line-height:25px;\">This is a live delivery test from CipherPay using the Mailjet transport.</p>", "CipherPay Mailjet delivery test"), "This is a live delivery test from CipherPay using the Mailjet transport.");
+    res.json({ ok: true, recipient, message: "Mailjet accepted the test email." });
+  } catch (error: any) {
+    res.status(502).json({ ok: false, error: String(error?.message ?? "Mailjet send failed") });
+  }
+});
 export default router;
