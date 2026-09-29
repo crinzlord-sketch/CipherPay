@@ -149,11 +149,13 @@ router.post("/airtime/buy", async (req, res): Promise<void> => {
 
   let sourceFunded = false;
   try {
+    req.log.info({ txId: tx.id, amount: charge }, "Airtime: funding Flutterwave source wallet");
     await fundBillSourceFromUser(userId, charge, tx.id);
+    req.log.info({ txId: tx.id, amount: charge }, "Airtime: source wallet funded");
     sourceFunded = true;
     const reference = flwReference(`AIR${tx.id}`);
     const result = await flwBuyAirtime({ phone, amount, reference, network });
-    req.log.info({ flwStatus: result.raw?.status, flwMessage: result.raw?.message, flwData: result.raw?.data, reference }, "Flutterwave airtime response");
+    req.log.info({ flwStatus: result.raw?.status, flwMessage: result.raw?.message, flwData: result.raw?.data, reference, processing: result.pending === true }, "Flutterwave airtime response");
     if (!result.success) {
       if (sourceFunded) await refundBillSourceToUser(userId, charge, tx.id);
       await refundFailed(userId, tx.id, charge, `Airtime delivery failed: ${result.message}`, "airtime");
@@ -169,7 +171,7 @@ router.post("/airtime/buy", async (req, res): Promise<void> => {
         metadata: JSON.stringify({ network, phone, amount, providerRef: result.flwRef ?? result.reference, providerStatus: result.message }),
       }).where(eq(transactionsTable.id, tx.id));
     });
-    res.json({ success: true, message: "Airtime delivered successfully", transaction: formatTransaction(tx) });
+    res.json({ success: true, processing: result.pending === true, message: result.pending ? "Airtime purchase is still processing. You have been charged once and we are waiting for the provider." : "Airtime delivered successfully", reference, transaction: formatTransaction(tx) });
   } catch (e: any) {
     if (sourceFunded) await refundBillSourceToUser(userId, charge, tx.id);
     await refundFailed(userId, tx.id, charge, `Provider error: ${e.message ?? "unknown"}`, "airtime");
