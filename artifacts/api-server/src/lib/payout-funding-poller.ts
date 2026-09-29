@@ -29,11 +29,31 @@ export function startPayoutFundingPoller(): void {
             // Because this query is already scoped to a specific PSA wallet,
             // use Flutterwave's WALLET FUNDING narration as the fallback signal.
             // This prevents legitimate bank deposits from being silently skipped.
-            const isWalletFunding =
-              narration === "WALLET FUNDING" ||
-              debitCurrency === "PSA";
+            const reference = String(tx?.reference ?? "").trim();
+            const amount = Number(tx?.amount ?? 0);
 
-            if (status !== "SUCCESSFUL" || !isWalletFunding) continue;
+            // Flutterwave's PSA transaction-history response is inconsistent:
+            // for bank deposits it can omit status, debit_currency, and narration.
+            // The history is already scoped to this specific PSA wallet. For
+            // reconciliation, treat a positive transaction as funding when it is
+            // explicitly marked as WALLET FUNDING / PSA, or when it has no
+            // classification fields and is not one of CipherPay's own outgoing
+            // CP-* transfer references. Outgoing CipherPay transfers always use
+            // CP-* references, so they must never be credited as deposits.
+            const explicitlyWalletFunding =
+              narration === "WALLET FUNDING" || debitCurrency === "PSA";
+            const unclassifiedIncomingTransfer =
+              amount > 0 &&
+              !status &&
+              !debitCurrency &&
+              !narration &&
+              Boolean(reference) &&
+              !reference.toUpperCase().startsWith("CP-");
+
+            const isWalletFunding = explicitlyWalletFunding || unclassifiedIncomingTransfer;
+
+            if (amount <= 0 || !isWalletFunding) continue;
+            if (status && status !== "SUCCESSFUL") continue;
 
             await handleEvent({ log: logger } as any, {
               event: "transfer.completed",
