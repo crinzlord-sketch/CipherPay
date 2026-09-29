@@ -39,16 +39,20 @@ function transporter(): Transporter {
 
 export function isEmailConfigured(): boolean {
   const { user, pass } = emailConfig();
-  return !!process.env.RESEND_API_KEY || !!(user && pass);
+  return !!process.env.BREVO_API_KEY || !!process.env.RESEND_API_KEY || !!(user && pass);
 }
 
 export async function verifyEmailTransport(): Promise<void> {
+  if (process.env.BREVO_API_KEY) {
+    logger.info("Email transport uses Brevo HTTPS; SMTP verification skipped");
+    return;
+  }
   if (process.env.RESEND_API_KEY) {
     logger.info("Email transport uses Resend HTTPS; SMTP verification skipped");
     return;
   }
   if (!isEmailConfigured()) {
-    throw new Error("Email not configured: set RESEND_API_KEY or EMAIL_USER and EMAIL_PASS");
+    throw new Error("Email not configured: set BREVO_API_KEY or EMAIL_USER and EMAIL_PASS");
   }
   await transporter().verify();
 }
@@ -121,8 +125,31 @@ export async function sendMail(to: string, subject: string, html: string, text?:
     .replace(/\s+/g, " ")
     .trim();
 
-  // Resend uses HTTPS, so it works from Render Free where outbound SMTP
-  // ports are blocked. Keep SMTP as a fallback for local/legacy environments.
+  // Brevo uses HTTPS, so it works from Render Free where outbound SMTP ports are blocked.
+  if (process.env.BREVO_API_KEY) {
+    try {
+      const configuredFrom = process.env.BREVO_FROM?.trim() || process.env.EMAIL_FROM?.trim();
+      if (!configuredFrom) throw new Error("BREVO_FROM or EMAIL_FROM must be set to a verified Brevo sender email");
+      const senderEmail = configuredFrom.match(/<([^>]+)>/)?.[1] ?? configuredFrom;
+      const senderName = configuredFrom.match(/^([^<]+)</)?.[1]?.trim() || "CipherPay";
+      if (!senderEmail.includes("@")) throw new Error("BREVO_FROM must be a verified Brevo sender email address");
+      const replyTo = replyToOverride ?? emailConfig().replyTo;
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: { accept: "application/json", "api-key": process.env.BREVO_API_KEY, "content-type": "application/json" },
+        body: JSON.stringify({ sender: { name: senderName, email: senderEmail }, to: [{ email: to }], subject, htmlContent: html, textContent: plainText, ...(replyTo ? { replyTo: { email: replyTo } } : {}) }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.message ?? payload?.code ?? `Brevo API returned HTTP ${response.status}`);
+      logger.info({ to, subject, messageId: payload?.messageId }, "email sent via Brevo");
+      return;
+    } catch (e: any) {
+      logger.error({ err: e?.message, to, subject }, "Brevo email send failed");
+      throw new Error(`Could not send email: ${e?.message ?? "unknown"}`);
+    }
+  }
+
+  // Resend remains as a legacy fallback until BREVO_API_KEY is configured.
   if (process.env.RESEND_API_KEY) {
     try {
       const { replyTo, from } = emailConfig();
