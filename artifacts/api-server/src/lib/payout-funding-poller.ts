@@ -182,6 +182,14 @@ export function startPayoutFundingPoller(): void {
         if (!Number.isFinite(fee) || fee <= 0 || !debitSubaccount || meta.feeTransferId) continue;
         const reference = `CP-FEE-${tx.id}`.slice(0, 48);
         try {
+          const existing = await findTransferByReference(reference);
+          if (existing) {
+            await db.update(transactionsTable).set({
+              metadata: JSON.stringify({ ...meta, feeTransferId: existing.id ?? null, feeTransferReference: reference, feeTransferStatus: String(existing.status ?? "pending").toLowerCase() }),
+            }).where(eq(transactionsTable.id, tx.id));
+            logger.info({ txId: tx.id, fee, transferId: existing.id, status: existing.status }, "withdrawal fee sweep already exists; reconciled");
+            continue;
+          }
           const transfer = await movePayoutWalletToMerchant({ debitSubaccount, amount: fee, reference });
           if (transfer.accepted) {
             await db.update(transactionsTable).set({
