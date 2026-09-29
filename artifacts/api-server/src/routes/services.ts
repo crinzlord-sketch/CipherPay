@@ -7,7 +7,7 @@ import {
 } from "@workspace/api-zod";
 import { creditWallet, debitWallet, formatTransaction } from "../lib/wallet";
 import {
-  flwReference, buyAirtime as flwBuyAirtime, movePayoutWalletToMerchant, moveMerchantToPayoutWallet, fetchPayoutWalletBalance,
+  flwReference, buyAirtime as flwBuyAirtime, movePayoutWalletToMerchant, moveMerchantToPayoutWallet, fetchPayoutWalletBalance, findTransferByReference,
   dataPlans as flwDataPlans, buyData as flwBuyData,
   electricityPlans as flwElecPlans,
   FLW_ELECTRICITY, validateBill as flwValidateBill, payBill as flwPayBill, verifyBill as flwVerifyBill,
@@ -49,10 +49,30 @@ async function fundBillSourceFromUser(userId: number, amount: number, txId: numb
   const payout = await ensureUserPayoutWallet(userId);
   const providerBalance = await fetchPayoutWalletBalance(payout.accountReference);
   if (providerBalance < amount) throw new Error("Your available wallet balance is not enough to complete this purchase.");
+
+  // One deterministic provider reference per CipherPay debit. If Render retries
+  // the request after a timeout, reconcile the original transfer instead of
+  // creating a second debit from the user's payout wallet.
+  const reference = `CP-SRC-${txId}`.slice(0, 48);
+  const existing = await findTransferByReference(reference);
+  if (existing) {
+    const status = String(existing.status ?? "").toUpperCase();
+    if (status === "SUCCESSFUL") return { barterId: payout.barterId };
+    if (existing.id != null) {
+      const moved = await movePayoutWalletToMerchant({
+        debitSubaccount: payout.accountReference,
+        amount,
+        reference,
+      });
+      if (!moved.accepted) throw new Error(moved.message || "The existing purchase-funding transfer is still processing.");
+      return { barterId: payout.barterId };
+    }
+  }
+
   const moved = await movePayoutWalletToMerchant({
     debitSubaccount: payout.accountReference,
     amount,
-    reference: flwReference(`SRC${txId}`),
+    reference,
   });
   if (!moved.accepted) throw new Error(moved.message || "Could not fund this purchase.");
   return { barterId: payout.barterId };
@@ -61,10 +81,14 @@ async function fundBillSourceFromUser(userId: number, amount: number, txId: numb
 async function refundBillSourceToUser(userId: number, amount: number, txId: number): Promise<void> {
   try {
     const payout = await ensureUserPayoutWallet(userId);
+    const reference = `CP-REF-${txId}`.slice(0, 48);
+    const existing = await findTransferByReference(reference);
+    if (existing && String(existing.status ?? "").toUpperCase() === "SUCCESSFUL") return;
+
     const moved = await moveMerchantToPayoutWallet({
       payoutBarterId: payout.barterId,
       amount,
-      reference: flwReference(`REF${txId}`),
+      reference,
     });
     if (!moved.accepted) throw new Error(moved.message || "Refund transfer failed");
   } catch (e: any) {
