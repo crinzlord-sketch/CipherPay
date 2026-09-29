@@ -11,7 +11,7 @@ function emailConfig() {
   const secure = process.env.EMAIL_SECURE
     ? process.env.EMAIL_SECURE === "true"
     : port === 465;
-  // Do not use a free-mail reply-to address for CipherPay transactional mail.\n  // Replies should not be routed anywhere unless an explicit domain-based\n  // support address is configured.\n  const replyTo = process.env.SUPPORT_REPLY_TO?.trim() || undefined;\n  const from = process.env.EMAIL_FROM ?? `CipherPay <${user ?? "no-reply@example.com"}>`;\n  return { user, pass, host, port, secure, replyTo, from };
+  // Do not use a free-mail reply-to address for CipherPay transactional mail.\n  // Replies should not be routed anywhere unless an explicit domain-based\n  // support address is configured.\n  const replyTo = process.env.SUPPORT_REPLY_TO?.trim() || undefined;\n  const from = process.env.EMAIL_FROM ?? `CipherPay <${user ?? "no-reply@example.com"}>`;\n  return { user, pass, host, port, secure, from };
 }
 
 function transporter(): Transporter {
@@ -65,7 +65,6 @@ function escapeHtml(value: string): string {
 }
 
 function brandWrap(title: string, contentHtml: string, previewText: string): string {
-  const { replyTo } = emailConfig();
   const safeTitle = escapeHtml(title);
   const safePreview = escapeHtml(previewText);
   return `<!doctype html>
@@ -110,7 +109,7 @@ function brandWrap(title: string, contentHtml: string, previewText: string): str
 </html>`;
 }
 
-export async function sendMail(to: string, subject: string, html: string, text?: string, replyToOverride?: string): Promise<void> {
+export async function sendMail(to: string, subject: string, html: string, text?: string): Promise<void> {
   if (!isEmailConfigured()) {
     logger.warn({ to, subject }, "Email skipped — no email provider configured");
     throw new Error("Email service not configured. Please contact support.");
@@ -130,7 +129,7 @@ export async function sendMail(to: string, subject: string, html: string, text?:
       const senderEmail = configuredFrom.match(/<([^>]+)>/)?.[1] ?? configuredFrom;
       const senderName = configuredFrom.match(/^([^<]+)</)?.[1]?.trim() || "CipherPay";
       if (!senderEmail.includes("@")) throw new Error("BREVO_FROM must be a verified Brevo sender email address");
-      // Deliberately omit Reply-To unless an explicit override is supplied.\n      // This prevents an accidental Gmail/free-mail reply address from being\n      // attached to CipherPay transactional messages.\n      const replyTo = replyToOverride?.trim() || undefined;\n      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         headers: { accept: "application/json", "api-key": process.env.BREVO_API_KEY, "content-type": "application/json" },
         body: JSON.stringify({ sender: { name: senderName, email: senderEmail }, to: [{ email: to }], subject, htmlContent: html, textContent: plainText, ...(replyTo ? { replyTo: { email: replyTo } } : {}) }),
@@ -148,7 +147,7 @@ export async function sendMail(to: string, subject: string, html: string, text?:
   // Resend remains as a legacy fallback until BREVO_API_KEY is configured.
   if (process.env.RESEND_API_KEY) {
     try {
-      const { replyTo, from } = emailConfig();
+      const { from } = emailConfig();
       const resendFromRaw = process.env.RESEND_FROM?.trim() || from;
       const resendFrom = resendFromRaw.includes("<")
         ? resendFromRaw
@@ -167,7 +166,6 @@ export async function sendMail(to: string, subject: string, html: string, text?:
           subject,
           html,
           text: plainText,
-          ...(replyToOverride ?? replyTo ? { reply_to: replyToOverride ?? replyTo } : {}),
         }),
       });
 
@@ -185,10 +183,9 @@ export async function sendMail(to: string, subject: string, html: string, text?:
   }
 
   try {
-    const { replyTo, from } = emailConfig();
+    const { from } = emailConfig();
     const info = await transporter().sendMail({
       from,
-      ...(replyToOverride?.trim() || replyTo ? { replyTo: replyToOverride?.trim() || replyTo } : {}),
       to, subject, html,
       text: plainText,
     });
