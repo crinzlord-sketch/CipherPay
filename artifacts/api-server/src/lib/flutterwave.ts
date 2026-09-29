@@ -5,10 +5,21 @@ const BASE = "https://api.flutterwave.com/v3";
 const fixieDispatcher = process.env.FIXIE_URL ? new ProxyAgent(process.env.FIXIE_URL) : undefined;
 
 async function flwFetch(input: string, init: RequestInit = {}): Promise<Response> {
-  return undiciFetch(input, {
-    ...init,
-    ...(fixieDispatcher ? { dispatcher: fixieDispatcher } : {}),
-  });
+  try {
+    return await undiciFetch(input, {
+      ...init,
+      ...(fixieDispatcher ? { dispatcher: fixieDispatcher } : {}),
+    });
+  } catch (err: any) {
+    console.error("Flutterwave network request failed", {
+      message: err?.message ?? String(err),
+      causeCode: err?.cause?.code ?? null,
+      causeMessage: err?.cause?.message ?? null,
+      fixieConfigured: Boolean(process.env.FIXIE_URL),
+      fixieHost: process.env.FIXIE_URL ? new URL(process.env.FIXIE_URL).hostname : null,
+    });
+    throw err;
+  }
 }
 
 function secretKey(): string {
