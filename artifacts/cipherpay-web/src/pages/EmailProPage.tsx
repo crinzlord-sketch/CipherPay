@@ -195,10 +195,6 @@ function SentHistoryPanel({
   onLoadMore: () => void;
   onOpenCampaign: (campaignId: number) => void;
 }) {
-  if (!loading && subscription && !subscription.unlocked) {
-    return <div className="cp-page cp-page-reveal email-pro-page"><PageHeading eyebrow="CIPHERPAY / EMAIL PRO" title="Unlock your private sending workspace." detail="Email Pro costs ₦5,000 to unlock, then ₦5,000 every month. If a renewal cannot be paid, the workspace locks automatically." /><section className="email-pro-hero" style={{ marginTop: 24 }}><div className="email-pro-hero-copy"><span className="email-pro-mark"><LockKeyhole size={18} /></span><div><span className="cp-kicker">Email Pro access</span><h2>One unlock. Then monthly access.</h2><p>Connect your own mailbox, send campaigns, and keep your sending history in one place.</p><Button type="button" onClick={async () => { setUnlocking(true); try { const result = await apiRequest<{ nextBillingAt: string }>('/api/email/pro/unlock', { method: 'POST' }); setSubscription({ unlocked: true, status: 'active', nextBillingAt: result.nextBillingAt, unlockFee: 5000, monthlyFee: 5000 }); await loadWorkspace(); } catch (e) { setPageError(e instanceof Error ? e.message : 'Could not unlock Email Pro.'); } finally { setUnlocking(false); } }} disabled={unlocking}>{unlocking ? 'Unlocking…' : 'Unlock for ₦5,000'} <ArrowUpRight size={16} /></Button></div></div></section></div>;
-  }
-
   return (
     <section className="cp-card cp-card-pad email-pro-history-card">
       <div className="cp-card-head email-pro-card-head">
@@ -309,7 +305,6 @@ export default function EmailProPage() {
     try {
       const subscriptionResponse = await apiRequest<{ unlocked: boolean; status: string; nextBillingAt: string | null; unlockFee: number; monthlyFee: number }>('/api/email/pro');
       setSubscription(subscriptionResponse);
-      if (!subscriptionResponse.unlocked) { setAccounts([]); setCampaigns([]); setSentHasMore(false); return; }
       const [accountResponse, sentResponse] = await Promise.all([
         apiRequest<{ data: EmailAccount[] }>('/api/email/accounts'),
         apiRequest<{ data: SentCampaign[]; hasMore?: boolean }>('/api/email/sent?limit=30'),
@@ -344,6 +339,7 @@ export default function EmailProPage() {
   const invalidRecipients = useMemo(() => recipients.filter((recipient) => !isValidEmail(recipient)), [recipients]);
   const activeGuide = guideContent[guideKey];
   const selectedAccount = accounts.find((account) => String(account.id) === sendForm.accountId);
+  const emailProLocked = subscription?.unlocked === false;
 
   const updateAccountField = <K extends keyof AccountForm>(field: K, value: AccountForm[K]) => {
     setAccountForm((current) => ({ ...current, [field]: value }));
@@ -552,6 +548,32 @@ export default function EmailProPage() {
         actions={<Button variant="soft" type="button" onClick={() => void loadWorkspace()} data-testid="button-refresh-email-pro"><RefreshCw size={15} /> Refresh</Button>}
       />
 
+      {emailProLocked && (
+        <section className="email-pro-lock-banner" role="status" aria-label="Email Pro locked">
+          <div className="email-pro-lock-banner-copy">
+            <span className="email-pro-mark"><LockKeyhole size={18} /></span>
+            <div>
+              <strong>Email Pro is locked</strong>
+              <p>You can still view your connected accounts and sending history. Unlock access for ₦3,000, then ₦3,000/month to send, manage accounts, and use Email Pro.</p>
+            </div>
+          </div>
+          <Button type="button" onClick={async () => {
+            setUnlocking(true);
+            try {
+              const result = await apiRequest<{ nextBillingAt: string }>('/api/email/pro/unlock', { method: 'POST' });
+              setSubscription({ unlocked: true, status: 'active', nextBillingAt: result.nextBillingAt, unlockFee: 3000, monthlyFee: 3000 });
+              await loadWorkspace();
+            } catch (e) {
+              setPageError(e instanceof Error ? e.message : 'Could not unlock Email Pro.');
+            } finally {
+              setUnlocking(false);
+            }
+          }} disabled={unlocking}>
+            {unlocking ? 'Unlocking…' : 'Unlock for ₦3,000'} <ArrowUpRight size={16} />
+          </Button>
+        </section>
+      )}
+
       <section className="email-pro-hero" aria-label="Email Pro overview">
         <div className="email-pro-hero-orbit email-pro-hero-orbit-one" />
         <div className="email-pro-hero-orbit email-pro-hero-orbit-two" />
@@ -592,7 +614,7 @@ export default function EmailProPage() {
             <form className="cp-form email-pro-form" onSubmit={handleSend}>
               <div className="cp-field">
                 <label htmlFor="email-send-account">Send from</label>
-                <select id="email-send-account" value={sendForm.accountId} onChange={(event) => {
+                <select disabled={emailProLocked} id="email-send-account" value={sendForm.accountId} onChange={(event) => {
                   const account = accounts.find((item) => String(item.id) === event.target.value);
                   updateSendField('accountId', event.target.value);
                    if (account) setSendForm((current) => ({ ...current, accountId: event.target.value, replyTo: account.replyTo ?? '' }));
@@ -604,31 +626,31 @@ export default function EmailProPage() {
               </div>
 
               <div className="cp-field-row">
-                <label className="cp-field" htmlFor="email-from-name"><span>Display name</span><input id="email-from-name" value={sendForm.fromName} onChange={(event) => updateSendField('fromName', event.target.value)} placeholder="The name recipients see" data-testid="input-send-from-name" /></label>
-                <label className="cp-field" htmlFor="email-reply-to"><span>Reply-To <em>optional</em></span><input id="email-reply-to" type="email" value={sendForm.replyTo} onChange={(event) => updateSendField('replyTo', event.target.value)} placeholder="replies@yourdomain.com" data-testid="input-send-reply-to" /></label>
+                <label className="cp-field" htmlFor="email-from-name"><span>Display name</span><input disabled={emailProLocked} id="email-from-name" value={sendForm.fromName} onChange={(event) => updateSendField('fromName', event.target.value)} placeholder="The name recipients see" data-testid="input-send-from-name" /></label>
+                <label className="cp-field" htmlFor="email-reply-to"><span>Reply-To <em>optional</em></span><input disabled={emailProLocked} id="email-reply-to" type="email" value={sendForm.replyTo} onChange={(event) => updateSendField('replyTo', event.target.value)} placeholder="replies@yourdomain.com" data-testid="input-send-reply-to" /></label>
               </div>
 
               <label className="cp-field" htmlFor="email-recipients">
                 <span className="email-pro-label-with-count">Recipients <strong className={recipients.length > 150 ? 'over' : ''} data-testid="text-recipient-count">{recipients.length} / 150</strong></span>
-                <textarea id="email-recipients" className="email-pro-recipients" value={sendForm.recipients} onChange={(event) => updateSendField('recipients', event.target.value)} placeholder="name@example.com, another@example.com&#10;You can paste one address per line." aria-describedby="recipient-help" data-testid="textarea-recipients" />
+                <textarea disabled={emailProLocked} id="email-recipients" className="email-pro-recipients" value={sendForm.recipients} onChange={(event) => updateSendField('recipients', event.target.value)} placeholder="name@example.com, another@example.com&#10;You can paste one address per line." aria-describedby="recipient-help" data-testid="textarea-recipients" />
                 <small id="recipient-help" className="email-pro-field-hint"><LockKeyhole size={12} /> Each recipient receives an individual message. Separate addresses with commas, spaces, or new lines.</small>
               </label>
 
-              <label className="cp-field" htmlFor="email-subject"><span>Subject</span><input id="email-subject" value={sendForm.subject} onChange={(event) => updateSendField('subject', event.target.value)} placeholder="A clear subject gets opened" data-testid="input-send-subject" /></label>
+              <label className="cp-field" htmlFor="email-subject"><span>Subject</span><input disabled={emailProLocked} id="email-subject" value={sendForm.subject} onChange={(event) => updateSendField('subject', event.target.value)} placeholder="A clear subject gets opened" data-testid="input-send-subject" /></label>
 
               <div className="email-pro-editor-toolbar" role="tablist" aria-label="Message format">
                 <button type="button" role="tab" aria-selected={sendForm.contentType === 'text'} className={sendForm.contentType === 'text' ? 'active' : ''} onClick={() => updateSendField('contentType', 'text')} data-testid="button-format-text"><FileText size={14} /> Plain text</button>
                 <button type="button" role="tab" aria-selected={sendForm.contentType === 'html'} className={sendForm.contentType === 'html' ? 'active' : ''} onClick={() => updateSendField('contentType', 'html')} data-testid="button-format-html"><Globe2 size={14} /> HTML</button>
                 <span><Zap size={13} /> {sendForm.contentType === 'html' ? 'HTML accepted as written' : 'Readable everywhere'}</span>
               </div>
-              <label className="cp-field" htmlFor="email-body"><span>Message</span><textarea id="email-body" className="email-pro-body" value={sendForm.body} onChange={(event) => updateSendField('body', event.target.value)} placeholder={sendForm.contentType === 'html' ? '<p>Hello there,</p>' : 'Write your message here…'} data-testid="textarea-send-body" /></label>
+              <label className="cp-field" htmlFor="email-body"><span>Message</span><textarea disabled={emailProLocked} id="email-body" className="email-pro-body" value={sendForm.body} onChange={(event) => updateSendField('body', event.target.value)} placeholder={sendForm.contentType === 'html' ? '<p>Hello there,</p>' : 'Write your message here…'} data-testid="textarea-send-body" /></label>
 
               <div className="email-pro-send-bar">
                 <div className="email-pro-send-meta">
                   <span><UserRound size={14} /> {recipients.length || 'No'} {recipients.length === 1 ? 'recipient' : 'recipients'}</span>
                   <span><ShieldCheck size={14} /> Bcc-style privacy</span>
                 </div>
-                <Button type="submit" disabled={sending || accounts.length === 0 || !selectedAccount?.verifiedAt} data-testid="button-send-campaign">{sending ? <><RefreshCw size={15} className="email-pro-spin" /> Sending</> : <><Send size={15} /> Send campaign</>}</Button>
+                <Button type="submit" disabled={emailProLocked || sending || accounts.length === 0 || !selectedAccount?.verifiedAt} data-testid="button-send-campaign">{sending ? <><RefreshCw size={15} className="email-pro-spin" /> Sending</> : <><Send size={15} /> Send campaign</>}</Button>
               </div>
             </form>
           </section>}
@@ -646,16 +668,16 @@ export default function EmailProPage() {
                 <div className="email-pro-account-empty"><Server size={20} /><strong>Nothing connected yet</strong><span>Start with your most trusted mailbox.</span></div>
               ) : accounts.map((account) => (
                 <div className={`email-pro-account-row ${sendForm.accountId === String(account.id) ? 'selected' : ''}`} key={account.id} data-testid={`row-account-${account.id}`}>
-                  <button type="button" className="email-pro-account-select" onClick={() => setSendForm((current) => ({ ...current, accountId: String(account.id), replyTo: account.replyTo ?? '' }))} data-testid={`button-select-account-${account.id}`}>
+                  <button type="button" className="email-pro-account-select" onClick={() => { if (!emailProLocked) setSendForm((current) => ({ ...current, accountId: String(account.id), replyTo: account.replyTo ?? '' })); }} data-testid={`button-select-account-${account.id}`}>
                     <span className="email-pro-provider-mark">{account.provider === 'gmail' ? 'G' : account.provider === 'outlook' ? 'O' : 'S'}</span>
                      <span><strong>{account.displayName || account.email}</strong><small>{account.email}</small></span>
                     <span className="email-pro-account-check">{sendForm.accountId === String(account.id) ? <Check size={14} /> : <ArrowUpRight size={14} />}</span>
                   </button>
                    <div className="email-pro-account-actions">
                       <span className={`email-pro-connection-status email-pro-connection-${connectionStates[account.id] ?? (account.verifiedAt ? 'verified' : 'idle')}`} data-testid={`status-account-${account.id}`}>{(connectionStates[account.id] ?? (account.verifiedAt ? 'verified' : 'idle')) === 'verified' ? 'Valid configuration' : (connectionStates[account.id] ?? 'idle') === 'invalid' ? 'Invalid configuration' : 'Not tested'}</span>
-                    <Button variant="quiet" type="button" className="email-pro-mini-button" onClick={() => void handleTestAccount(account)} disabled={testingAccount === account.id} data-testid={`button-test-account-${account.id}`}>{testingAccount === account.id ? <RefreshCw size={13} className="email-pro-spin" /> : <Zap size={13} />} Test</Button>
-                     <Button variant="quiet" type="button" className="email-pro-mini-button" onClick={() => openEditAccount(account)} data-testid={`button-edit-account-${account.id}`}><Settings2 size={13} /> Edit</Button>
-                    <button type="button" className="email-pro-delete-button" onClick={() => void handleDeleteAccount(account)} disabled={deletingAccount === account.id} aria-label={`Remove ${account.email}`} data-testid={`button-delete-account-${account.id}`}>{deletingAccount === account.id ? <RefreshCw size={13} className="email-pro-spin" /> : <Trash2 size={13} />}</button>
+                    <Button variant="quiet" type="button" className="email-pro-mini-button" onClick={() => { if (!emailProLocked) void handleTestAccount(account); }} disabled={emailProLocked || testingAccount === account.id} data-testid={`button-test-account-${account.id}`}>{testingAccount === account.id ? <RefreshCw size={13} className="email-pro-spin" /> : <Zap size={13} />} Test</Button>
+                     <Button variant="quiet" type="button" className="email-pro-mini-button" onClick={() => { if (!emailProLocked) openEditAccount(account); }} data-testid={`button-edit-account-${account.id}`}><Settings2 size={13} /> Edit</Button>
+                    <button type="button" className="email-pro-delete-button" onClick={() => void handleDeleteAccount(account)} disabled={emailProLocked || deletingAccount === account.id} aria-label={`Remove ${account.email}`} data-testid={`button-delete-account-${account.id}`}>{deletingAccount === account.id ? <RefreshCw size={13} className="email-pro-spin" /> : <Trash2 size={13} />}</button>
                   </div>
                 </div>
               ))}
@@ -668,14 +690,14 @@ export default function EmailProPage() {
                 </div>
                  <div className="email-pro-config-note"><LockKeyhole size={14} /><span>The mailbox address comes from your SMTP username. Sender name and Reply-To can be set per campaign.</span></div>
                 <div className="email-pro-smtp-heading"><span>SMTP details</span><small>Provider-specific values can be changed.</small></div>
-                <div className="cp-field-row"><label className="cp-field" htmlFor="account-host"><span>SMTP host</span><input id="account-host" value={accountForm.host} onChange={(event) => updateAccountField('host', event.target.value)} placeholder="smtp.example.com" required data-testid="input-account-host" /></label><label className="cp-field" htmlFor="account-port"><span>Port</span><input id="account-port" type="number" min="1" max="65535" value={accountForm.port} onChange={(event) => updateAccountField('port', event.target.value)} required data-testid="input-account-port" /></label></div>
-                <label className="email-pro-toggle-row"><input type="checkbox" checked={accountForm.secure} onChange={(event) => updateAccountField('secure', event.target.checked)} data-testid="input-account-secure" /><span><strong>Use secure connection</strong><small>Recommended for port 465. Port 587 typically uses STARTTLS.</small></span></label>
-                <label className="cp-field" htmlFor="account-username"><span>SMTP username</span><input id="account-username" value={accountForm.username} onChange={(event) => updateAccountField('username', event.target.value)} placeholder="Usually your full email address" autoComplete="username" required data-testid="input-account-username" /></label>
-                 <label className="cp-field" htmlFor="account-app-password"><span>App password <em>{editingAccountId ? 'required again to verify changes' : ''}</em></span><input id="account-app-password" type="password" value={accountForm.appPassword} onChange={(event) => updateAccountField('appPassword', event.target.value)} placeholder="Paste your app-specific password" autoComplete="new-password" required data-testid="input-account-app-password" /></label>
+                <div className="cp-field-row"><label className="cp-field" htmlFor="account-host"><span>SMTP host</span><input disabled={emailProLocked} id="account-host" value={accountForm.host} onChange={(event) => updateAccountField('host', event.target.value)} placeholder="smtp.example.com" required data-testid="input-account-host" /></label><label className="cp-field" htmlFor="account-port"><span>Port</span><input disabled={emailProLocked} id="account-port" type="number" min="1" max="65535" value={accountForm.port} onChange={(event) => updateAccountField('port', event.target.value)} required data-testid="input-account-port" /></label></div>
+                <label className="email-pro-toggle-row"><input disabled={emailProLocked} type="checkbox" checked={accountForm.secure} onChange={(event) => updateAccountField('secure', event.target.checked)} data-testid="input-account-secure" /><span><strong>Use secure connection</strong><small>Recommended for port 465. Port 587 typically uses STARTTLS.</small></span></label>
+                <label className="cp-field" htmlFor="account-username"><span>SMTP username</span><input disabled={emailProLocked} id="account-username" value={accountForm.username} onChange={(event) => updateAccountField('username', event.target.value)} placeholder="Usually your full email address" autoComplete="username" required data-testid="input-account-username" /></label>
+                 <label className="cp-field" htmlFor="account-app-password"><span>App password <em>{editingAccountId ? 'required again to verify changes' : ''}</em></span><input disabled={emailProLocked} id="account-app-password" type="password" value={accountForm.appPassword} onChange={(event) => updateAccountField('appPassword', event.target.value)} placeholder="Paste your app-specific password" autoComplete="new-password" required data-testid="input-account-app-password" /></label>
                 <div className="email-pro-form-footnote"><LockKeyhole size={14} /><span>We use this credential to connect to your mailbox. It is not displayed after this form is saved.</span></div>
-                 <Button type="submit" disabled={savingAccount} data-testid="button-save-account">{savingAccount ? <><RefreshCw size={15} className="email-pro-spin" /> Saving and testing</> : <><Check size={15} /> {editingAccountId ? 'Save changes' : 'Save connection'}</>}</Button>
+                 <Button type="submit" disabled={emailProLocked || savingAccount} data-testid="button-save-account">{savingAccount ? <><RefreshCw size={15} className="email-pro-spin" /> Saving and testing</> : <><Check size={15} /> {editingAccountId ? 'Save changes' : 'Save connection'}</>}</Button>
               </form>
-            ) : <Button variant="soft" type="button" className="email-pro-add-account" onClick={() => openAccountForm()} data-testid="button-add-account"><Plus size={15} /> Add sending account</Button>}
+            ) : <Button variant="soft" type="button" className="email-pro-add-account" onClick={() => openAccountForm()} disabled={emailProLocked} data-testid="button-add-account"><Plus size={15} /> Add sending account</Button>}
           </section>
 
           <section className="email-pro-guide">
