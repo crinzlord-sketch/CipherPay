@@ -50,7 +50,7 @@ export async function flutterwaveWebhookHandler(req: Request, res: Response): Pr
   }
 }
 
-export async function handleEvent(req: Request, evt: FlwEvent): Promise<void> {
+export async function handleEvent(req: Request, evt: FlwEvent, psaAccountReference?: string): Promise<void> {
   const eventName = evt.event ?? evt["event.type"] ?? "";
   const data = evt.data ?? {};
 
@@ -71,16 +71,28 @@ export async function handleEvent(req: Request, evt: FlwEvent): Promise<void> {
       return;
     }
 
-    const [walletRow] = await db.select({
+    let [walletRow] = await db.select({
       wallet: walletsTable,
       user: usersTable,
     }).from(walletsTable).innerJoin(usersTable, eq(usersTable.id, walletsTable.userId))
       .where(eq(walletsTable.flwPsaStaticAccount, accountNumber));
-    if (!walletRow) {
-      req.log?.warn?.({ accountNumber, providerReference }, "flw webhook: no CipherPay wallet for PSA account");
-      return;
+
+    // Poll-based reconciliation already knows which PSA wallet produced the
+    // transaction. Flutterwave transaction records can expose an account_number
+    // that is not the destination static account, so use the queried PSA
+    // account reference as a trusted fallback.
+    if (!walletRow && psaAccountReference) {
+      [walletRow] = await db.select({
+        wallet: walletsTable,
+        user: usersTable,
+      }).from(walletsTable).innerJoin(usersTable, eq(usersTable.id, walletsTable.userId))
+        .where(eq(walletsTable.flwPsaAccountReference, psaAccountReference));
     }
 
+    if (!walletRow) {
+      req.log?.warn?.({ accountNumber, providerReference, psaAccountReference }, "flw webhook: no CipherPay wallet for PSA account");
+      return;
+    }
     const reference = `PSA-${providerReference}`.slice(0, 48);
     const existing = await db.select({ id: transactionsTable.id, status: transactionsTable.status })
       .from(transactionsTable).where(eq(transactionsTable.reference, reference));
