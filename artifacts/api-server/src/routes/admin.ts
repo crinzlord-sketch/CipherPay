@@ -1300,7 +1300,6 @@ router.post("/admin/kyc/:id/identity-check", requireAdmin, async (req: AdminRequ
 
     const providerName = [entity?.first_name, entity?.middle_name, entity?.last_name].filter(Boolean).join(" ").trim();
     const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const submittedTokens = normalize(submittedName).split(/(?=[a-z])/).filter(Boolean);
     const submittedFirst = normalize(firstName);
     const submittedLast = normalize(lastName);
     const providerFirst = normalize(String(entity?.first_name ?? ""));
