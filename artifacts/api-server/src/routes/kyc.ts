@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, kycTable, usersTable } from "@workspace/db";
+import { db, kycTable, usersTable, notificationsTable } from "@workspace/db";
 import { notifyUser } from "../lib/notifications";
 import { sendAdminAlertEmail } from "../lib/email";
 import path from "path";
@@ -141,6 +141,25 @@ router.post("/kyc/submit", async (req, res): Promise<void> => {
   }
 
   await notifyUser({ userId, type: "info", title: "KYC documents received", body: "Your verification is under review. We'll notify you within 24–48 hours." }).catch(() => {});
+
+  // Create an unread admin alert for every admin. This powers the Verification
+  // tab badge and remains independent of email delivery.
+  try {
+    const admins = await db.select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.isAdmin, true));
+    if (admins.length) {
+      await db.insert(notificationsTable).values(admins.map((admin) => ({
+        userId: admin.id,
+        type: "admin_kyc",
+        title: "New KYC submission",
+        body: `${fullName || "A customer"} submitted ${documentType.toUpperCase()} verification. Review it in Admin → Verification.`,
+        link: "/admin?tab=verification",
+      })));
+    }
+  } catch (e: any) {
+    req.log?.warn?.({ err: e?.message }, "admin in-app KYC alert failed");
+  }
 
   // Best-effort alert to the operator inbox — never block the user's request.
   try {
