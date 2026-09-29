@@ -17,7 +17,7 @@ export async function ensureUserPayoutWallet(userId: number) {
   let bankName = wallet.flwPsaBankName;
   let bankCode = wallet.flwPsaBankCode;
 
-  const desiredAccountName = `CipherPay - ${user.firstName} ${user.lastName}`.trim();
+  const desiredAccountName = `${user.firstName} ${user.lastName}`.trim();
 
   if (!accountReference) {
     let psa;
