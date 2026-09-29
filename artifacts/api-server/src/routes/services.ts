@@ -217,7 +217,7 @@ function parsePlanMeta(name: string): { size: string; validity: string } {
   return { size: sizeMatch?.[1]?.toUpperCase().replace(/\s+/g, "") ?? "", validity: validityMatch?.[1] ?? "" };
 }
 
-type DataPlan = { id: string; name: string; size: string; validity: string; price: number; wholesalePrice: number; network: string; billerName: string };
+type DataPlan = { id: string; name: string; size: string; validity: string; price: number; wholesalePrice: number; network: string; billerName: string; billerCode: string };
 
 async function getAllDataPlansRaw(): Promise<Awaited<ReturnType<typeof flwDataPlans>>> {
   if (rawDataCache && Date.now() - rawDataCache.at < DATA_TTL_MS) return rawDataCache.plans;
@@ -241,7 +241,8 @@ async function getDataPlans(network: string): Promise<DataPlan[]> {
         price: dataRetailPrice(p.amount, meta.size),
         wholesalePrice: p.amount,  // charged to Flutterwave; user pays the retail price
         network,
-        billerName: p.billerName,  // used as `type` in POST /v3/bills
+        billerName: p.billerName,
+        billerCode: p.billerCode,
       };
     });
 }
@@ -287,7 +288,7 @@ router.post("/data/buy", async (req, res): Promise<void> => {
     await fundBillSourceFromUser(userId, plan.price, tx.id);
     sourceFunded = true;
     const reference = flwReference(`DAT${tx.id}`);
-    const result = await flwBuyData({ phone, amount: plan.wholesalePrice, itemCode: planId, billerName: plan.billerName, reference });
+    const result = await flwBuyData({ phone, amount: plan.wholesalePrice, itemCode: planId, billerName: plan.billerName, billerCode: plan.billerCode, reference });
     req.log.info({ flwStatus: result.raw?.status, flwMessage: result.raw?.message, flwData: result.raw?.data, reference, planId }, "Flutterwave data response");
     if (!result.success) {
       if (sourceFunded) await refundBillSourceToUser(userId, plan.price, tx.id);
@@ -413,7 +414,7 @@ router.post("/bills/pay", async (req, res): Promise<void> => {
         res.status(502).json({ error: "Bill payment failed. You have been refunded.", details: "Biller not found in catalog" });
         return;
       }
-      const result = await flwPayBill({ billerName, item, customer: customerId, amount, reference });
+      const result = await flwPayBill({ billerName, billerCode: flwElec.biller, item, customer: customerId, amount, reference });
       req.log.info({ flwStatus: result.raw?.status, flwMessage: result.raw?.message, flwRef: result.flwRef, reference, provider, item, billerName }, "Flutterwave electricity bill response");
       if (!result.success) {
         if (sourceFunded) await refundBillSourceToUser(userId, amount, tx.id);
