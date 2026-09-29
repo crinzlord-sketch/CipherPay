@@ -329,29 +329,4 @@ router.get("/email/sent/:id", async (req, res): Promise<void> => {
 });
 
 
-// Temporary Mailjet delivery test endpoint. Protected by a short-lived Render env token and intended for operator verification only.
-router.get("/email/test-mailjet", async (req, res): Promise<void> => {
-  const expected = String(process.env.MAILJET_TEST_TOKEN ?? "").trim();
-  const provided = String(req.query.token ?? "").trim();
-  if (!expected || !provided || provided !== expected) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-
-  const recipient = "eteowoudo@gmail.com";
-  const html = `<div style="font-family:Arial,sans-serif;padding:24px;color:#1f2937"><h2>CipherPay Mailjet test</h2><p>This is a live delivery test from CipherPay using the Mailjet transport.</p></div>`;
-
-  try {
-    await sendMail(
-      recipient,
-      "CipherPay · Mailjet delivery test",
-      html,
-      "This is a live delivery test from CipherPay using the Mailjet transport.",
-    );
-    res.json({ ok: true, recipient, message: "Mailjet accepted the test email." });
-  } catch (error: any) {
-    res.status(502).json({ ok: false, error: String(error?.message ?? "Mailjet send failed") });
-  }
-});
-
 export default router;
