@@ -91,6 +91,7 @@ export function KycPage({ detailType }: { detailType?: VerificationType }) {
   const [formError, setFormError] = useState('');
   const [success, setSuccess] = useState('');
   const [fileError, setFileError] = useState('');
+  const [submittedPopup, setSubmittedPopup] = useState(false);
   const [expandedType, setExpandedType] = useState<VerificationType | null>(detailType ?? null);
   const [step, setStep] = useState(1);
 
@@ -266,6 +267,7 @@ export function KycPage({ detailType }: { detailType?: VerificationType }) {
       });
       setStatus(next);
       setSuccess('Your details are in the queue for review.');
+      setSubmittedPopup(true);
     } catch (caught) {
       setFormError(caught instanceof Error ? caught.message : 'We could not submit your details.');
     } finally {
@@ -277,6 +279,32 @@ export function KycPage({ detailType }: { detailType?: VerificationType }) {
   if (error && !status) return <main className="cp-page"><ErrorState message={error} retry={() => void loadStatus()} /></main>;
 
   return (
+    {submittedPopup && (
+      <div
+        role="presentation"
+        onClick={() => setSubmittedPopup(false)}
+        style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'grid', placeItems: 'center', padding: 20, background: 'rgba(0,0,0,.55)', backdropFilter: 'blur(6px)' }}
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="kyc-submitted-title"
+          onClick={(event) => event.stopPropagation()}
+          className="cp-card cp-card-pad"
+          style={{ width: 'min(440px, 100%)', textAlign: 'center' }}
+        >
+          <div style={{ width: 54, height: 54, margin: '0 auto 14px', display: 'grid', placeItems: 'center', borderRadius: 16, background: 'rgba(34,197,94,.12)' }}>
+            <CheckCircle2 size={28} />
+          </div>
+          <h2 id="kyc-submitted-title" style={{ marginBottom: 8 }}>KYC submitted</h2>
+          <p style={{ margin: '0 auto 18px', maxWidth: 360, lineHeight: 1.55 }}>
+            Your details have been submitted successfully and are now under review. You cannot edit them while the review is in progress.
+          </p>
+          <Button type="button" onClick={() => setSubmittedPopup(false)}>Got it</Button>
+        </div>
+      </div>
+    )}
+
     <main className="cp-page cp-page-reveal">
       <PageHeading
         eyebrow="Account / identity"
