@@ -528,5 +528,5 @@ export function KycPage({ detailType }: { detailType?: VerificationType }) {
         </aside>
       </div>}
     </main>
-  );
+    </>\n  );
 }
