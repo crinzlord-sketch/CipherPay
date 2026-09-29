@@ -195,6 +195,10 @@ function SentHistoryPanel({
   onLoadMore: () => void;
   onOpenCampaign: (campaignId: number) => void;
 }) {
+  if (!loading && subscription && !subscription.unlocked) {
+    return <div className="cp-page cp-page-reveal email-pro-page"><PageHeading eyebrow="CIPHERPAY / EMAIL PRO" title="Unlock your private sending workspace." detail="Email Pro costs ₦5,000 to unlock, then ₦5,000 every month. If a renewal cannot be paid, the workspace locks automatically." /><section className="email-pro-hero" style={{ marginTop: 24 }}><div className="email-pro-hero-copy"><span className="email-pro-mark"><LockKeyhole size={18} /></span><div><span className="cp-kicker">Email Pro access</span><h2>One unlock. Then monthly access.</h2><p>Connect your own mailbox, send campaigns, and keep your sending history in one place.</p><Button type="button" onClick={async () => { setUnlocking(true); try { const result = await apiRequest<{ nextBillingAt: string }>('/api/email/pro/unlock', { method: 'POST' }); setSubscription({ unlocked: true, status: 'active', nextBillingAt: result.nextBillingAt, unlockFee: 5000, monthlyFee: 5000 }); await loadWorkspace(); } catch (e) { setPageError(e instanceof Error ? e.message : 'Could not unlock Email Pro.'); } finally { setUnlocking(false); } }} disabled={unlocking}>{unlocking ? 'Unlocking…' : 'Unlock for ₦5,000'} <ArrowUpRight size={16} /></Button></div></div></section></div>;
+  }
+
   return (
     <section className="cp-card cp-card-pad email-pro-history-card">
       <div className="cp-card-head email-pro-card-head">
@@ -285,6 +289,8 @@ export default function EmailProPage() {
   const [campaignDetail, setCampaignDetail] = useState<SentCampaignDetail | null>(null);
   const [campaignDetailLoading, setCampaignDetailLoading] = useState(false);
   const [campaignDetailError, setCampaignDetailError] = useState('');
+  const [subscription, setSubscription] = useState<{ unlocked: boolean; status: string; nextBillingAt: string | null; unlockFee: number; monthlyFee: number } | null>(null);
+  const [unlocking, setUnlocking] = useState(false);
 
   const refreshSent = useCallback(async (append = false) => {
     const offset = append ? campaigns.length : 0;
@@ -301,6 +307,9 @@ export default function EmailProPage() {
     setPageError('');
     setLoading(true);
     try {
+      const subscriptionResponse = await apiRequest<{ unlocked: boolean; status: string; nextBillingAt: string | null; unlockFee: number; monthlyFee: number }>('/api/email/pro');
+      setSubscription(subscriptionResponse);
+      if (!subscriptionResponse.unlocked) { setAccounts([]); setCampaigns([]); setSentHasMore(false); return; }
       const [accountResponse, sentResponse] = await Promise.all([
         apiRequest<{ data: EmailAccount[] }>('/api/email/accounts'),
         apiRequest<{ data: SentCampaign[]; hasMore?: boolean }>('/api/email/sent?limit=30'),
