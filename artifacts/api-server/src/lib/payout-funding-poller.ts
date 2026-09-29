@@ -18,7 +18,7 @@ export function startPayoutFundingPoller(): void {
         if (!row.accountReference) continue;
         try {
           const transactions = await fetchPayoutWalletTransactions(row.accountReference);
-          logger.info({ accountReference: row.accountReference, transactionCount: transactions.length }, "payout funding poll checked wallet");
+          logger.info({ accountReference: row.accountReference, transactionCount: transactions.length, transactions: transactions.map((tx: any) => ({ id: tx?.id, status: tx?.status, debitCurrency: tx?.debit_currency, currency: tx?.currency, amount: tx?.amount, reference: tx?.reference, accountNumber: tx?.account_number, narration: tx?.narration })) }, "payout funding poll checked wallet");
           for (const tx of transactions) {
             const status = String(tx?.status ?? "").toUpperCase();
             const debitCurrency = String(tx?.debit_currency ?? "").toUpperCase();
@@ -26,7 +26,7 @@ export function startPayoutFundingPoller(): void {
             await handleEvent({ log: logger } as any, {
               event: "transfer.completed",
               data: tx,
-            });
+            }, row.accountReference);
           }
         } catch (e: any) {
           logger.warn({ err: e?.message, accountReference: row.accountReference }, "payout funding poll failed");
