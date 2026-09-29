@@ -378,6 +378,7 @@ export default function EmailProPage() {
 
   const handleSaveAccount = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (emailProLocked) return;
     setAccountNotice(null);
     if (!accountForm.host || !accountForm.username || !accountForm.appPassword) {
       setAccountNotice({ tone: 'error', message: 'Add the SMTP host, username, and app password.' });
@@ -417,6 +418,7 @@ export default function EmailProPage() {
   };
 
   const handleTestAccount = async (account: EmailAccount) => {
+    if (emailProLocked) return;
     setAccountNotice(null);
     setTestingAccount(account.id);
     try {
@@ -436,6 +438,7 @@ export default function EmailProPage() {
   };
 
   const handleDeleteAccount = async (account: EmailAccount) => {
+    if (emailProLocked) return;
     if (!window.confirm(`Remove ${account.email} from Email Pro?`)) return;
     setAccountNotice(null);
     setDeletingAccount(account.id);
@@ -458,6 +461,7 @@ export default function EmailProPage() {
 
   const handleSend = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (emailProLocked) return;
     setSendNotice(null);
     if (!sendForm.accountId || !sendForm.fromName.trim() || !sendForm.subject.trim() || !sendForm.body.trim() || recipients.length === 0) {
       setSendNotice({ tone: 'error', message: 'Choose a sending account and add a display name, subject, message, and at least one recipient.' });
@@ -639,8 +643,8 @@ export default function EmailProPage() {
               <label className="cp-field" htmlFor="email-subject"><span>Subject</span><input disabled={emailProLocked} id="email-subject" value={sendForm.subject} onChange={(event) => updateSendField('subject', event.target.value)} placeholder="A clear subject gets opened" data-testid="input-send-subject" /></label>
 
               <div className="email-pro-editor-toolbar" role="tablist" aria-label="Message format">
-                <button type="button" role="tab" aria-selected={sendForm.contentType === 'text'} className={sendForm.contentType === 'text' ? 'active' : ''} onClick={() => updateSendField('contentType', 'text')} data-testid="button-format-text"><FileText size={14} /> Plain text</button>
-                <button type="button" role="tab" aria-selected={sendForm.contentType === 'html'} className={sendForm.contentType === 'html' ? 'active' : ''} onClick={() => updateSendField('contentType', 'html')} data-testid="button-format-html"><Globe2 size={14} /> HTML</button>
+                <button disabled={emailProLocked} type="button" role="tab" aria-selected={sendForm.contentType === 'text'} className={sendForm.contentType === 'text' ? 'active' : ''} onClick={() => updateSendField('contentType', 'text')} data-testid="button-format-text"><FileText size={14} /> Plain text</button>
+                <button disabled={emailProLocked} type="button" role="tab" aria-selected={sendForm.contentType === 'html'} className={sendForm.contentType === 'html' ? 'active' : ''} onClick={() => updateSendField('contentType', 'html')} data-testid="button-format-html"><Globe2 size={14} /> HTML</button>
                 <span><Zap size={13} /> {sendForm.contentType === 'html' ? 'HTML accepted as written' : 'Readable everywhere'}</span>
               </div>
               <label className="cp-field" htmlFor="email-body"><span>Message</span><textarea disabled={emailProLocked} id="email-body" className="email-pro-body" value={sendForm.body} onChange={(event) => updateSendField('body', event.target.value)} placeholder={sendForm.contentType === 'html' ? '<p>Hello there,</p>' : 'Write your message here…'} data-testid="textarea-send-body" /></label>
@@ -668,7 +672,7 @@ export default function EmailProPage() {
                 <div className="email-pro-account-empty"><Server size={20} /><strong>Nothing connected yet</strong><span>Start with your most trusted mailbox.</span></div>
               ) : accounts.map((account) => (
                 <div className={`email-pro-account-row ${sendForm.accountId === String(account.id) ? 'selected' : ''}`} key={account.id} data-testid={`row-account-${account.id}`}>
-                  <button type="button" className="email-pro-account-select" onClick={() => { if (!emailProLocked) setSendForm((current) => ({ ...current, accountId: String(account.id), replyTo: account.replyTo ?? '' })); }} data-testid={`button-select-account-${account.id}`}>
+                  <button disabled={emailProLocked} type="button" className="email-pro-account-select" onClick={() => { if (!emailProLocked) setSendForm((current) => ({ ...current, accountId: String(account.id), replyTo: account.replyTo ?? '' })); }} data-testid={`button-select-account-${account.id}`}>
                     <span className="email-pro-provider-mark">{account.provider === 'gmail' ? 'G' : account.provider === 'outlook' ? 'O' : 'S'}</span>
                      <span><strong>{account.displayName || account.email}</strong><small>{account.email}</small></span>
                     <span className="email-pro-account-check">{sendForm.accountId === String(account.id) ? <Check size={14} /> : <ArrowUpRight size={14} />}</span>
@@ -676,7 +680,7 @@ export default function EmailProPage() {
                    <div className="email-pro-account-actions">
                       <span className={`email-pro-connection-status email-pro-connection-${connectionStates[account.id] ?? (account.verifiedAt ? 'verified' : 'idle')}`} data-testid={`status-account-${account.id}`}>{(connectionStates[account.id] ?? (account.verifiedAt ? 'verified' : 'idle')) === 'verified' ? 'Valid configuration' : (connectionStates[account.id] ?? 'idle') === 'invalid' ? 'Invalid configuration' : 'Not tested'}</span>
                     <Button variant="quiet" type="button" className="email-pro-mini-button" onClick={() => { if (!emailProLocked) void handleTestAccount(account); }} disabled={emailProLocked || testingAccount === account.id} data-testid={`button-test-account-${account.id}`}>{testingAccount === account.id ? <RefreshCw size={13} className="email-pro-spin" /> : <Zap size={13} />} Test</Button>
-                     <Button variant="quiet" type="button" className="email-pro-mini-button" onClick={() => { if (!emailProLocked) openEditAccount(account); }} data-testid={`button-edit-account-${account.id}`}><Settings2 size={13} /> Edit</Button>
+                     <Button variant="quiet" type="button" className="email-pro-mini-button" onClick={() => { if (!emailProLocked) openEditAccount(account); }} disabled={emailProLocked} data-testid={`button-edit-account-${account.id}`}><Settings2 size={13} /> Edit</Button>
                     <button type="button" className="email-pro-delete-button" onClick={() => void handleDeleteAccount(account)} disabled={emailProLocked || deletingAccount === account.id} aria-label={`Remove ${account.email}`} data-testid={`button-delete-account-${account.id}`}>{deletingAccount === account.id ? <RefreshCw size={13} className="email-pro-spin" /> : <Trash2 size={13} />}</button>
                   </div>
                 </div>
