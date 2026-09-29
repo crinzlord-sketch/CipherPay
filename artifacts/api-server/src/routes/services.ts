@@ -116,13 +116,12 @@ const NETWORKS = [
 router.get("/airtime/networks", (_req, res) => { res.json(NETWORKS); });
 
 
-// Flat profit margin (₦) added on top of airtime AND data purchases.
-const VAS_PROFIT_FEE = 10;
+// Airtime and data are sold at the provider price. CipherPay does not add a
+// service/profit fee to either VAS purchase.
+const VAS_PROFIT_FEE = 0;
 
-// Competitive data pricing: wholesale cost + ₦20 flat fee, rounded to nearest ₦10.
 function dataRetailPrice(wholesaleAmount: number, _sizeStr: string): number {
-  const raw = Math.max(wholesaleAmount + VAS_PROFIT_FEE, 50);
-  return Math.ceil(raw / 10) * 10;
+  return Math.max(Number(wholesaleAmount) || 0, 0);
 }
 
 router.post("/airtime/buy", async (req, res): Promise<void> => {
@@ -134,7 +133,7 @@ router.post("/airtime/buy", async (req, res): Promise<void> => {
   const { network, phone: rawPhone, amount } = parsed.data;
   const phone = normalizeNgPhone(rawPhone);
   const networkObj = NETWORKS.find(n => n.id === network);
-  const charge = amount + VAS_PROFIT_FEE;
+  const charge = amount;
 
   const kycLevel = await getUserKycLevel(userId);
   const airtimeLimitError = checkPerTxLimitSync(kycLevel, charge);
@@ -142,7 +141,7 @@ router.post("/airtime/buy", async (req, res): Promise<void> => {
 
   let tx: any;
   try {
-    ({ tx } = await debitWallet(userId, charge, `${networkObj?.name ?? network} airtime - ${phone}`, "airtime", { network, phone, amount, fee: VAS_PROFIT_FEE }));
+    ({ tx } = await debitWallet(userId, charge, `${networkObj?.name ?? network} airtime - ${phone}`, "airtime", { network, phone, amount, fee: 0 }));
   } catch (e: any) {
     res.status(400).json({ error: e.message }); return;
   }
@@ -168,10 +167,19 @@ router.post("/airtime/buy", async (req, res): Promise<void> => {
     }
     await safePersist(req, tx.id, async () => {
       await db.update(transactionsTable).set({
+        status: result.pending ? "pending" : "success",
         metadata: JSON.stringify({ network, phone, amount, providerRef: result.flwRef ?? result.reference, providerStatus: result.message }),
       }).where(eq(transactionsTable.id, tx.id));
     });
-    res.json({ success: true, processing: result.pending === true, message: result.pending ? "Airtime purchase is still processing. You have been charged once and we are waiting for the provider." : "Airtime delivered successfully", reference, transaction: formatTransaction(tx) });
+    res.json({
+      success: true,
+      processing: result.pending === true,
+      message: result.pending
+        ? "Airtime purchase is still processing. You have not been charged any extra fee."
+        : "Airtime delivered successfully",
+      reference,
+      transaction: formatTransaction({ ...tx, status: result.pending ? "pending" : "success" }),
+    });
   } catch (e: any) {
     if (sourceFunded) await refundBillSourceToUser(userId, charge, tx.id);
     await refundFailed(userId, tx.id, charge, `Provider error: ${e.message ?? "unknown"}`, "airtime");
@@ -293,10 +301,19 @@ router.post("/data/buy", async (req, res): Promise<void> => {
     }
     await safePersist(req, tx.id, async () => {
       await db.update(transactionsTable).set({
+        status: result.pending ? "pending" : "success",
         metadata: JSON.stringify({ network, phone, planId, plan, providerRef: result.flwRef ?? result.reference, providerStatus: result.message }),
       }).where(eq(transactionsTable.id, tx.id));
     });
-    res.json({ success: true, message: "Data delivered successfully", transaction: formatTransaction(tx) });
+    res.json({
+      success: true,
+      processing: result.pending === true,
+      message: result.pending
+        ? "Data purchase is still processing. You have not been charged any extra fee."
+        : "Data delivered successfully",
+      reference,
+      transaction: formatTransaction({ ...tx, status: result.pending ? "pending" : "success" }),
+    });
   } catch (e: any) {
     if (sourceFunded) await refundBillSourceToUser(userId, plan.price, tx.id);
     await refundFailed(userId, tx.id, plan.price, `Provider error: ${e.message ?? "unknown"}`, "data");
