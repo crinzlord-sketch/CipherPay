@@ -19,8 +19,8 @@ function toUserChatDto(c: {
     agentTypingAt: c.agentTypingAt,
   };
 }
-import { db, usersTable, supportChatsTable, supportMessagesTable } from "@workspace/db";
-import { sendMail, isEmailConfigured } from "../lib/email";
+import { db, usersTable, supportChatsTable, supportMessagesTable, notificationsTable } from "@workspace/db";
+import { sendMail, sendAdminAlertEmail, isEmailConfigured } from "../lib/email";
 import { getBotReply, WELCOME_MESSAGE } from "../lib/support-bot";
 import { notifyUser } from "../lib/notifications";
 
@@ -61,6 +61,20 @@ function requireUser(req: any, res: any): number | null {
 
 const router: IRouter = Router();
 
+async function notifyAllAdmins(title: string, body: string, link: string | null = null): Promise<void> {
+  const admins = await db.select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.isAdmin, true));
+  if (!admins.length) return;
+  await db.insert(notificationsTable).values(admins.map((admin) => ({
+    userId: admin.id,
+    type: "admin_support",
+    title,
+    body,
+    link,
+  })));
+}
+
 // ── FAQ + legacy email form (kept for backwards compat) ──────────────────────
 const FAQ = [
   { id: "fund-wallet", q: "How do I fund my wallet?", a: "Wallet → Fund → enter amount → pay securely with card or bank transfer in the app. Funds arrive instantly." },
@@ -85,10 +99,33 @@ router.post("/support/contact", async (req, res): Promise<void> => {
   if (!isEmailConfigured()) { res.status(503).json({ error: "Email service not configured. Please email gglteam.2025@gmail.com directly." }); return; }
   const safeMessage = String(message).replace(/[<>]/g, (c) => ({ "<": "&lt;", ">": "&gt;" }[c] ?? c));
   const html = `<div style="font-family:-apple-system,sans-serif;max-width:560px;padding:24px;background:#15162a;color:#e7e7f0;border-radius:14px"><h2 style="color:#a78bfa">New CipherPay Support Request</h2><p style="color:#8b8c9e">Category: <strong style="color:#fff">${category ?? "general"}</strong></p><div style="background:#0b0c1a;border:1px solid #2a2b45;border-radius:10px;padding:14px;margin-bottom:14px"><div style="color:#8b8c9e;font-size:11px;text-transform:uppercase;letter-spacing:1px">From</div><div style="color:#fff">${userInfo}</div></div><div style="background:#0b0c1a;border:1px solid #2a2b45;border-radius:10px;padding:14px;margin-bottom:14px"><div style="color:#8b8c9e;font-size:11px;text-transform:uppercase;letter-spacing:1px">Subject</div><div style="color:#fff">${String(subject).replace(/[<>]/g, "")}</div></div><div style="background:#0b0c1a;border:1px solid #2a2b45;border-radius:10px;padding:14px"><div style="color:#8b8c9e;font-size:11px;text-transform:uppercase;letter-spacing:1px">Message</div><div style="color:#fff;white-space:pre-wrap">${safeMessage}</div></div></div>`;
+  // Store an unread admin alert first so support requests are not lost if
+  // the email provider is temporarily unavailable.
   try {
-    await sendMail(SUPPORT_INBOX, `[CipherPay Support] ${subject}`, html, undefined, replyEmail || undefined);
-    res.json({ success: true, message: "We've received your message. Our team will get back to you within 24 hours." });
-  } catch (e: any) { res.status(502).json({ error: e?.message ?? "Could not deliver your message" }); }
+    await notifyAllAdmins(
+      "New support request",
+      `${subject} — ${userInfo}`,
+      "/admin?tab=support",
+    );
+  } catch (e: any) {
+    console.warn("admin in-app support alert failed", e?.message ?? String(e));
+  }
+
+  // Email is best-effort. A Brevo suspension must not make the user's support
+  // request disappear; the admin console notification remains available.
+  try {
+    if (isEmailConfigured()) {
+      await sendAdminAlertEmail(
+        "New support request",
+        `Category: ${category ?? "general"}\n\nFrom: ${userInfo}\n\nSubject: ${subject}\n\n${message}`,
+        SUPPORT_INBOX,
+      );
+    }
+  } catch (e: any) {
+    console.warn("admin support email failed", e?.message ?? String(e));
+  }
+
+  res.json({ success: true, message: "We've received your message. Our team will get back to you within 24 hours." });
 });
 
 // ── CHAT ─────────────────────────────────────────────────────────────────────
@@ -205,6 +242,17 @@ router.post("/support/chat/:id/request-agent", async (req, res): Promise<void> =
     chatId: id, sender: "system",
     body: "You're in the queue for a live Support agent. Average wait time is a few minutes — feel free to keep typing and we'll see your messages when we join.",
   }).returning();
+  // Notify all admins in the console as an unread support alert.
+  try {
+    await notifyAllAdmins(
+      "Live support requested",
+      `${who} is waiting for a live support agent. Open the Support inbox.`,
+      `/admin?tab=support&chatId=${id}`,
+    );
+  } catch (e: any) {
+    console.warn("admin in-app live support alert failed", e?.message ?? String(e));
+  }
+
   // Notify all admins
   try {
     const admins = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.isAdmin, true));
