@@ -2,7 +2,14 @@ import { ProxyAgent, fetch as undiciFetch } from "undici";
 
 const BASE = "https://api.flutterwave.com/v3";
 
-const fixieDispatcher = process.env.FIXIE_URL ? new ProxyAgent(process.env.FIXIE_URL) : undefined;
+function normalizeProxyUrl(raw: string | undefined): string | undefined {
+  if (!raw?.trim()) return undefined;
+  const value = raw.trim();
+  return /^https?:\/\//i.test(value) ? value : `http://${value}`;
+}
+
+const proxyUrl = normalizeProxyUrl(process.env.FIXIE_URL);
+const fixieDispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
 
 async function flwFetch(input: string, init: RequestInit = {}): Promise<Response> {
   try {
@@ -15,8 +22,8 @@ async function flwFetch(input: string, init: RequestInit = {}): Promise<Response
       message: err?.message ?? String(err),
       causeCode: err?.cause?.code ?? null,
       causeMessage: err?.cause?.message ?? null,
-      fixieConfigured: Boolean(process.env.FIXIE_URL),
-      fixieHost: process.env.FIXIE_URL ? new URL(process.env.FIXIE_URL).hostname : null,
+      proxyConfigured: Boolean(proxyUrl),
+      proxyHost: proxyUrl ? new URL(proxyUrl).hostname : null,
     });
     throw err;
   }
