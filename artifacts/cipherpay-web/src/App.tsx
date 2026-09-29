@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/reac
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { AnimatedDialogProvider } from './components/animated-dialog';
+import { AnimatedDialogProvider, useAnimatedDialog } from './components/animated-dialog';
 import SmsVerification from './pages/SmsVerification';
 import TemporaryEmail from './pages/TemporaryEmail';
 import { KycPage } from './pages/KycPage';
@@ -95,6 +95,7 @@ function Shell({ children }: { children: ReactNode }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [location, setLocation] = useLocation();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const { confirm } = useAnimatedDialog();
   const me = useGetMe({ query: { enabled: !!useToken(), queryKey: ['/api/auth/me'] } });
   const user = me.data as any;
   const initials = user ? `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}` : 'CP';
@@ -164,7 +165,18 @@ function Shell({ children }: { children: ReactNode }) {
       window.clearInterval(interval);
     };
   }, [location]);
-  const logout = () => { localStorage.removeItem('cipherpay_token'); queryClient.clear(); setLocation('/login'); };
+  const logout = async () => {
+    const confirmed = await confirm({
+      title: 'Log out of CipherPay?',
+      description: 'You will need to sign in again to access your account.',
+      confirmLabel: 'Log out',
+      destructive: true,
+    });
+    if (!confirmed) return;
+    localStorage.removeItem('cipherpay_token');
+    queryClient.clear();
+    setLocation('/login');
+  };
   const linkList = (items: typeof nav) => items.map(({ href, label, icon: Icon }) => (
     <Link key={href} href={href} onClick={() => setMobileOpen(false)} className={`nav-item ${location === href ? 'active' : ''}`} data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`}>
       <Icon size={17} strokeWidth={1.8} /><span>{label}</span>
@@ -182,14 +194,14 @@ function Shell({ children }: { children: ReactNode }) {
           </button>
           {userMenuOpen && <div className="user-menu" role="menu" aria-label="Account menu">
             <button type="button" className="user-menu-item" role="menuitem" onClick={() => { setUserMenuOpen(false); setLocation('/profile'); }} data-testid="button-user-profile"><UserRound size={16} /><span>Profile</span></button>
-            <button type="button" className="user-menu-item user-menu-logout" role="menuitem" onClick={() => { setUserMenuOpen(false); logout(); }} data-testid="button-user-logout"><LogOut size={16} /><span>Log out</span></button>
+            <button type="button" className="user-menu-item user-menu-logout" role="menuitem" onClick={() => { setUserMenuOpen(false); void logout(); }} data-testid="button-user-logout"><LogOut size={16} /><span>Log out</span></button>
           </div>}
         </div>}
       </div>
     </aside>
     {mobileOpen && <button className="scrim" onClick={() => setMobileOpen(false)} aria-label="Close navigation" data-testid="button-scrim" />}
     <main className="main-area">
-       <header className="topbar"><button className="icon-btn menu-toggle" onClick={() => setMobileOpen(true)} data-testid="button-open-menu"><Menu size={21} /></button><div className="mobile-logo"><Logo /></div><div className="topbar-spacer" /><button type="button" className="icon-btn notification-button" onClick={() => setLocation(location === '/notifications' ? '/' : '/notifications')} aria-label={location === '/notifications' ? 'Close notifications' : unreadNotifications > 0 ? `Open notifications, ${unreadNotifications} unread` : 'Open notifications'} aria-pressed={location === '/notifications'} data-testid="button-notifications"><Bell size={19} />{unreadNotifications > 0 && <i />}</button>{user && <span className="topbar-name">{user.firstName}</span>}<button className="logout-link" onClick={logout} data-testid="button-logout"><LogOut size={16} /> <span>Log out</span></button></header>
+       <header className="topbar"><button className="icon-btn menu-toggle" onClick={() => setMobileOpen(true)} data-testid="button-open-menu"><Menu size={21} /></button><div className="mobile-logo"><Logo /></div><div className="topbar-spacer" /><button type="button" className="icon-btn notification-button" onClick={() => setLocation(location === '/notifications' ? '/' : '/notifications')} aria-label={location === '/notifications' ? 'Close notifications' : unreadNotifications > 0 ? `Open notifications, ${unreadNotifications} unread` : 'Open notifications'} aria-pressed={location === '/notifications'} data-testid="button-notifications"><Bell size={19} />{unreadNotifications > 0 && <i />}</button>{user && <span className="topbar-name">{user.firstName}</span>}<button className="logout-link" onClick={() => void logout()} data-testid="button-logout"><LogOut size={16} /> <span>Log out</span></button></header>
       <div className="content">{children}</div>
     </main>
   </div>;
