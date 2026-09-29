@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { isNotNull } from "drizzle-orm";
 import { db, walletsTable } from "@workspace/db";
 import { fetchPayoutWalletTransactions } from "./flutterwave";
 import { handleEvent } from "../routes/webhooks";
@@ -13,11 +13,12 @@ export function startPayoutFundingPoller(): void {
     try {
       const rows = await db.select({ accountReference: walletsTable.flwPsaAccountReference })
         .from(walletsTable)
-        .where(eq(walletsTable.flwPsaAccountReference, walletsTable.flwPsaAccountReference));
+        .where(isNotNull(walletsTable.flwPsaAccountReference));
       for (const row of rows) {
         if (!row.accountReference) continue;
         try {
           const transactions = await fetchPayoutWalletTransactions(row.accountReference);
+          logger.info({ accountReference: row.accountReference, transactionCount: transactions.length }, "payout funding poll checked wallet");
           for (const tx of transactions) {
             const status = String(tx?.status ?? "").toUpperCase();
             const debitCurrency = String(tx?.debit_currency ?? "").toUpperCase();
