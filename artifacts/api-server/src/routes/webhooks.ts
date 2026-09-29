@@ -160,7 +160,7 @@ export async function handleEvent(req: Request, evt: FlwEvent, psaAccountReferen
         type: "warning",
         title: "Deposit received — KYC review required",
         body: `Your ₦${amount.toLocaleString()} deposit was received in your personal account but is being held because ${flagReason!.toLowerCase()} Complete your KYC and an admin will release it.`,
-        link: `/transactions/${result.txId}`,
+        link: "/transactions",
       }).catch(() => {});
       req.log?.info?.({ txId: result.txId, userId: walletRow.user.id, amount, flagReason }, "flw webhook: PSA deposit held");
       return;
@@ -212,7 +212,7 @@ export async function handleEvent(req: Request, evt: FlwEvent, psaAccountReferen
         type: "warning",
         title: "Deposit received — KYC review required",
         body: `Your ₦${expected.toLocaleString()} payment was received but is being held because ${tx.flagReason ?? "your KYC deposit limit was exceeded"}. An admin will release it after your KYC is complete.`,
-        link: `/transactions/${tx.id}`,
+        link: "/transactions",
       }).catch(() => {});
       return;
     }
@@ -289,7 +289,7 @@ export async function handleEvent(req: Request, evt: FlwEvent, psaAccountReferen
           type: "success",
           title: "Withdrawal sent",
           body: successBody,
-          link: `/transactions/${tx.id}`,
+          link: "/transactions",
         });
       }
       req.log?.info?.({ txId: tx.id, updated: updated.length }, "flw webhook: transfer success");
@@ -331,7 +331,7 @@ export async function handleEvent(req: Request, evt: FlwEvent, psaAccountReferen
         type: "error",
         title: "Withdrawal failed",
         body: failedBody,
-        link: `/transactions/${tx.id}`,
+        link: "/transactions",
       });
 
       req.log?.info?.({ txId: tx.id, refundAmount }, "flw webhook: transfer failed, refunded");
