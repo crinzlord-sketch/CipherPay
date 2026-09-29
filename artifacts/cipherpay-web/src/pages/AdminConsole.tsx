@@ -58,6 +58,7 @@ export default function AdminConsole() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [adminAlertCounts, setAdminAlertCounts] = useState({ verification: 0, support: 0 });
   const [stats, setStats] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
@@ -97,7 +98,7 @@ export default function AdminConsole() {
     setLoading(true);
     setError('');
     try {
-      const [meResult, statsResult, usersResult, transactionsResult, supportResult, kycResult, depositsResult, withdrawalsResult, smsResult, socialResult, adminsResult] = await Promise.all([
+      const [meResult, statsResult, usersResult, transactionsResult, supportResult, kycResult, depositsResult, withdrawalsResult, smsResult, socialResult, adminsResult, alertsResult] = await Promise.all([
         adminRequest<any>('/api/admin/me', token),
         adminRequest<any>('/api/admin/stats', token),
         adminRequest<any>('/api/admin/users?limit=100', token),
@@ -109,6 +110,7 @@ export default function AdminConsole() {
         adminRequest<any>('/api/admin/sms-activations', token),
         adminRequest<any>('/api/admin/social-orders', token),
         adminRequest<any>('/api/admin/admins', token),
+        adminRequest<any>('/api/admin/alerts', token),
       ]);
       setCurrentAdminId(meResult.id);
       setStats(statsResult);
@@ -121,6 +123,7 @@ export default function AdminConsole() {
       setSmsActivations(smsResult.data ?? []);
       setSocialOrders(socialResult.data ?? []);
       setAdmins(adminsResult.data ?? []);
+      setAdminAlertCounts({ verification: Number(alertsResult.verification ?? 0), support: Number(alertsResult.support ?? 0) });
     } catch (caught) {
       if (caught instanceof Error && /token|admin|unauthorized|expired/i.test(caught.message)) {
         sessionStorage.removeItem('cipherpay_admin_token');
@@ -133,6 +136,16 @@ export default function AdminConsole() {
   }, [token, supportFilter]);
 
   useEffect(() => { void loadAll(); }, [loadAll]);
+
+  // Opening a queue tab marks its admin alerts as seen. New submissions that
+  // arrive afterwards create a fresh unread badge.
+  useEffect(() => {
+    if (!token || !['verification', 'support'].includes(tab)) return;
+    const type = tab === 'verification' ? 'admin_kyc' : 'admin_support';
+    void adminRequest('/api/admin/alerts/read', token, { method: 'POST', body: { type } })
+      .then(() => setAdminAlertCounts((current) => ({ ...current, [tab]: 0 })))
+      .catch(() => {});
+  }, [tab, token]);
 
   useEffect(() => {
     if (!token || !selectedSupport?.chat?.id || selectedSupport.chat.status === 'closed') return undefined;
@@ -438,7 +451,14 @@ export default function AdminConsole() {
     <nav className="admin-tabs" aria-label="Admin areas">{([
        ['overview', 'Overview', Zap], ['users', 'Users', Users], ['support', 'Support inbox', LifeBuoy],
       ['money', 'Money operations', CircleDollarSign], ['verification', 'Verification', ClipboardCheck], ['activity', 'Activity & tools', Database], ['admins', 'Add admin', ShieldCheck],
-    ] as const).map(([key, label, Icon]) => <button type="button" key={key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}><Icon size={16} />{label}{key === 'support' && supportChats.some((chat) => chat.unreadForAdmin > 0) && <i />}</button>)}</nav>
+    ] as const).map(([key, label, Icon]) => {
+      const unread = key === 'verification'
+        ? adminAlertCounts.verification
+        : key === 'support'
+          ? Math.max(adminAlertCounts.support, supportChats.filter((chat) => chat.unreadForAdmin > 0).length)
+          : 0;
+      return <button type="button" key={key} className="admin-tab" onClick={() => setTab(key)}><Icon size={16} />{label}{unread > 0 && <span className="admin-tab-unread" aria-label={`${unread} unread`}>{unread > 99 ? '99+' : unread}</span>}</button>;
+    })}</nav>
 
     {tab === 'overview' && <section className="admin-section">
       <div className="admin-stat-grid">
