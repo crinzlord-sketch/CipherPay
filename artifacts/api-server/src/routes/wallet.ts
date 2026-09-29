@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, gte, lte, sql, ne, inArray } from "drizzle-orm";
+import { eq, desc, and, or, gte, lte, sql, ne, inArray } from "drizzle-orm";
 import { db, walletsTable, transactionsTable, usersTable } from "@workspace/db";
 import { FundWalletBody, VerifyFundingBody, WalletTransferBody, WithdrawFundsBody, ListTransactionsQueryParams, ClaimDepositBody } from "@workspace/api-zod";
 import { getOrCreateWallet, creditWallet, debitWallet, formatWallet, formatTransaction } from "../lib/wallet";
@@ -617,7 +617,10 @@ router.get("/wallet/stats", async (req, res): Promise<void> => {
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   const transactions = await db.select().from(transactionsTable)
-    .where(and(eq(transactionsTable.userId, userId), eq(transactionsTable.status, "success")));
+    .where(and(
+      eq(transactionsTable.userId, userId),
+      or(eq(transactionsTable.status, "success"), eq(transactionsTable.status, "pending")),
+    ));
 
   let totalFunded = 0, totalSpent = 0, totalWithdrawn = 0, totalTransfers = 0, monthlySpend = 0;
   const categoryMap: Record<string, { amount: number; count: number }> = {};
@@ -627,7 +630,7 @@ router.get("/wallet/stats", async (req, res): Promise<void> => {
   for (const tx of transactions) {
     const amt = parseFloat(tx.amount);
     if (tx.type === "fund") { totalFunded += amt; }
-    else if (tx.type === "withdraw") { totalWithdrawn += amt; }
+    else if (tx.type === "withdraw" && tx.status !== "failed") { totalWithdrawn += amt; }
     else if (tx.type === "transfer_out") { totalTransfers += amt; }
     else if (tx.type === "transfer_in" || tx.type === "refund" || tx.type === "admin_credit") {
       // inbound / neutral — not counted as spending
