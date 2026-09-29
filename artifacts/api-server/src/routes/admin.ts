@@ -694,7 +694,10 @@ router.get("/admin/transactions", requireAdmin, async (req, res): Promise<void> 
   if (status) conds.push(eq(transactionsTable.status, status));
   if (type) conds.push(eq(transactionsTable.type, type));
   if (userId) conds.push(eq(transactionsTable.userId, userId));
-  if (reference) conds.push(eq(transactionsTable.reference, reference));
+  if (reference) conds.push(or(
+    eq(transactionsTable.reference, reference),
+    sql`${transactionsTable.metadata} ILIKE ${"%" + reference + "%"}`,
+  ));
   if (flagged) conds.push(eq(transactionsTable.isFlagged, true));
 
   const rows = await db.select({
