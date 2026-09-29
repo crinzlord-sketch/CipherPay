@@ -38,10 +38,14 @@ function transporter(): Transporter {
 
 export function isEmailConfigured(): boolean {
   const { user, pass } = emailConfig();
-  return !!process.env.BREVO_API_KEY || !!process.env.RESEND_API_KEY || !!(user && pass);
+  return !!process.env.MAILJET_API_KEY || !!process.env.BREVO_API_KEY || !!process.env.RESEND_API_KEY || !!(user && pass);
 }
 
 export async function verifyEmailTransport(): Promise<void> {
+  if (process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY) {
+    logger.info("Email transport uses Mailjet HTTPS; SMTP verification skipped");
+    return;
+  }
   if (process.env.BREVO_API_KEY) {
     logger.info("Email transport uses Brevo HTTPS; SMTP verification skipped");
     return;
@@ -51,7 +55,7 @@ export async function verifyEmailTransport(): Promise<void> {
     return;
   }
   if (!isEmailConfigured()) {
-    throw new Error("Email not configured: set BREVO_API_KEY or EMAIL_USER and EMAIL_PASS");
+    throw new Error("Email not configured: set MAILJET_API_KEY and MAILJET_SECRET_KEY, BREVO_API_KEY, or EMAIL_USER and EMAIL_PASS");
   }
   await transporter().verify();
 }
@@ -121,6 +125,45 @@ export async function sendMail(to: string, subject: string, html: string, text?:
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+
+  // Mailjet uses HTTPS, so it works from Render Free without SMTP ports.
+  if (process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY) {
+    try {
+      const configuredFrom = process.env.MAILJET_FROM?.trim() || process.env.EMAIL_FROM?.trim();
+      if (!configuredFrom) throw new Error("MAILJET_FROM or EMAIL_FROM must be set to a verified Mailjet sender email");
+      const senderEmail = configuredFrom.match(/<([^>]+)>/)?.[1] ?? configuredFrom;
+      const senderName = configuredFrom.match(/^([^<]+)</)?.[1]?.trim() || "CipherPay";
+      if (!senderEmail.includes("@")) throw new Error("MAILJET_FROM must be a verified Mailjet sender email address");
+      const credentials = Buffer.from(`${process.env.MAILJET_API_KEY}:${process.env.MAILJET_SECRET_KEY}`).toString("base64");
+      const response = await fetch("https://api.mailjet.com/v3.1/send", {
+        method: "POST",
+        headers: {
+          "Authorization": `Basic ${credentials}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          Messages: [{
+            From: { Email: senderEmail, Name: senderName },
+            To: [{ Email: to }],
+            Subject: subject,
+            HTMLPart: html,
+            TextPart: plainText,
+          }],
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const message = payload?.ErrorMessage ?? payload?.Messages?.[0]?.Errors?.[0]?.ErrorMessage;
+        throw new Error(message ?? `Mailjet API returned HTTP ${response.status}`);
+      }
+      const messageId = payload?.Messages?.[0]?.To?.[0]?.MessageID ?? payload?.Messages?.[0]?.To?.[0]?.MessageUUID;
+      logger.info({ to, subject, messageId }, "email sent via Mailjet");
+      return;
+    } catch (e: any) {
+      logger.error({ err: e?.message, to, subject }, "Mailjet email send failed");
+      throw new Error(`Could not send email: ${e?.message ?? "unknown"}`);
+    }
+  }
 
   // Brevo uses HTTPS, so it works from Render Free where outbound SMTP ports are blocked.
   if (process.env.BREVO_API_KEY) {
