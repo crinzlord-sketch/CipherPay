@@ -7,7 +7,7 @@ import {
 } from "@workspace/api-zod";
 import { creditWallet, debitWallet, formatTransaction } from "../lib/wallet";
 import {
-  flwReference, buyAirtime as flwBuyAirtime, movePayoutWalletToMerchant, moveMerchantToPayoutWallet, fetchPayoutWalletBalance, findTransferByReference,
+  flwReference, buyAirtime as flwBuyAirtime, movePayoutWalletToMerchant, moveMerchantToPayoutWallet, fetchPayoutWalletBalance, findTransferByReference, verifyTransferById,
   dataPlans as flwDataPlans, buyData as flwBuyData,
   electricityPlans as flwElecPlans,
   FLW_ELECTRICITY, validateBill as flwValidateBill, payBill as flwPayBill, verifyBill as flwVerifyBill,
@@ -59,13 +59,10 @@ async function fundBillSourceFromUser(userId: number, amount: number, txId: numb
     const status = String(existing.status ?? "").toUpperCase();
     if (status === "SUCCESSFUL") return { barterId: payout.barterId };
     if (existing.id != null) {
-      const moved = await movePayoutWalletToMerchant({
-        debitSubaccount: payout.accountReference,
-        amount,
-        reference,
-      });
-      if (!moved.accepted) throw new Error(moved.message || "The existing purchase-funding transfer is still processing.");
-      return { barterId: payout.barterId };
+      const final = await verifyTransferById(existing.id);
+      const finalStatus = String(final.status ?? "").toUpperCase();
+      if (finalStatus === "SUCCESSFUL") return { barterId: payout.barterId };
+      throw new Error(final.raw?.message || "The existing purchase-funding transfer is still processing.");
     }
   }
 
