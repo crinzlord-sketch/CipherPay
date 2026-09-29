@@ -1,4 +1,15 @@
+import { ProxyAgent, fetch as undiciFetch } from "undici";
+
 const BASE = "https://api.flutterwave.com/v3";
+
+const fixieDispatcher = process.env.FIXIE_URL ? new ProxyAgent(process.env.FIXIE_URL) : undefined;
+
+async function flwFetch(input: string, init: RequestInit = {}): Promise<Response> {
+  return undiciFetch(input, {
+    ...init,
+    ...(fixieDispatcher ? { dispatcher: fixieDispatcher } : {}),
+  });
+}
 
 function secretKey(): string {
   const k = process.env.FLUTTERWAVE_SECRET_KEY;
@@ -14,7 +25,7 @@ export function flwReference(suffix?: string): string {
 }
 
 export async function flwGet<T = any>(path: string): Promise<{ status: number; body: T }> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await flwFetch(`${BASE}${path}`, {
     headers: { Authorization: `Bearer ${secretKey()}` },
   });
   const body = (await res.json().catch(() => ({}))) as T;
@@ -22,7 +33,7 @@ export async function flwGet<T = any>(path: string): Promise<{ status: number; b
 }
 
 async function flwPost<T = any>(path: string, payload: Record<string, unknown>): Promise<{ status: number; body: T }> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await flwFetch(`${BASE}${path}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${secretKey()}`, "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -32,7 +43,7 @@ async function flwPost<T = any>(path: string, payload: Record<string, unknown>):
 }
 
 async function flwPut<T = any>(path: string, payload: Record<string, unknown>): Promise<{ status: number; body: T }> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await flwFetch(`${BASE}${path}`, {
     method: "PUT",
     headers: { Authorization: `Bearer ${secretKey()}`, "Content-Type": "application/json" },
     body: JSON.stringify(payload),
