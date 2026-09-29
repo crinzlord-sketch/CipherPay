@@ -39,12 +39,16 @@ function transporter(): Transporter {
 
 export function isEmailConfigured(): boolean {
   const { user, pass } = emailConfig();
-  return !!(user && pass);
+  return !!process.env.RESEND_API_KEY || !!(user && pass);
 }
 
 export async function verifyEmailTransport(): Promise<void> {
+  if (process.env.RESEND_API_KEY) {
+    logger.info("Email transport uses Resend HTTPS; SMTP verification skipped");
+    return;
+  }
   if (!isEmailConfigured()) {
-    throw new Error("Email not configured: EMAIL_USER and EMAIL_PASS must be set");
+    throw new Error("Email not configured: set RESEND_API_KEY or EMAIL_USER and EMAIL_PASS");
   }
   await transporter().verify();
 }
