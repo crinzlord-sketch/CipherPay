@@ -1,61 +1,83 @@
-import { db, walletsTable, transactionsTable, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, walletsTable, transactionsTable } from "@workspace/db";
+import { eq, sql } from "drizzle-orm";
 import { generateReference } from "./auth";
 
 export async function getOrCreateWallet(userId: number) {
-  let [wallet] = await db.select().from(walletsTable).where(eq(walletsTable.userId, userId));
-  if (!wallet) {
-    [wallet] = await db.insert(walletsTable).values({ userId, balance: "0", ledgerBalance: "0", currency: "NGN" }).returning();
-  }
+  await db.insert(walletsTable)
+    .values({ userId, balance: "0", ledgerBalance: "0", currency: "NGN" })
+    .onConflictDoNothing({ target: walletsTable.userId });
+
+  const [wallet] = await db.select().from(walletsTable).where(eq(walletsTable.userId, userId));
+  if (!wallet) throw new Error("Could not create wallet");
   return wallet;
 }
 
 export async function creditWallet(userId: number, amount: number, description: string, type: string, metadata?: object) {
-  const wallet = await getOrCreateWallet(userId);
-  const balanceBefore = parseFloat(wallet.balance);
-  const balanceAfter = balanceBefore + amount;
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("Credit amount must be greater than zero");
+  await getOrCreateWallet(userId);
 
-  await db.update(walletsTable).set({ balance: balanceAfter.toFixed(2), ledgerBalance: balanceAfter.toFixed(2) }).where(eq(walletsTable.userId, userId));
+  return db.transaction(async (database) => {
+    const [updated] = await database.update(walletsTable)
+      .set({
+        balance: sql`${walletsTable.balance} + ${amount.toFixed(2)}`,
+        ledgerBalance: sql`${walletsTable.ledgerBalance} + ${amount.toFixed(2)}`,
+      })
+      .where(eq(walletsTable.userId, userId))
+      .returning({ balance: walletsTable.balance });
 
-  const [tx] = await db.insert(transactionsTable).values({
-    userId,
-    type,
-    amount: amount.toFixed(2),
-    status: "success",
-    reference: generateReference("CR"),
-    description,
-    metadata: metadata ? JSON.stringify(metadata) : null,
-    balanceBefore: balanceBefore.toFixed(2),
-    balanceAfter: balanceAfter.toFixed(2),
-  }).returning();
+    if (!updated) throw new Error("Wallet could not be credited");
 
-  return { tx, balanceAfter };
+    const balanceAfter = parseFloat(updated.balance);
+    const balanceBefore = balanceAfter - amount;
+
+    const [tx] = await database.insert(transactionsTable).values({
+      userId,
+      type,
+      amount: amount.toFixed(2),
+      status: "success",
+      reference: generateReference("CR"),
+      description,
+      metadata: metadata ? JSON.stringify(metadata) : null,
+      balanceBefore: balanceBefore.toFixed(2),
+      balanceAfter: balanceAfter.toFixed(2),
+    }).returning();
+
+    return { tx, balanceAfter };
+  });
 }
 
 export async function debitWallet(userId: number, amount: number, description: string, type: string, metadata?: object) {
-  const wallet = await getOrCreateWallet(userId);
-  const balanceBefore = parseFloat(wallet.balance);
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error("Debit amount must be greater than zero");
+  await getOrCreateWallet(userId);
 
-  if (balanceBefore < amount) {
-    throw new Error("Insufficient balance");
-  }
+  return db.transaction(async (database) => {
+    const [updated] = await database.update(walletsTable)
+      .set({
+        balance: sql`${walletsTable.balance} - ${amount.toFixed(2)}`,
+        ledgerBalance: sql`${walletsTable.ledgerBalance} - ${amount.toFixed(2)}`,
+      })
+      .where(sql`${walletsTable.userId} = ${userId} AND ${walletsTable.balance} >= ${amount.toFixed(2)}`)
+      .returning({ balance: walletsTable.balance });
 
-  const balanceAfter = balanceBefore - amount;
-  await db.update(walletsTable).set({ balance: balanceAfter.toFixed(2), ledgerBalance: balanceAfter.toFixed(2) }).where(eq(walletsTable.userId, userId));
+    if (!updated) throw new Error("Insufficient balance");
 
-  const [tx] = await db.insert(transactionsTable).values({
-    userId,
-    type,
-    amount: amount.toFixed(2),
-    status: "success",
-    reference: generateReference("DR"),
-    description,
-    metadata: metadata ? JSON.stringify(metadata) : null,
-    balanceBefore: balanceBefore.toFixed(2),
-    balanceAfter: balanceAfter.toFixed(2),
-  }).returning();
+    const balanceAfter = parseFloat(updated.balance);
+    const balanceBefore = balanceAfter + amount;
 
-  return { tx, balanceAfter };
+    const [tx] = await database.insert(transactionsTable).values({
+      userId,
+      type,
+      amount: amount.toFixed(2),
+      status: "success",
+      reference: generateReference("DR"),
+      description,
+      metadata: metadata ? JSON.stringify(metadata) : null,
+      balanceBefore: balanceBefore.toFixed(2),
+      balanceAfter: balanceAfter.toFixed(2),
+    }).returning();
+
+    return { tx, balanceAfter };
+  });
 }
 
 export function formatWallet(wallet: typeof walletsTable.$inferSelect) {
