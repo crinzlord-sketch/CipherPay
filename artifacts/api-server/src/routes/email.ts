@@ -1,4 +1,5 @@
-import { sendMail } from "../lib/email";\nimport { Router, type IRouter } from "express";
+import { sendMail } from "../lib/email";
+import { Router, type IRouter } from "express";
 import { getEmailProSubscription, hasActiveEmailPro, unlockEmailPro } from "../lib/email-pro-subscription";
 import { and, desc, eq } from "drizzle-orm";
 import {
