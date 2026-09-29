@@ -4,8 +4,8 @@ import { generateReference } from "./auth";
 import { getOrCreateWallet } from "./wallet";
 import { logger } from "./logger";
 
-export const EMAIL_PRO_UNLOCK_FEE = 5000;
-export const EMAIL_PRO_MONTHLY_FEE = 5000;
+export const EMAIL_PRO_UNLOCK_FEE = 3000;
+export const EMAIL_PRO_MONTHLY_FEE = 3000;
 
 function nextMonth(from: Date): Date {
   const d = new Date(from);
