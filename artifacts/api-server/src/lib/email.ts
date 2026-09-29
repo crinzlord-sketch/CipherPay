@@ -209,6 +209,27 @@ export async function sendPasswordResetEmail(to: string, link: string, firstName
   await sendMail(to, "Reset your CipherPay password", html, `Hi ${firstName.trim() || "there"},\n\nWe received a request to reset your CipherPay password.\n\nReset your password: ${link}\n\nThis link is valid for 30 minutes. If you did not request this, you can ignore this message.`);
 }
 
+export async function sendWelcomeEmail(to: string, firstName: string): Promise<void> {
+  const name = escapeHtml(firstName.trim() || "there");
+  const html = brandWrap("Welcome to CipherPay", `
+    <p style="margin:0 0 18px;color:#4e5c74;font-size:16px;line-height:26px;">Hey ${name}, welcome to CipherPay.</p>
+    <p style="margin:0 0 18px;color:#4e5c74;font-size:15px;line-height:25px;">Your account is ready. Take a minute to explore your wallet, fund it, send money, pay bills, and discover the services built into your account.</p>
+    <div style="margin:0 0 24px;padding:20px;background:#f8f9fc;border:1px solid #e4e8f0;border-radius:14px;">
+      <p style="margin:0 0 10px;color:#17213b;font-size:14px;font-weight:700;">A good place to start</p>
+      <p style="margin:0;color:#4e5c74;font-size:14px;line-height:23px;">1. Complete your email verification.<br>2. Fund your wallet when you are ready.<br>3. Add your profile details and explore the services available to you.<br>4. Keep your account protected and never share your security codes.</p>
+    </div>
+    <p style="margin:0;color:#738099;font-size:13px;line-height:21px;">We’ll occasionally send useful tips and updates. No noise — just things worth knowing.</p>
+  `, "Welcome to CipherPay — your account is ready.");
+  await sendMail(to, "Welcome to CipherPay", html, `Hey ${firstName.trim() || "there"}, welcome to CipherPay.\n\nYour account is ready. Explore your wallet, funding, transfers, bill payments and services.\n\nStart by verifying your email, funding your wallet when you're ready, and keeping your account secure.\n\n— CipherPay`);
+}
+
+export async function sendWeeklyEmail(to: string, firstName: string, title: string, body: string): Promise<void> {
+  const name = escapeHtml(firstName.trim() || "there");
+  const safeBody = escapeHtml(body).replace(/\\r?\\n/g, "<br>");
+  const html = brandWrap(title, `<p style="margin:0 0 18px;color:#4e5c74;font-size:16px;line-height:26px;">Hey ${name},</p><p style="margin:0;color:#4e5c74;font-size:15px;line-height:25px;">${safeBody}</p>`, title);
+  await sendMail(to, `CipherPay · ${title}`, html, `Hey ${firstName.trim() || "there"},\n\n${body}\n\n— CipherPay`);
+}
+
 export async function sendUserNotificationEmail(to: string, title: string, body: string): Promise<void> {
   const safeBody = escapeHtml(body).replace(/\r?\n/g, "<br>");
   const html = brandWrap(title, `<p style="margin:0;color:#4e5c74;font-size:15px;line-height:25px;">${safeBody}</p>`, title);
