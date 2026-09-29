@@ -279,7 +279,8 @@ export function KycPage({ detailType }: { detailType?: VerificationType }) {
   if (error && !status) return <main className="cp-page"><ErrorState message={error} retry={() => void loadStatus()} /></main>;
 
   return (
-    {submittedPopup && (
+    <>
+      {submittedPopup && (
       <div
         role="presentation"
         onClick={() => setSubmittedPopup(false)}
@@ -528,5 +529,6 @@ export function KycPage({ detailType }: { detailType?: VerificationType }) {
         </aside>
       </div>}
     </main>
-    </>\n  );
+    </>
+  );
 }
