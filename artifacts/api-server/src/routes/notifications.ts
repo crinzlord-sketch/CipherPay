@@ -4,6 +4,10 @@ import { db, notificationsTable, usersTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
+function normalizeLink(link: string | null): string | null {
+  return link && /^\/transactions\/\d+$/.test(link) ? "/transactions" : link;
+}
+
 function uid(req: any): number | null {
   const raw = req.headers["x-user-id"];
   const id = parseInt(Array.isArray(raw) ? raw[0] : (raw ?? ""), 10);
@@ -21,7 +25,7 @@ router.get("/notifications", async (req, res): Promise<void> => {
       .where(and(eq(notificationsTable.userId, userId), eq(notificationsTable.isRead, false))),
   ]);
   res.json({
-    data: rows.map(r => ({ ...r, createdAt: r.createdAt.toISOString() })),
+    data: rows.map(r => ({ ...r, link: normalizeLink(r.link), createdAt: r.createdAt.toISOString() })),
     unread: Number(unread ?? 0),
   });
 });
