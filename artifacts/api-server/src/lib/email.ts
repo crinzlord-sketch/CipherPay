@@ -11,9 +11,7 @@ function emailConfig() {
   const secure = process.env.EMAIL_SECURE
     ? process.env.EMAIL_SECURE === "true"
     : port === 465;
-  const replyTo = process.env.SUPPORT_REPLY_TO ?? user ?? "gglteam.2025@gmail.com";
-  const from = process.env.EMAIL_FROM ?? `CipherPay <${user ?? "no-reply@example.com"}>`;
-  return { user, pass, host, port, secure, replyTo, from };
+  // Do not use a free-mail reply-to address for CipherPay transactional mail.\n  // Replies should not be routed anywhere unless an explicit domain-based\n  // support address is configured.\n  const replyTo = process.env.SUPPORT_REPLY_TO?.trim() || undefined;\n  const from = process.env.EMAIL_FROM ?? `CipherPay <${user ?? "no-reply@example.com"}>`;\n  return { user, pass, host, port, secure, replyTo, from };
 }
 
 function transporter(): Transporter {
@@ -70,7 +68,6 @@ function brandWrap(title: string, contentHtml: string, previewText: string): str
   const { replyTo } = emailConfig();
   const safeTitle = escapeHtml(title);
   const safePreview = escapeHtml(previewText);
-  const safeReplyTo = escapeHtml(replyTo);
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -101,8 +98,8 @@ function brandWrap(title: string, contentHtml: string, previewText: string): str
             </tr>
             <tr>
               <td style="padding:24px 8px 0;color:#738099;font-size:12px;line-height:19px;">
-                <p style="margin:0 0 8px;">This is an automated message from CipherPay. You can reply to this email if you need assistance.</p>
-                <p style="margin:0;">Need help? Contact <a href="mailto:${safeReplyTo}" style="color:#5b3aa4;text-decoration:underline;">${safeReplyTo}</a><br>CipherPay, Nigeria</p>
+                <p style="margin:0 0 8px;">This is an automated message from CipherPay.</p>
+                <p style="margin:0;">Need help? Contact <a href="mailto:support@cipherpay.it.com" style="color:#5b3aa4;text-decoration:underline;">support@cipherpay.it.com</a><br>CipherPay, Nigeria</p>
               </td>
             </tr>
           </table>
@@ -133,8 +130,7 @@ export async function sendMail(to: string, subject: string, html: string, text?:
       const senderEmail = configuredFrom.match(/<([^>]+)>/)?.[1] ?? configuredFrom;
       const senderName = configuredFrom.match(/^([^<]+)</)?.[1]?.trim() || "CipherPay";
       if (!senderEmail.includes("@")) throw new Error("BREVO_FROM must be a verified Brevo sender email address");
-      const replyTo = replyToOverride ?? emailConfig().replyTo;
-      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      // Deliberately omit Reply-To unless an explicit override is supplied.\n      // This prevents an accidental Gmail/free-mail reply address from being\n      // attached to CipherPay transactional messages.\n      const replyTo = replyToOverride?.trim() || undefined;\n      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         headers: { accept: "application/json", "api-key": process.env.BREVO_API_KEY, "content-type": "application/json" },
         body: JSON.stringify({ sender: { name: senderName, email: senderEmail }, to: [{ email: to }], subject, htmlContent: html, textContent: plainText, ...(replyTo ? { replyTo: { email: replyTo } } : {}) }),
@@ -192,7 +188,7 @@ export async function sendMail(to: string, subject: string, html: string, text?:
     const { replyTo, from } = emailConfig();
     const info = await transporter().sendMail({
       from,
-      replyTo: replyToOverride ?? replyTo,
+      ...(replyToOverride?.trim() || replyTo ? { replyTo: replyToOverride?.trim() || replyTo } : {}),
       to, subject, html,
       text: plainText,
     });
