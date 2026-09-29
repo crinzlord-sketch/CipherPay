@@ -102,7 +102,7 @@ router.post("/wallet/deposit/claim", async (req, res): Promise<void> => {
     body: flagReason
       ? `Your ₦${amount.toLocaleString()} deposit was flagged because ${flagReason.toLowerCase()} It will be released after your KYC is completed and an admin confirms the payment.`
       : `We received your ₦${amount.toLocaleString()} bank-transfer deposit request. It'll reflect once we confirm the payment.`,
-    link: `/transactions/${tx.id}`,
+    link: "/transactions",
   }).catch(() => {});
 
   res.json({
@@ -525,7 +525,7 @@ router.post("/wallet/withdraw", async (req, res): Promise<void> => {
     userId, type: "transaction",
     title: "Withdrawal processing",
     body: `Your ₦${amount.toLocaleString()} withdrawal to ${accountName} (${accountNumber}) is being processed. Fee: ₦${fee}.`,
-    link: `/transactions/${tx.id}`,
+    link: "/transactions",
   });
 
   res.json({
