@@ -1,4 +1,4 @@
-import { Bot, CheckCircle2, ChevronDown, CircleHelp, Headphones, Image as ImageIcon, MessageCircle, Paperclip, RefreshCw, Send, UserRound, X } from 'lucide-react';
+import { Bot, CheckCircle2, ChevronDown, CircleHelp, Headphones, Image as ImageIcon, MessageCircle, Paperclip, Receipt, RefreshCw, Send, UserRound, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { apiRequest, formatWhen } from './page-api';
@@ -244,6 +244,7 @@ export function SupportPage() {
           <section className="cp-card cp-card-pad cp-chat-assurance">
             <div className="cp-help-row"><UserRound size={17} /><div><b>Real people, when it matters</b><p>Request a support specialist for account-sensitive questions.</p></div></div>
             <div className="cp-help-row"><LockKeyholeIcon /><div><b>Your chat is private</b><p>Only you and the CipherPay support team can see this thread.</p></div></div>
+            <div className="cp-help-row"><Receipt size={17} /><div><b>Payment issue?</b><p>Send the transaction or funding reference in this chat. Support can use it to locate the exact record and investigate it from the admin console.</p></div></div>
           </section>
            <section className="cp-card cp-card-pad cp-support-history">
              <div className="cp-card-head"><div><div className="cp-kicker">Your records</div><h2>Support history</h2><p>Closed conversations stay available on your account.</p></div><MessageCircle size={20} color="hsl(var(--primary))" /></div>
