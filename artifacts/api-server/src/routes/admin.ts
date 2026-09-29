@@ -210,7 +210,7 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
     // Fees collected from withdrawals — include pending because wallet was already debited
     db.select({ s: sql<string>`coalesce(sum(${transactionsTable.fee}),0)` }).from(transactionsTable)
       .where(and(eq(transactionsTable.type, "withdraw"), ne(transactionsTable.status, "failed"))),
-    // Successful airtime + data purchases (₦50 profit margin baked into each)
+    // Airtime/data no longer carry a CipherPay service fee.
     db.select({ c: count() }).from(transactionsTable)
       .where(and(
         or(eq(transactionsTable.type, "airtime"), eq(transactionsTable.type, "data")),
@@ -220,7 +220,7 @@ router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
 
   const totalTransferFees = parseFloat(String(transferFees?.s ?? "0"));
   const totalWithdrawalFees = parseFloat(String(withdrawFees?.s ?? "0"));
-  const totalVasProfit = Number(vasCount?.c ?? 0) * 50; // ₦50 flat margin per VAS tx
+  const totalVasProfit = 0; // Airtime/data are sold without a CipherPay service fee
   const totalIncome = totalTransferFees + totalWithdrawalFees + totalVasProfit;
 
   res.json({
@@ -687,12 +687,14 @@ router.get("/admin/transactions", requireAdmin, async (req, res): Promise<void> 
   const status = req.query.status ? String(req.query.status) : null;
   const type = req.query.type ? String(req.query.type) : null;
   const userId = req.query.userId ? parseInt(String(req.query.userId), 10) : null;
+  const reference = req.query.reference ? String(req.query.reference).trim() : null;
   const flagged = req.query.flagged === "true";
 
   const conds: any[] = [];
   if (status) conds.push(eq(transactionsTable.status, status));
   if (type) conds.push(eq(transactionsTable.type, type));
   if (userId) conds.push(eq(transactionsTable.userId, userId));
+  if (reference) conds.push(eq(transactionsTable.reference, reference));
   if (flagged) conds.push(eq(transactionsTable.isFlagged, true));
 
   const rows = await db.select({
