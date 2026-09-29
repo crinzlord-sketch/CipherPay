@@ -167,17 +167,15 @@ router.post("/airtime/buy", async (req, res): Promise<void> => {
     res.status(400).json({ error: e.message }); return;
   }
 
-  let sourceFunded = false;
   try {
-    req.log.info({ txId: tx.id, amount: charge }, "Airtime: funding Flutterwave source wallet");
-    await fundBillSourceFromUser(userId, charge, tx.id);
-    req.log.info({ txId: tx.id, amount: charge }, "Airtime: source wallet funded");
-    sourceFunded = true;
+    // Flutterwave bill payments debit the merchant's already-funded bill-payment
+    // source balance directly. Do not transfer each user's purchase into that
+    // source wallet first; doing so can create an unnecessary async transfer
+    // failure even when the bill-payment source is funded.
     const reference = flwReference(`AIR${tx.id}`);
     const result = await flwBuyAirtime({ phone, amount, reference, network });
     req.log.info({ flwStatus: result.raw?.status, flwMessage: result.raw?.message, flwData: result.raw?.data, reference, processing: result.pending === true }, "Flutterwave airtime response");
     if (!result.success) {
-      if (sourceFunded) await refundBillSourceToUser(userId, charge, tx.id);
       await refundFailed(userId, tx.id, charge, `Airtime delivery failed: ${result.message}`, "airtime");
       res.status(502).json({
         error: `Airtime delivery failed. You have been refunded.`,
@@ -202,7 +200,6 @@ router.post("/airtime/buy", async (req, res): Promise<void> => {
       transaction: formatTransaction({ ...tx, status: result.pending ? "pending" : "success" }),
     });
   } catch (e: any) {
-    if (sourceFunded) await refundBillSourceToUser(userId, charge, tx.id);
     await refundFailed(userId, tx.id, charge, `Provider error: ${e.message ?? "unknown"}`, "airtime");
     res.status(502).json({ error: "Provider error. You have been refunded.", details: e.message });
   }
