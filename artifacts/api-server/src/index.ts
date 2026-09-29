@@ -6,6 +6,8 @@ import { startElectricityTokenJob } from "./lib/electricity-token-job";
 import { startTemporaryInboxRenewal } from "./lib/temporary-email";
 import { isEmailConfigured, verifyEmailTransport } from "./lib/email";
 import { startPayoutFundingPoller } from "./lib/payout-funding-poller";
+import { renewDueEmailProSubscriptions } from "./lib/email-pro-subscription";
+import { sendWeeklyUserEmails } from "./lib/user-email-job";
 
 // Route ALL outbound fetch requests through a fixed-IP proxy (e.g. Fixie) so
 // the server's egress IP is stable and can be whitelisted in Flutterwave.
@@ -49,4 +51,8 @@ app.listen(port, (err) => {
   startElectricityTokenJob();
   startTemporaryInboxRenewal();
   startPayoutFundingPoller();
+  void renewDueEmailProSubscriptions();
+  setInterval(() => void renewDueEmailProSubscriptions(), 60 * 60 * 1000);
+  void sendWeeklyUserEmails();
+  setInterval(() => void sendWeeklyUserEmails(), 24 * 60 * 60 * 1000);
 });
