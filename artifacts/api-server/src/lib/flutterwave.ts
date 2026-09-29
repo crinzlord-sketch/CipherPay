@@ -197,7 +197,27 @@ export async function buyData(params: { phone: string; amount: number; itemCode:
     recurrence: "ONCE",
     item_code: params.itemCode,
   });
-  return parsePayResult(status, body, params.reference);
+  const initial = parsePayResult(status, body, params.reference, true);
+  if (!initial.success || !initial.pending) return initial;
+
+  // Data delivery is asynchronous too. Never treat a provider "pending"
+  // response as a completed purchase, and never create a second bill request.
+  for (let attempt = 0; attempt < 10; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      const verified = await verifyBill(params.reference);
+      const providerStatus = String(verified.status ?? "").toLowerCase();
+      if (["successful", "success", "completed"].includes(providerStatus)) {
+        return { ...initial, pending: false, message: "Data delivered successfully", raw: verified.raw };
+      }
+      if (["failed", "cancelled", "canceled", "reversed"].includes(providerStatus)) {
+        return { ...initial, success: false, pending: false, message: verified.raw?.message ?? "Data purchase failed", raw: verified.raw };
+      }
+    } catch (error: any) {
+      console.warn("Flutterwave data status check failed", { reference: params.reference, message: error?.message ?? String(error) });
+    }
+  }
+  return { ...initial, pending: true, message: "Data purchase is still processing", raw: body };
 }
 
 // ── Bill validation (electricity meter / smartcard lookup) ───────────────────
