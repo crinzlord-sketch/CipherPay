@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { getEmailProSubscription, hasActiveEmailPro, unlockEmailPro } from "../lib/email-pro-subscription";
 import { and, desc, eq } from "drizzle-orm";
 import {
   db,
@@ -17,6 +18,7 @@ import {
 } from "../lib/email-pro";
 
 const router: IRouter = Router();
+async function requireEmailPro(req: any, res: any): Promise<number | null> { const userId = getUserId(req); if (!userId) { res.status(401).json({ error: "Unauthorized" }); return null; } if (!(await hasActiveEmailPro(userId))) { res.status(402).json({ error: "Email Pro is locked. Unlock it for ₦5,000, then ₦5,000 monthly.", code: "EMAIL_PRO_LOCKED" }); return null; } return userId; }
 const MAX_RECIPIENTS = 150;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PROVIDERS = new Set(["gmail", "outlook", "custom"]);
@@ -82,7 +84,11 @@ function containsHeaderBreak(value: string): boolean {
   return /[\r\n]/.test(value);
 }
 
+router.get("/email/pro", async (req, res): Promise<void> => { const userId = getUserId(req); if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; } const subscription = await getEmailProSubscription(userId); res.json({ unlocked: subscription?.status === "active" && subscription.nextBillingAt > new Date(), status: subscription?.status ?? "locked", nextBillingAt: subscription?.nextBillingAt?.toISOString() ?? null, unlockFee: 5000, monthlyFee: 5000 }); });
+router.post("/email/pro/unlock", async (req, res): Promise<void> => { const userId = getUserId(req); if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; } try { const result = await unlockEmailPro(userId); res.json({ success: true, unlocked: true, nextBillingAt: result.nextBillingAt.toISOString() }); } catch (e: any) { res.status(400).json({ error: e?.message ?? "Could not unlock Email Pro." }); } });
 router.get("/email/accounts", async (req, res): Promise<void> => {
+  const proUserId = await requireEmailPro(req, res);
+  if (!proUserId) return;
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   const rows = await db.select().from(emailAccountsTable)
@@ -92,6 +98,8 @@ router.get("/email/accounts", async (req, res): Promise<void> => {
 });
 
 router.post("/email/accounts", async (req, res): Promise<void> => {
+  const proUserId = await requireEmailPro(req, res);
+  if (!proUserId) return;
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
@@ -154,6 +162,8 @@ router.post("/email/accounts", async (req, res): Promise<void> => {
 });
 
 router.post("/email/accounts/:id/test", async (req, res): Promise<void> => {
+  const proUserId = await requireEmailPro(req, res);
+  if (!proUserId) return;
   const userId = getUserId(req);
   const accountId = parseInt(String(req.params.id), 10);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -177,6 +187,8 @@ router.post("/email/accounts/:id/test", async (req, res): Promise<void> => {
 });
 
 router.delete("/email/accounts/:id", async (req, res): Promise<void> => {
+  const proUserId = await requireEmailPro(req, res);
+  if (!proUserId) return;
   const userId = getUserId(req);
   const accountId = parseInt(String(req.params.id), 10);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -189,6 +201,8 @@ router.delete("/email/accounts/:id", async (req, res): Promise<void> => {
 });
 
 router.post("/email/send", async (req, res): Promise<void> => {
+  const proUserId = await requireEmailPro(req, res);
+  if (!proUserId) return;
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
@@ -281,6 +295,8 @@ router.post("/email/send", async (req, res): Promise<void> => {
 });
 
 router.get("/email/sent", async (req, res): Promise<void> => {
+  const proUserId = await requireEmailPro(req, res);
+  if (!proUserId) return;
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "30"), 10) || 30, 1), 100);
@@ -291,6 +307,8 @@ router.get("/email/sent", async (req, res): Promise<void> => {
 });
 
 router.get("/email/sent/:id", async (req, res): Promise<void> => {
+  const proUserId = await requireEmailPro(req, res);
+  if (!proUserId) return;
   const userId = getUserId(req);
   const campaignId = parseInt(String(req.params.id), 10);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
