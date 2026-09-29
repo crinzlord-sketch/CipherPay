@@ -9,7 +9,7 @@ import { generateUniqueAccountNumber } from "../lib/account";
 import { createSession, listSessions, revokeSession, revokeAllExcept } from "../lib/sessions";
 import { getOrCreateWallet, formatWallet, creditWallet } from "../lib/wallet";
 import { ensureUserPayoutWallet } from "../lib/payout-wallet";
-import { sendOtpEmail, isEmailConfigured } from "../lib/email";
+import { sendOtpEmail, isEmailConfigured, sendWelcomeEmail } from "../lib/email";
 import { notifyUser } from "../lib/notifications";
 import path from "path";
 import fs from "fs/promises";
@@ -190,6 +190,10 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   const dev = deviceInfo(req);
   const sid = await createSession(user.id, dev.name, dev.platform, dev.ip);
   const token = signToken(user.id, sid);
+  void sendWelcomeEmail(user.email, user.firstName).catch((e: any) => {
+    req.log?.warn?.({ userId: user.id, err: e?.message }, "welcome email failed");
+  });
+
   res.status(201).json({
     user: formatUser(user, 0),
     token,
