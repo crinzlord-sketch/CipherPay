@@ -603,11 +603,12 @@ router.post("/social/order", async (req, res): Promise<void> => {
     return;
   }
 
-  const amount = service.pricePerUnit * quantity;
+  const providerAmount = service.pricePerUnit * quantity;
+  const amount = providerAmount + 200;
 
   let tx: any;
   try {
-    ({ tx } = await debitWallet(userId, amount, `${service.name} x${quantity} - ${link}`, "social", { serviceId, link, quantity }));
+    ({ tx } = await debitWallet(userId, amount, `${service.name} x${quantity} - ${link}`, "social", { serviceId, link, quantity, providerAmount, cipherPayProfit: 200 }));
   } catch (e: any) {
     res.status(400).json({ error: e.message }); return;
   }
@@ -783,7 +784,8 @@ router.post("/sms/buy-number", async (req, res): Promise<void> => {
     res.status(502).json({ error: "Could not verify the service price right now. Please try again." }); return;
   }
   if (!offer) { res.status(400).json({ error: "Service or country not available right now" }); return; }
-  const price = Math.ceil((offer.priceUsd * rate) / 10) * 10;
+  const providerPrice = Math.ceil((offer.priceUsd * rate) / 10) * 10;
+  const price = providerPrice + 400;
 
   let tx: any;
   try {
@@ -792,6 +794,7 @@ router.post("/sms/buy-number", async (req, res): Promise<void> => {
       country,
       provider: "SMSPool",
       providerPriceUsd: offer.priceUsd,
+      cipherPayProfit: 400,
       usdNgnRate: rate,
     }));
   } catch (e: any) {
