@@ -1,5 +1,6 @@
 import { and, eq, lte } from "drizzle-orm";
-import { db, emailProSubscriptionsTable } from "@workspace/db";
+import { db, emailProSubscriptionsTable, transactionsTable, walletsTable } from "@workspace/db";
+import { generateReference } from "./auth";
 import { debitWallet } from "./wallet";
 
 export const EMAIL_PRO_UNLOCK_FEE = 5000;
@@ -52,13 +53,17 @@ export async function renewDueEmailProSubscriptions(): Promise<void> {
 
   for (const row of rows) {
     try {
-      await debitWallet(row.userId, EMAIL_PRO_MONTHLY_FEE, "Email Pro — monthly renewal", "service", {
-        service: "email_pro", fee: EMAIL_PRO_MONTHLY_FEE,
-      });
       const nextBillingAt = nextMonth(row.nextBillingAt);
-      await db.update(emailProSubscriptionsTable).set({
-        nextBillingAt, lastChargedAt: now, updatedAt: now,
-      }).where(and(eq(emailProSubscriptionsTable.id, row.id), eq(emailProSubscriptionsTable.status, "active")));
+      await db.transaction(async (database) => {
+        const [wallet] = await database.select().from(walletsTable).where(eq(walletsTable.userId, row.userId)).limit(1);
+        if (!wallet) throw new Error("Wallet not found");
+        const before = parseFloat(wallet.balance);
+        if (before < EMAIL_PRO_MONTHLY_FEE) throw new Error("Insufficient balance");
+        const after = before - EMAIL_PRO_MONTHLY_FEE;
+        await database.update(walletsTable).set({ balance: after.toFixed(2), ledgerBalance: after.toFixed(2) }).where(eq(walletsTable.userId, row.userId));
+        await database.insert(transactionsTable).values({ userId: row.userId, type: "service", amount: EMAIL_PRO_MONTHLY_FEE.toFixed(2), status: "success", reference: generateReference("DR"), description: "Email Pro — monthly renewal", metadata: JSON.stringify({ service: "email_pro", fee: EMAIL_PRO_MONTHLY_FEE }), balanceBefore: before.toFixed(2), balanceAfter: after.toFixed(2) });
+        await database.update(emailProSubscriptionsTable).set({ nextBillingAt, lastChargedAt: now, updatedAt: now }).where(and(eq(emailProSubscriptionsTable.id, row.id), eq(emailProSubscriptionsTable.status, "active")));
+      });
     } catch {
       await db.update(emailProSubscriptionsTable).set({
         status: "locked", lockedAt: now, updatedAt: now,
