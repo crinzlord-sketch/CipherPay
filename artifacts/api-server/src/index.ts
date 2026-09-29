@@ -12,7 +12,7 @@ import { sendWeeklyUserEmails } from "./lib/user-email-job";
 function normalizeProxyUrl(raw: string | undefined): string | undefined {
   if (!raw?.trim()) return undefined;
   const value = raw.trim();
-  return /^https?:\\/\\//i.test(value) ? value : `http://${value}`;
+  return /^https?:\/\//i.test(value) ? value : `http://${value}`;
 }
 
 const fixieUrl = normalizeProxyUrl(process.env["FIXIE_URL"]);
