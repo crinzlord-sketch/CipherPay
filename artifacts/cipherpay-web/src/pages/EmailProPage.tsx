@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { apiRequest, formatWhen } from './page-api';
 import { Button, ErrorState, LoadingState, Notice, PageHeading } from './PagePieces';
+import { Link } from 'wouter';
 
 type Provider = 'gmail' | 'outlook' | 'custom';
 type ContentType = 'text' | 'html';
@@ -540,6 +541,118 @@ export default function EmailProPage() {
   }
 
   if (pageError) {
+    const insufficientFunds = /insufficient\\s+(funds|balance)|not enough (funds|balance)|insufficient/i.test(pageError);
+    if (insufficientFunds) {
+      return (
+        <div className="cp-page cp-page-reveal email-pro-page" data-testid="email-pro-insufficient-funds">
+          <PageHeading
+            eyebrow="CIPHERPAY / EMAIL PRO"
+            title="Email Pro"
+            detail="Your renewal could not be completed."
+          />
+          <section
+            className="cp-card email-pro-payment-error"
+            role="alert"
+            aria-labelledby="email-pro-payment-error-title"
+            style={{
+              maxWidth: 760,
+              margin: '24px auto 0',
+              padding: '48px 40px',
+              textAlign: 'center',
+              border: '1px solid rgba(248, 113, 113, 0.22)',
+              background: 'linear-gradient(145deg, rgba(127, 29, 29, 0.16), rgba(36, 28, 50, 0.72))',
+              boxShadow: '0 24px 70px rgba(0, 0, 0, 0.22)',
+            }}
+          >
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                margin: '0 auto 20px',
+                display: 'grid',
+                placeItems: 'center',
+                borderRadius: 18,
+                color: '#fca5a5',
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(248, 113, 113, 0.2)',
+              }}
+            >
+              <AlertCircle size={30} strokeWidth={1.8} />
+            </div>
+            <span
+              className="cp-kicker"
+              style={{
+                color: '#fca5a5',
+                letterSpacing: '0.14em',
+                fontWeight: 700,
+              }}
+            >
+              PAYMENT REQUIRED
+            </span>
+            <h2
+              id="email-pro-payment-error-title"
+              style={{
+                margin: '10px 0 10px',
+                fontSize: 'clamp(30px, 5vw, 44px)',
+                lineHeight: 1.05,
+              }}
+            >
+              Insufficient funds
+            </h2>
+            <p style={{ maxWidth: 540, margin: '0 auto', lineHeight: 1.65, opacity: 0.78 }}>
+              Your wallet doesn’t have enough balance to complete your Email Pro renewal.
+            </p>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 12,
+                margin: '28px auto 24px',
+                padding: '14px 18px',
+                borderRadius: 14,
+                background: 'rgba(255, 255, 255, 0.045)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+              }}
+            >
+              <span style={{ fontSize: 12, opacity: 0.6, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Amount due</span>
+              <strong style={{ fontSize: 22 }}>₦3,000</strong>
+            </div>
+            <p style={{ margin: '0 auto 26px', fontSize: 14, opacity: 0.62 }}>
+              Add at least ₦3,000 to your wallet, then try again.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <Link
+                href="/fund"
+                className="btn btn-primary"
+                data-testid="button-email-pro-add-funds"
+                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+              >
+                Add funds <ArrowUpRight size={16} />
+              </Link>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => void loadWorkspace()}
+                data-testid="button-email-pro-retry-insufficient-funds"
+              >
+                <RefreshCw size={15} /> Try again
+              </Button>
+            </div>
+            <div
+              style={{
+                marginTop: 28,
+                paddingTop: 18,
+                borderTop: '1px solid rgba(255, 255, 255, 0.07)',
+                fontSize: 12,
+                opacity: 0.5,
+              }}
+            >
+              Email Pro requires ₦3,000 to unlock or renew for the next month.
+            </div>
+          </section>
+        </div>
+      );
+    }
     return <div className="cp-page cp-page-reveal email-pro-page"><PageHeading eyebrow="CIPHERPAY / EMAIL PRO" title="Your private sending cockpit." detail="We could not reach the Email Pro workspace." /><ErrorState message={pageError} retry={loadWorkspace} /></div>;
   }
 
