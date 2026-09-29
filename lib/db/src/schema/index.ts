@@ -16,3 +16,5 @@ export * from "./crypto-alerts";
 export * from "./crypto-holdings";
 export * from "./temporary-inboxes";
 export * from "./email-pro";
+
+export * from "./email-pro-subscriptions";
