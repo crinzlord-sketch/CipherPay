@@ -11,7 +11,8 @@ function emailConfig() {
   const secure = process.env.EMAIL_SECURE
     ? process.env.EMAIL_SECURE === "true"
     : port === 465;
-  // Do not use a free-mail reply-to address for CipherPay transactional mail.\n  // Replies should not be routed anywhere unless an explicit domain-based\n  // support address is configured.\n  const replyTo = process.env.SUPPORT_REPLY_TO?.trim() || undefined;\n  const from = process.env.EMAIL_FROM ?? `CipherPay <${user ?? "no-reply@example.com"}>`;\n  return { user, pass, host, port, secure, from };
+  const from = process.env.EMAIL_FROM ?? `CipherPay <${user ?? "no-reply@example.com"}>`;
+  return { user, pass, host, port, secure, from };
 }
 
 function transporter(): Transporter {
@@ -132,7 +133,7 @@ export async function sendMail(to: string, subject: string, html: string, text?:
       const response = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         headers: { accept: "application/json", "api-key": process.env.BREVO_API_KEY, "content-type": "application/json" },
-        body: JSON.stringify({ sender: { name: senderName, email: senderEmail }, to: [{ email: to }], subject, htmlContent: html, textContent: plainText, ...(replyTo ? { replyTo: { email: replyTo } } : {}) }),
+        body: JSON.stringify({ sender: { name: senderName, email: senderEmail }, to: [{ email: to }], subject, htmlContent: html, textContent: plainText }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload?.message ?? payload?.code ?? `Brevo API returned HTTP ${response.status}`);
