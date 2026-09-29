@@ -203,6 +203,7 @@ router.post("/admin/email/test", requireAdmin, async (req: AdminRequest, res): P
     await sendAdminAlertEmail(
       "Brevo delivery test",
       "This is a live CipherPay email transport test. If you received this message, the Brevo transactional email integration is working.",
+      recipient,
     );
     req.log.info({ recipient, provider: process.env.BREVO_API_KEY ? "brevo" : "fallback" }, "Admin email test sent");
     res.json({ success: true, recipient });
