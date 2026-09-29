@@ -399,112 +399,88 @@ export function KycPage({ detailType }: { detailType?: VerificationType }) {
             <div className="cp-privacy-chip"><LockKeyhole size={14} /> Private and protected</div>
           </div>
 
-          <form className="cp-form cp-kyc-form" onSubmit={submitKyc}>
-            <fieldset disabled={isLocked || submitting} className="cp-fieldset">
-              <div className="cp-kyc-wizard-bar">
-                <div>
-                  <span className="cp-kicker">Step {step} of {totalSteps}</span>
-                  <strong>{step === 1 ? 'Choose your identity document' : step === 2 ? 'Add your personal details' : form.verificationType === 'basic' ? 'Review your details' : step === 3 ? 'Capture the front' : step === 4 ? 'Add the reverse side' : 'Finish with a selfie'}</strong>
-                </div>
-                <div className="cp-kyc-progress" aria-label={`Step ${step} of ${totalSteps}`}>
-                  {Array.from({ length: totalSteps }, (_, index) => <i key={index} className={index + 1 <= step ? 'active' : ''} />)}
-                </div>
+          {isLocked ? (
+            <div className="cp-card cp-card-pad" style={{ marginTop: 18, textAlign: 'center' }}>
+              <div style={{ width: 58, height: 58, margin: '0 auto 14px', display: 'grid', placeItems: 'center', borderRadius: 18, background: status?.status === 'verified' ? 'rgba(34,197,94,.12)' : 'rgba(249,115,22,.12)' }}>
+                {status?.status === 'verified' ? <CheckCircle2 size={29} /> : <FileCheck2 size={29} />}
               </div>
-
-              {step === 1 && <div className="cp-kyc-step cp-kyc-step-enter">
-               <div className="cp-field">
-                 <span>Identity document</span>
-                <div className="cp-doc-grid" role="radiogroup" aria-label="Identity document">
-                   {documentOptions.filter((option) => option.verificationType === form.verificationType).map((option) => (
-                    <button
-                      type="button"
-                      key={option.value}
-                      role="radio"
-                      aria-checked={form.documentType === option.value}
-                      className={`cp-doc-option ${form.documentType === option.value ? 'active' : ''}`}
-                      onClick={() => updateForm('documentType', option.value)}
-                      data-testid={`button-document-${option.value}`}
-                    >
-                      <FileCheck2 size={17} />
-                      <strong>{option.label}</strong>
-                      <small>{option.hint}</small>
-                    </button>
-                  ))}
+              <span className="cp-kicker">{status?.status === 'verified' ? 'Verification complete' : 'Review in progress'}</span>
+              <h2 style={{ margin: '6px 0 8px' }}>{status?.status === 'verified' ? 'Your identity has been verified' : 'Your KYC is under review'}</h2>
+              <p style={{ margin: '0 auto', maxWidth: 430, lineHeight: 1.6 }}>
+                {status?.status === 'verified'
+                  ? 'Your submitted identity details are already verified. They cannot be edited from here.'
+                  : 'Your submitted identity details are being reviewed. You cannot edit or resubmit them until the review is completed.'}
+              </p>
+              {status?.submittedAt && <small style={{ display: 'block', marginTop: 14 }}>Submitted {formatWhen(status.submittedAt)}</small>}
+              {status?.verifiedAt && <small style={{ display: 'block', marginTop: 6 }}>Verified {formatWhen(status.verifiedAt)}</small>}
+            </div>
+          ) : (
+            <form className="cp-form cp-kyc-form" onSubmit={submitKyc}>
+              <fieldset disabled={submitting} className="cp-fieldset">
+                <div className="cp-kyc-wizard-bar">
+                  <div>
+                    <span className="cp-kicker">Step {step} of {totalSteps}</span>
+                    <strong>{step === 1 ? 'Choose your identity document' : step === 2 ? 'Add your personal details' : form.verificationType === 'basic' ? 'Review your details' : step === 3 ? 'Capture the front' : step === 4 ? 'Add the reverse side' : 'Finish with a selfie'}</strong>
+                  </div>
+                  <div className="cp-kyc-progress" aria-label={`Step ${step} of ${totalSteps}`}>
+                    {Array.from({ length: totalSteps }, (_, index) => <i key={index} className={index + 1 <= step ? 'active' : ''} />)}
+                  </div>
                 </div>
-              </div>
-                <label className="cp-field">
-                  <span>{selectedDocument.label} number</span>
-                  <input
-                    value={form.documentNumber}
-                    onChange={(event) => updateForm('documentNumber', event.target.value)}
-                    inputMode="numeric"
-                    autoComplete="off"
-                    placeholder={form.documentType === 'bvn' || form.documentType === 'nin' ? '10–11 digits' : 'Document number'}
-                    data-testid="input-document-number"
-                  />
-                </label>
-              </div>}
 
-              {step === 2 && <div className="cp-kyc-step cp-kyc-step-enter">
-              <div className="cp-field-row">
-                <label className="cp-field">
-                  <span>Full name</span>
-                  <input value={form.fullName} onChange={(event) => updateForm('fullName', event.target.value)} autoComplete="name" placeholder="First and last name" data-testid="input-full-name" />
-                </label>
-                <label className="cp-field">
-                  <span>Date of birth</span>
-                  <input type="date" value={form.dateOfBirth} onChange={(event) => updateForm('dateOfBirth', event.target.value)} data-testid="input-date-of-birth" />
-                </label>
-                <label className="cp-field">
-                  <span>Residential address</span>
-                  <input value={form.address} onChange={(event) => updateForm('address', event.target.value)} autoComplete="street-address" placeholder="Where you live" data-testid="input-address" />
-                </label>
-              </div>
-              </div>}
+                {step === 1 && <div className="cp-kyc-step cp-kyc-step-enter">
+                  <div className="cp-field">
+                    <span>Identity document</span>
+                    <div className="cp-doc-grid" role="radiogroup" aria-label="Identity document">
+                      {documentOptions.filter((option) => option.verificationType === form.verificationType).map((option) => (
+                        <button type="button" key={option.value} role="radio" aria-checked={form.documentType === option.value} className={`cp-doc-option ${form.documentType === option.value ? 'active' : ''}`} onClick={() => updateForm('documentType', option.value)} data-testid={`button-document-${option.value}`}>
+                          <FileCheck2 size={17} /><strong>{option.label}</strong><small>{option.hint}</small>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <label className="cp-field">
+                    <span>{selectedDocument.label} number</span>
+                    <input value={form.documentNumber} onChange={(event) => updateForm('documentNumber', event.target.value)} inputMode="numeric" autoComplete="off" placeholder={form.documentType === 'bvn' || form.documentType === 'nin' ? '10–11 digits' : 'Document number'} data-testid="input-document-number" />
+                  </label>
+                </div>}
 
-               {form.verificationType === 'advanced' && step === 3 ? (
-                 <div className="cp-kyc-step cp-kyc-step-enter">
-                   <div className="cp-upload-intro"><span className="cp-upload-number">01</span><div><strong>Front of document</strong><p>Use a sharp, well-lit image. Make sure every corner and word is visible.</p></div></div>
-                   <label className={`cp-upload ${form.documentFrontImage ? 'has-file' : ''}`}>
-                     <div className="cp-upload-head"><span>{form.documentFrontImage ? 'Image ready to continue' : 'Add the front image'}</span><UploadCloud size={16} /></div>
-                     <input type="file" accept="image/*" onChange={(event) => void onFileChange('documentFrontImage', event.target.files?.[0])} data-testid="input-document-front" />
-                     <small>{form.documentFrontImage ? 'Choose another image to replace it' : 'Tap here to browse your device'}</small>
-                   </label>
-                 </div>
-               ) : form.verificationType === 'advanced' && step === 4 ? (
-                 <div className="cp-kyc-step cp-kyc-step-enter">
-                   <div className="cp-upload-intro"><span className="cp-upload-number">02</span><div><strong>Reverse side</strong><p>If your document has a back, add it here. Otherwise, continue without one.</p></div></div>
-                   <label className={`cp-upload ${form.documentBackImage ? 'has-file' : ''}`}>
-                     <div className="cp-upload-head"><span>{form.documentBackImage ? 'Back image ready' : 'Add the back image'}</span><UploadCloud size={16} /></div>
-                     <input type="file" accept="image/*" onChange={(event) => void onFileChange('documentBackImage', event.target.files?.[0])} data-testid="input-document-back" />
-                     <small>{form.documentBackImage ? 'Choose another image to replace it' : 'Optional for one-sided documents'}</small>
-                   </label>
-                 </div>
-               ) : form.verificationType === 'advanced' && step === 5 ? (
-                 <div className="cp-kyc-step cp-kyc-step-enter">
-                   <div className="cp-upload-intro"><span className="cp-upload-number">03</span><div><strong>Selfie check</strong><p>Look at the camera with your face clearly visible, while holding the same document.</p></div></div>
-                   <label className={`cp-upload ${form.selfieImage ? 'has-file' : ''}`}>
-                     <div className="cp-upload-head"><span>{form.selfieImage ? 'Selfie ready to submit' : 'Add your selfie'}</span><UserRound size={16} /></div>
-                     <input type="file" accept="image/*" onChange={(event) => void onFileChange('selfieImage', event.target.files?.[0])} data-testid="input-selfie" />
-                     <small>{form.selfieImage ? 'Choose another image to replace it' : 'Keep your face and document in frame'}</small>
-                   </label>
-                 </div>
-               ) : form.verificationType === 'basic' && step === 3 ? (
-                 <div className="cp-basic-note"><ShieldCheck size={16} /><span>Everything looks ready. Basic verification uses your identity number and personal details only — no photo uploads.</span></div>
-               ) : null}
-            </fieldset>
+                {step === 2 && <div className="cp-kyc-step cp-kyc-step-enter">
+                  <div className="cp-field-row">
+                    <label className="cp-field"><span>Full name</span><input value={form.fullName} onChange={(event) => updateForm('fullName', event.target.value)} autoComplete="name" placeholder="First and last name" data-testid="input-full-name" /></label>
+                    <label className="cp-field"><span>Date of birth</span><input type="date" value={form.dateOfBirth} onChange={(event) => updateForm('dateOfBirth', event.target.value)} data-testid="input-date-of-birth" /></label>
+                    <label className="cp-field"><span>Residential address</span><input value={form.address} onChange={(event) => updateForm('address', event.target.value)} autoComplete="street-address" placeholder="Where you live" data-testid="input-address" /></label>
+                  </div>
+                </div>}
 
-            {fileError && <Notice tone="error">{fileError}</Notice>}
-            {formError && <Notice tone="error">{formError}</Notice>}
-            {!isLocked && (
+                {form.verificationType === 'advanced' && step === 3 ? (
+                  <div className="cp-kyc-step cp-kyc-step-enter">
+                    <div className="cp-upload-intro"><span className="cp-upload-number">01</span><div><strong>Front of document</strong><p>Use a sharp, well-lit image. Make sure every corner and word is visible.</p></div></div>
+                    <label className={`cp-upload ${form.documentFrontImage ? 'has-file' : ''}`}><div className="cp-upload-head"><span>{form.documentFrontImage ? 'Image ready to continue' : 'Add the front image'}</span><UploadCloud size={16} /></div><input type="file" accept="image/*" onChange={(event) => void onFileChange('documentFrontImage', event.target.files?.[0])} data-testid="input-document-front" /><small>{form.documentFrontImage ? 'Choose another image to replace it' : 'Tap here to browse your device'}</small></label>
+                  </div>
+                ) : form.verificationType === 'advanced' && step === 4 ? (
+                  <div className="cp-kyc-step cp-kyc-step-enter">
+                    <div className="cp-upload-intro"><span className="cp-upload-number">02</span><div><strong>Reverse side</strong><p>If your document has a back, add it here. Otherwise, continue without one.</p></div></div>
+                    <label className={`cp-upload ${form.documentBackImage ? 'has-file' : ''}`}><div className="cp-upload-head"><span>{form.documentBackImage ? 'Back image ready' : 'Add the back image'}</span><UploadCloud size={16} /></div><input type="file" accept="image/*" onChange={(event) => void onFileChange('documentBackImage', event.target.files?.[0])} data-testid="input-document-back" /><small>{form.documentBackImage ? 'Choose another image to replace it' : 'Optional for one-sided documents'}</small></label>
+                  </div>
+                ) : form.verificationType === 'advanced' && step === 5 ? (
+                  <div className="cp-kyc-step cp-kyc-step-enter">
+                    <div className="cp-upload-intro"><span className="cp-upload-number">03</span><div><strong>Selfie check</strong><p>Look at the camera with your face clearly visible, while holding the same document.</p></div></div>
+                    <label className={`cp-upload ${form.selfieImage ? 'has-file' : ''}`}><div className="cp-upload-head"><span>{form.selfieImage ? 'Selfie ready to submit' : 'Add your selfie'}</span><UserRound size={16} /></div><input type="file" accept="image/*" onChange={(event) => void onFileChange('selfieImage', event.target.files?.[0])} data-testid="input-selfie" /><small>{form.selfieImage ? 'Choose another image to replace it' : 'Keep your face and document in frame'}</small></label>
+                  </div>
+                ) : form.verificationType === 'basic' && step === 3 ? (
+                  <div className="cp-basic-note"><ShieldCheck size={16} /><span>Everything looks ready. Basic verification uses your identity number and personal details only — no photo uploads.</span></div>
+                ) : null}
+              </fieldset>
+              {fileError && <Notice tone="error">{fileError}</Notice>}
+              {formError && <Notice tone="error">{formError}</Notice>}
               <div className="cp-kyc-wizard-actions">
                 {step > 1 && <button type="button" className="cp-back-link" onClick={previousStep}><ArrowLeft size={15} /> Back</button>}
                 {step < totalSteps
                   ? <Button type="button" onClick={nextStep} data-testid="button-next-kyc">Continue <ChevronRight size={16} /></Button>
                   : <Button type="submit" disabled={submitting} data-testid="button-submit-kyc">{submitting ? 'Sending for review…' : status?.status === 'rejected' ? 'Submit updated details' : 'Submit for review'} <CheckCircle2 size={16} /></Button>}
               </div>
-            )}
-          </form>
+            </form>
+          )}
         </section>
 
         <aside className="cp-kyc-side">
