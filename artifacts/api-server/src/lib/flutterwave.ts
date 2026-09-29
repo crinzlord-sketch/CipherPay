@@ -664,6 +664,13 @@ export async function createTransfer(params: {
   };
 }
 
+export async function findTransferByReference(reference: string): Promise<any | null> {
+  const { status, body } = await flwGet<any>(`/transfers?reference=${encodeURIComponent(reference)}&page=1&page_size=10`);
+  if (status < 200 || status >= 300 || body?.status !== "success") return null;
+  const rows = Array.isArray(body?.data) ? body.data : [];
+  return rows.find((row: any) => String(row?.reference ?? "") === reference) ?? null;
+}
+
 export async function verifyTransferById(id: number | string): Promise<{ status: string | null; raw: any }> {
   const { body } = await flwGet<any>(`/transfers/${encodeURIComponent(String(id))}`);
   return { status: body?.data?.status ?? null, raw: body };
