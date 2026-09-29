@@ -1213,6 +1213,121 @@ router.get("/admin/kyc", requireAdmin, async (req, res): Promise<void> => {
   });
 });
 
+router.post("/admin/kyc/:id/identity-check", requireAdmin, async (req: AdminRequest, res): Promise<void> => {
+  const id = parseInt(String(req.params.id ?? ""), 10);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid KYC id" }); return; }
+
+  const [row] = await db.select().from(kycTable).where(eq(kycTable.id, id));
+  if (!row) { res.status(404).json({ error: "KYC record not found" }); return; }
+
+  const appId = String(process.env.DOJAH_APP_ID ?? "").trim();
+  const secretKey = String(process.env.DOJAH_SECRET_KEY ?? "").trim();
+  if (!appId || !secretKey) {
+    res.status(503).json({ error: "Live identity verification is not configured. Add DOJAH_APP_ID and DOJAH_SECRET_KEY to the API service." });
+    return;
+  }
+
+  const documentType = String(row.documentType ?? "").toLowerCase();
+  const identifier = String(row.bvn ?? row.nin ?? row.documentNumber ?? "").replace(/\D/g, "");
+  if ((documentType !== "bvn" && documentType !== "nin") || !identifier) {
+    res.status(400).json({ error: "Live Dojah verification is currently available for BVN and NIN submissions." });
+    return;
+  }
+
+  const submittedName = String(row.fullName ?? "").trim();
+  const nameParts = submittedName.split(/\s+/).filter(Boolean);
+  const firstName = nameParts[0] ?? "";
+  const lastName = nameParts.at(-1) ?? "";
+  const submittedDob = String(row.dateOfBirth ?? "").trim();
+
+  const params = new URLSearchParams();
+  let endpointUrl = "";
+  if (documentType === "bvn") {
+    params.set("bvn", identifier);
+    if (firstName) params.set("first_name", firstName);
+    if (lastName && lastName !== firstName) params.set("last_name", lastName);
+    if (submittedDob) params.set("dob", submittedDob);
+    endpointUrl = `https://api.dojah.io/api/v1/kyc/bvn?${params.toString()}`;
+  } else {
+    params.set("nin", identifier);
+    endpointUrl = `https://api.dojah.io/api/v1/kyc/nin?${params.toString()}`;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const response = await fetch(endpointUrl, {
+      headers: { Authorization: secretKey, AppId: appId, Accept: "application/json" },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    const body: any = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const message = String(body?.error ?? body?.message ?? `Dojah returned HTTP ${response.status}`);
+      res.status(response.status === 404 ? 404 : 502).json({ error: message });
+      return;
+    }
+
+    const entity = body?.entity ?? {};
+    if (documentType === "bvn") {
+      const bvnStatus = entity?.bvn?.status === true;
+      const firstNameStatus = entity?.first_name?.status === true;
+      const lastNameStatus = entity?.last_name?.status === true;
+      const dobStatus = entity?.date_of_birth?.status === true || entity?.dob?.status === true;
+      const suppliedFields = [firstName, lastName, submittedDob].filter(Boolean).length;
+      const matchedFields = [firstNameStatus, lastNameStatus, dobStatus].slice(0, suppliedFields).filter(Boolean).length;
+      const valid = bvnStatus && matchedFields === suppliedFields;
+
+      res.json({
+        provider: "Dojah",
+        documentType: "BVN",
+        checkedAt: new Date().toISOString(),
+        valid,
+        bvnValid: bvnStatus,
+        nameMatch: firstNameStatus && lastNameStatus,
+        firstNameMatch: firstNameStatus,
+        lastNameMatch: lastNameStatus,
+        dobMatch: submittedDob ? dobStatus : null,
+        confidence: {
+          firstName: entity?.first_name?.confidence_value ?? null,
+          lastName: entity?.last_name?.confidence_value ?? null,
+        },
+        submitted: { name: submittedName, dateOfBirth: submittedDob || null },
+      });
+      return;
+    }
+
+    const providerName = [entity?.first_name, entity?.middle_name, entity?.last_name].filter(Boolean).join(" ").trim();
+    const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const submittedTokens = normalize(submittedName).split(/(?=[a-z])/).filter(Boolean);
+    const submittedFirst = normalize(firstName);
+    const submittedLast = normalize(lastName);
+    const providerFirst = normalize(String(entity?.first_name ?? ""));
+    const providerLast = normalize(String(entity?.last_name ?? ""));
+    const nameMatch = Boolean(providerFirst && providerLast && providerFirst === submittedFirst && providerLast === submittedLast);
+    const providerDob = String(entity?.date_of_birth ?? "").trim();
+    const dobMatch = Boolean(submittedDob && providerDob && submittedDob === providerDob);
+    res.json({
+      provider: "Dojah",
+      documentType: "NIN",
+      checkedAt: new Date().toISOString(),
+      valid: nameMatch && dobMatch,
+      nameMatch,
+      dobMatch,
+      submitted: { name: submittedName, dateOfBirth: submittedDob || null },
+      returned: {
+        name: providerName || null,
+        dateOfBirth: providerDob || null,
+        gender: entity?.gender ?? null,
+        phone: entity?.phone_number ?? null,
+      },
+    });
+  } catch (error: any) {
+    res.status(502).json({ error: error?.name === "AbortError" ? "Dojah identity check timed out." : "Dojah identity check could not be completed." });
+  }
+});
+
 router.post("/admin/kyc/:id/approve", requireAdmin, async (req: AdminRequest, res): Promise<void> => {
   const id = parseInt(String(req.params.id ?? ""), 10);
   const [row] = await db.select().from(kycTable).where(eq(kycTable.id, id));
