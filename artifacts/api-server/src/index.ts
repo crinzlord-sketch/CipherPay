@@ -9,8 +9,6 @@ import { startPayoutFundingPoller } from "./lib/payout-funding-poller";
 import { renewDueEmailProSubscriptions } from "./lib/email-pro-subscription";
 import { sendWeeklyUserEmails } from "./lib/user-email-job";
 
-// Route ALL outbound fetch requests through a fixed-IP proxy (e.g. Fixie) so
-// the server's egress IP is stable and can be whitelisted in Flutterwave.
 const fixieUrl = process.env["FIXIE_URL"];
 if (fixieUrl) {
   setGlobalDispatcher(new ProxyAgent(fixieUrl));
@@ -20,25 +18,15 @@ if (fixieUrl) {
 }
 
 const rawPort = process.env["PORT"];
-
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
-
+if (!rawPort) throw new Error("PORT environment variable is required but was not provided.");
 const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
+if (Number.isNaN(port) || port <= 0) throw new Error(`Invalid PORT value: "${rawPort}"`);
 
 app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
   }
-
   logger.info({ port }, "Server listening");
   if (isEmailConfigured()) {
     void verifyEmailTransport()
@@ -52,7 +40,7 @@ app.listen(port, (err) => {
   startTemporaryInboxRenewal();
   startPayoutFundingPoller();
   void renewDueEmailProSubscriptions();
-  setInterval(() => void renewDueEmailProSubscriptions(), 60 * 60 * 1000);
-  void sendWeeklyUserEmails();
-  setInterval(() => void sendWeeklyUserEmails(), 24 * 60 * 60 * 1000);
+  setInterval(() => void renewDueEmailProSubscriptions(), 60_000);
+  setTimeout(() => void sendWeeklyUserEmails(), 30_000);
+  setInterval(() => void sendWeeklyUserEmails(), 6 * 60 * 60 * 1000);
 });
