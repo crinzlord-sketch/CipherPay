@@ -94,46 +94,41 @@ export async function handleEvent(req: Request, evt: FlwEvent, psaAccountReferen
       return;
     }
     const reference = `PSA-${providerReference}`.slice(0, 48);
-    const existing = await db.select({ id: transactionsTable.id, status: transactionsTable.status })
-      .from(transactionsTable).where(eq(transactionsTable.reference, reference));
-    if (existing.length > 0) return;
-
     const flagReason = getDepositFlagReason(walletRow.user.kycLevel, amount);
-    await getOrCreateWallet(walletRow.user.id);
+    const now = new Date();
 
-    const [tx] = await db.insert(transactionsTable).values({
-      userId: walletRow.user.id,
-      type: "fund",
-      amount: amount.toFixed(2),
-      status: flagReason ? "pending" : "success",
-      reference,
-      description: flagReason ? "Wallet funding via personal bank account — held for KYC review" : "Wallet funded via personal bank account",
-      isFlagged: Boolean(flagReason),
-      flagReason,
-      metadata: JSON.stringify({
-        provider: "flutterwave-psa",
-        providerReference,
-        accountNumber,
-        bankName: data.bank_name ?? null,
-        senderName: data.fullname ?? null,
-        receivedAt: new Date().toISOString(),
-        heldForKyc: Boolean(flagReason),
-      }),
-    }).returning();
-
-    if (flagReason) {
-      await notifyUser({
+    // The webhook and fallback poller can observe the same provider transaction
+    // concurrently. Insert the ledger row and credit the wallet atomically, with
+    // the unique reference protecting against double-credit.
+    const result = await db.transaction(async (dbtx) => {
+      const [tx] = await dbtx.insert(transactionsTable).values({
         userId: walletRow.user.id,
-        type: "warning",
-        title: "Deposit received — KYC review required",
-        body: `Your ₦${amount.toLocaleString()} deposit was received in your personal account but is being held because ${flagReason.toLowerCase()} Complete your KYC and an admin will release it.`,
-        link: `/transactions/${tx.id}`,
-      }).catch(() => {});
-      req.log?.info?.({ txId: tx.id, userId: walletRow.user.id, amount, flagReason }, "flw webhook: PSA deposit held");
-      return;
-    }
+        type: "fund",
+        amount: amount.toFixed(2),
+        status: flagReason ? "pending" : "success",
+        reference,
+        description: flagReason
+          ? "Wallet funding via personal bank account — held for KYC review"
+          : "Wallet funded via personal bank account",
+        isFlagged: Boolean(flagReason),
+        flagReason,
+        metadata: JSON.stringify({
+          provider: "flutterwave-psa",
+          providerReference,
+          accountNumber,
+          bankName: data.bank_name ?? null,
+          senderName: data.fullname ?? null,
+          receivedAt: now.toISOString(),
+          heldForKyc: Boolean(flagReason),
+        }),
+      }).onConflictDoNothing({ target: transactionsTable.reference }).returning();
 
-    await db.transaction(async (dbtx) => {
+      if (!tx) return { duplicate: true as const, held: false as const, txId: null as number | null };
+
+      if (flagReason) {
+        return { duplicate: false as const, held: true as const, txId: tx.id };
+      }
+
       const [w] = await dbtx.update(walletsTable)
         .set({
           balance: sql`${walletsTable.balance} + ${amount}`,
@@ -141,13 +136,35 @@ export async function handleEvent(req: Request, evt: FlwEvent, psaAccountReferen
         })
         .where(eq(walletsTable.userId, walletRow.user.id))
         .returning({ balance: walletsTable.balance });
+
+      if (!w) throw new Error("CipherPay wallet could not be updated for the funding transaction");
+
       const balanceAfter = parseFloat(w.balance);
       const balanceBefore = balanceAfter - amount;
       await dbtx.update(transactionsTable).set({
         balanceBefore: balanceBefore.toFixed(2),
         balanceAfter: balanceAfter.toFixed(2),
       }).where(eq(transactionsTable.id, tx.id));
+
+      return { duplicate: false as const, held: false as const, txId: tx.id };
     });
+
+    if (result.duplicate) {
+      req.log?.info?.({ providerReference, reference }, "flw webhook: PSA funding already reconciled");
+      return;
+    }
+
+    if (result.held) {
+      await notifyUser({
+        userId: walletRow.user.id,
+        type: "warning",
+        title: "Deposit received — KYC review required",
+        body: `Your ₦${amount.toLocaleString()} deposit was received in your personal account but is being held because ${flagReason!.toLowerCase()} Complete your KYC and an admin will release it.`,
+        link: `/transactions/${result.txId}`,
+      }).catch(() => {});
+      req.log?.info?.({ txId: result.txId, userId: walletRow.user.id, amount, flagReason }, "flw webhook: PSA deposit held");
+      return;
+    }
 
     await notifyUser({
       userId: walletRow.user.id,
