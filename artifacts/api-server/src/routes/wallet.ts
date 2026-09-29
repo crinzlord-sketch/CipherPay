@@ -354,7 +354,9 @@ router.post("/wallet/transfer", async (req, res): Promise<void> => {
   const [sender] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
 
   try {
-    const { tx } = await debitWallet(userId, amount, `Transfer to ${recipient.firstName} ${recipient.lastName}${note ? ` - ${note}` : ""}`, "transfer_out", { recipientId: recipient.id });
+    const fee = internalTransferFee(amount);
+    const { tx } = await debitWallet(userId, amount + fee, `Transfer to ${recipient.firstName} ${recipient.lastName}${note ? ` - ${note}` : ""}`, "transfer_out", { recipientId: recipient.id, fee, note });
+    await db.update(transactionsTable).set({ fee: fee.toFixed(2) }).where(eq(transactionsTable.id, tx.id));
     await creditWallet(recipient.id, amount, `Transfer from ${sender?.firstName} ${sender?.lastName}`, "transfer_in", { senderId: userId });
     res.json({ success: true, message: "Transfer successful", transaction: formatTransaction(tx) });
   } catch (e: any) {
