@@ -9,7 +9,13 @@ import { startPayoutFundingPoller } from "./lib/payout-funding-poller";
 import { renewDueEmailProSubscriptions } from "./lib/email-pro-subscription";
 import { sendWeeklyUserEmails } from "./lib/user-email-job";
 
-const fixieUrl = process.env["FIXIE_URL"];
+function normalizeProxyUrl(raw: string | undefined): string | undefined {
+  if (!raw?.trim()) return undefined;
+  const value = raw.trim();
+  return /^https?:\\/\\//i.test(value) ? value : `http://${value}`;
+}
+
+const fixieUrl = normalizeProxyUrl(process.env["FIXIE_URL"]);
 if (fixieUrl) {
   setGlobalDispatcher(new ProxyAgent(fixieUrl));
   logger.info("Outbound requests routed through proxy (stable egress IP)");
