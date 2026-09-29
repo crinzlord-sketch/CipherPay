@@ -588,7 +588,7 @@ router.post("/wallet/withdraw/refresh/:id", async (req, res): Promise<void> => {
       await notifyUser({
         userId, type: "success", title: "Withdrawal sent",
         body: `Your ₦${netAmount.toLocaleString()} withdrawal to ${recipient} has been sent successfully.`,
-        link: `/transactions/${id}`,
+        link: "/transactions",
       });
     }
     res.json({ updated: rows.length > 0, status: "success" });
@@ -602,7 +602,7 @@ router.post("/wallet/withdraw/refresh/:id", async (req, res): Promise<void> => {
       await notifyUser({
         userId, type: "error", title: "Withdrawal failed — refunded",
         body: `Your ₦${Math.abs(parseFloat(tx.amount)).toLocaleString()} withdrawal failed. The amount has been refunded to your wallet.`,
-        link: `/transactions/${id}`,
+        link: "/transactions",
       });
     }
     res.json({ updated: rows.length > 0, status: "failed" });
