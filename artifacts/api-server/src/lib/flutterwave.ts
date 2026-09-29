@@ -60,7 +60,11 @@ export async function flwGet<T = any>(path: string): Promise<{ status: number; b
 async function flwPost<T = any>(path: string, payload: Record<string, unknown>): Promise<{ status: number; body: T }> {
   const res = await flwFetch(`${BASE}${path}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${secretKey()}`, "Content-Type": "application/json" },
+    headers: {
+      Authorization: `Bearer ${secretKey()}`,
+      "Content-Type": "application/json",
+      ...(payload.reference || payload.tx_ref ? { "X-Idempotency-Key": String(payload.reference ?? payload.tx_ref) } : {}),
+    },
     body: JSON.stringify(payload),
   });
   const body = (await res.json().catch(() => ({}))) as T;
@@ -243,7 +247,7 @@ export async function validateBill(params: { biller: string; item: string; custo
 
 // ── Electricity catalog (live; cached in the route layer) ────────────────────
 // GET /bill-categories?electricity=1 returns all disco billers.
-// billerName (biller_name from catalog) is what POST /v3/bills expects as `type`.
+// billerName is retained for route compatibility; payment uses billerCode + itemCode.
 export interface FlwElecPlan {
   itemCode: string;
   billerCode: string;
@@ -268,18 +272,15 @@ export async function electricityPlans(): Promise<FlwElecPlan[]> {
 }
 
 // ── Bill payment (electricity, amount-based) ─────────────────────────────────
-// Flutterwave POST /v3/bills requires:
-//   type      = billerName from the live catalog (e.g. "EKEDC Prepaid") — NOT biller/item codes
-//   item_code = item code from the catalog (e.g. "UB157")
+// Use the current biller/item payment endpoint. The old POST /v3/bills flow
+// accepted legacy payloads and is no longer the path used by the current API.
 export async function payBill(params: { billerName: string; billerCode?: string; item: string; customer: string; amount: number; reference: string }): Promise<FlwResult> {
-  const { status, body } = await flwPost("/bills", {
+  if (!params.billerCode) throw new Error("Flutterwave biller code is missing");
+  const { status, body } = await flwBillPayment(params.billerCode, params.item, {
     country: "NG",
-    customer: params.customer,
+    customer_id: params.customer,
     amount: params.amount,
-    type: params.billerName,
-    item_code: params.item,
     reference: params.reference,
-    recurrence: "ONCE",
   });
   // Electricity/utility bills are async — Flutterwave returns "pending" on acceptance;
   // the prepaid token is delivered to the meter or via SMS. Treat "pending" as success.
@@ -289,7 +290,7 @@ export async function payBill(params: { billerName: string; billerCode?: string;
 // ── Verify a bill payment by reference (post-acceptance status check) ─────────
 export async function verifyBill(reference: string): Promise<{ status: string | null; raw: any }> {
   const { body } = await flwGet<any>(`/bills/${encodeURIComponent(reference)}`);
-  return { status: body?.data?.status ?? null, raw: body };
+  return { status: body?.data?.status ?? body?.status ?? null, raw: body };
 }
 
 // ── Banks ────────────────────────────────────────────────────────────────────
