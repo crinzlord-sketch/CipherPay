@@ -275,7 +275,7 @@ export async function sendUserNotificationEmail(to: string, title: string, body:
 // Throws if the transport fails — callers must wrap in try/catch and treat it
 // as best-effort so it never blocks the user-facing request.
 export async function sendAdminAlertEmail(subject: string, body: string, recipientOverride?: string): Promise<void> {
-  const recipient = recipientOverride?.trim() || process.env.ADMIN_ALERT_EMAIL ?? process.env.EMAIL_USER;
+  const recipient = recipientOverride?.trim() || (process.env.ADMIN_ALERT_EMAIL ?? process.env.EMAIL_USER);
   if (!recipient) {
     logger.warn({ subject }, "Admin alert email skipped — no sender or admin recipient configured");
     return;
