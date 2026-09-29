@@ -150,3 +150,21 @@
 .admin-money-empty{min-height:190px;display:grid;place-items:center;text-align:center;align-content:center;gap:8px;opacity:.58}.admin-money-empty span{font-size:13px}
 @media(max-width:900px){.admin-money-stats{grid-template-columns:1fr 1fr}.admin-money-grid{grid-template-columns:1fr}}
 @media(max-width:560px){.admin-money-hero{align-items:flex-start;flex-direction:column}.admin-money-stats{grid-template-columns:1fr}.admin-money-row{grid-template-columns:1fr}.admin-money-actions{justify-content:flex-start}}
+
+
+.admin-tab { position: relative; }
+.admin-tab-unread {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 18px;
+  font-weight: 800;
+  background: #f4733a;
+  color: #fff;
+}
