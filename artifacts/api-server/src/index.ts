@@ -1,4 +1,6 @@
 import { ProxyAgent, setGlobalDispatcher } from "undici";
+import { sql } from "drizzle-orm";
+import { db } from "@workspace/db";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureAdminUser } from "./lib/admin-seed";
@@ -28,7 +30,7 @@ if (!rawPort) throw new Error("PORT environment variable is required but was not
 const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) throw new Error(`Invalid PORT value: "${rawPort}"`);
 
-app.listen(port, (err) => {
+const start = async () => {\n  await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS gender text`);\n\n  app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
@@ -47,7 +49,7 @@ app.listen(port, (err) => {
   startPayoutFundingPoller();
   void renewDueEmailProSubscriptions();
   setInterval(() => void renewDueEmailProSubscriptions(), 60_000);
-  if (process.env.MAILJET_RUN_TEST_ON_BOOT === "true") {
+    if (process.env.MAILJET_RUN_TEST_ON_BOOT === "true") {
     const recipient = process.env.MAILJET_TEST_RECIPIENT?.trim();
     if (recipient) {
       void import("./lib/email").then(async ({ sendMail }) => {
