@@ -9,6 +9,7 @@ import SmsVerification from './pages/SmsVerification';
 import TemporaryEmail from './pages/TemporaryEmail';
 import { KycPage } from './pages/KycPage';
 import { SupportPage } from './pages/SupportPage';
+import ReferralPage from './pages/ReferralPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
