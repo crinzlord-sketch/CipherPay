@@ -75,6 +75,29 @@ const utilityNav = [
   { href: '/admin', label: 'Admin console', icon: LockKeyhole },
 ];
 
+const serviceFeatureForPath = (path: string) => {
+  if (path === '/send' || path.startsWith('/send/')) return 'transfers';
+  if (path === '/fund' || path.startsWith('/fund/')) return 'wallet_funding';
+  if (path === '/airtime' || path.startsWith('/airtime/')) return 'airtime';
+  if (path === '/bills' || path.startsWith('/bills/')) return 'bills';
+  if (path === '/sms' || path.startsWith('/sms/')) return 'sms';
+  if (path === '/temporary-email' || path.startsWith('/temporary-email/')) return 'temporary_email';
+  if (path === '/services' || path.startsWith('/services/')) return 'services';
+  if (path === '/email-pro' || path.startsWith('/email-pro/')) return 'email_pro';
+  if (path === '/crypto' || path.startsWith('/crypto/')) return 'crypto';
+  return null;
+};
+
+function ServiceMaintenance({ serviceLabel }: { serviceLabel: string }) {
+  return <section className="service-maintenance" aria-live="polite">
+    <div className="service-maintenance-mark"><span /><span /><span /></div>
+    <span className="eyebrow">SERVICE / TEMPORARILY UNAVAILABLE</span>
+    <h1>{serviceLabel} is under maintenance.</h1>
+    <p>We’re making a few improvements behind the scenes, so this service is temporarily unavailable. Your account and balance are safe, and there’s nothing you need to do.</p>
+    <div className="service-maintenance-note"><span>●</span><div><b>Thanks for your patience.</b><small>Please check back shortly. We’ll restore access as soon as the service is ready.</small></div></div>
+  </section>;
+}
+
 function useToken() {
   return typeof window !== 'undefined' ? window.localStorage.getItem('cipherpay_token') : null;
 }
@@ -103,6 +126,7 @@ function Shell({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const [notificationReturnPath, setNotificationReturnPath] = useState<string>('/');
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [serviceFeatures, setServiceFeatures] = useState<Record<string, boolean> | null>(null);
   const { confirm } = useAnimatedDialog();
   const me = useGetMe({ query: { enabled: !!useToken(), queryKey: ['/api/auth/me'] } });
   const user = me.data as any;
@@ -151,6 +175,29 @@ function Shell({ children }: { children: ReactNode }) {
       window.removeEventListener('storage', onStorage);
     };
   }, [setLocation]);
+
+  useEffect(() => {
+    let active = true;
+    const loadServiceFeatures = async () => {
+      if (!useToken() || location.startsWith('/admin')) {
+        if (active) setServiceFeatures(null);
+        return;
+      }
+      try {
+        const response = await fetch(apiUrl('/api/service-features'), { cache: 'no-store' });
+        const payload = await response.json();
+        if (active && response.ok) setServiceFeatures(payload.data ?? null);
+      } catch {
+        // Availability checks are fail-open so a temporary status request cannot lock users out.
+      }
+    };
+    void loadServiceFeatures();
+    const interval = window.setInterval(() => void loadServiceFeatures(), 15_000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [location]);
 
   useEffect(() => {
     let active = true;
@@ -217,7 +264,22 @@ function Shell({ children }: { children: ReactNode }) {
           setLocation('/notifications');
         }
       }} aria-label={location === '/notifications' ? 'Close notifications' : unreadNotifications > 0 ? `Open notifications, ${unreadNotifications} unread` : 'Open notifications'} aria-pressed={location === '/notifications'} data-testid="button-notifications"><Bell size={19} />{unreadNotifications > 0 && <i />}</button>{user && <span className="topbar-name">{user.firstName}</span>}<button className="logout-link" onClick={() => void logout()} data-testid="button-logout"><LogOut size={16} /> <span>Log out</span></button></header>
-      <div className="content">{children}</div>
+      <div className="content">{(() => {
+        const featureKey = serviceFeatureForPath(location);
+        const maintenance = featureKey && serviceFeatures && serviceFeatures[featureKey] === false;
+        const labels: Record<string, string> = {
+          transfers: 'Transfers',
+          wallet_funding: 'Wallet funding',
+          airtime: 'Airtime',
+          bills: 'Bill payments',
+          sms: 'SMS verification',
+          temporary_email: 'Temporary email',
+          services: 'Services',
+          email_pro: 'Email Pro',
+          crypto: 'Crypto',
+        };
+        return maintenance ? <ServiceMaintenance serviceLabel={labels[featureKey] ?? 'This service'} /> : children;
+      })()}</div>
     </main>
   </div>;
 }
