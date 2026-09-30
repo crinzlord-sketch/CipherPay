@@ -5803,3 +5803,50 @@ html[data-route-transition="auth-switch"]::after {
 .bills-workspace-side{display:grid;align-content:start;gap:12px}.bills-summary-card{padding:19px}.bills-summary-provider{display:flex;align-items:center;gap:10px;margin-top:12px}.bills-summary-provider>div{display:grid;gap:4px}.bills-summary-provider b{font-size:.68rem}.bills-summary-provider small{color:hsl(var(--muted-foreground));font-size:.57rem}.bills-side-rule{height:1px;margin:16px 0 2px;background:hsl(var(--border))}.bills-side-step{display:flex;gap:10px;padding:12px 0;border-bottom:1px solid hsl(var(--border))}.bills-side-step:last-child{border-bottom:0}.bills-side-step>span{color:hsl(var(--primary));font-family:var(--app-font-mono);font-size:.55rem;font-weight:700}.bills-side-step div{display:grid;gap:3px}.bills-side-step b{font-size:.64rem}.bills-side-step small{color:hsl(var(--muted-foreground));font-size:.57rem;line-height:1.4}.bills-trust-panel{display:flex;gap:10px;padding:14px;border:1px solid hsl(var(--primary)/.2);border-radius:14px;background:hsl(var(--primary)/.06)}.bills-trust-panel>svg{flex:0 0 auto;color:hsl(var(--primary))}.bills-trust-panel b{font-size:.64rem}.bills-trust-panel p{margin:4px 0 0;color:hsl(var(--muted-foreground));font-size:.57rem;line-height:1.45}
 @media (max-width: 900px){.bills-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.bills-workspace-grid{grid-template-columns:1fr}.bills-workspace-side{grid-template-columns:1fr 1fr}.bills-workspace-hero{align-items:flex-start;flex-direction:column}.bills-workspace-meta{grid-template-columns:1fr 1fr;width:100%}}
 @media (max-width: 640px){.bills-command-hero,.bills-picker,.bills-provider-panel{padding:17px;border-radius:17px}.bills-command-copy{margin:24px 0}.bills-command-copy h2{font-size:1.85rem}.bills-command-stats{display:grid;grid-template-columns:repeat(3,1fr)}.bills-command-stats span{min-width:0;padding:0 9px}.bills-command-stats b{font-size:.65rem}.bills-command-stats small{font-size:.48rem}.bills-category-grid,.bills-provider-grid{grid-template-columns:1fr}.bills-picker-head,.bills-provider-head{align-items:flex-start;flex-direction:column}.bills-workspace-hero{padding:17px;border-radius:17px}.bills-workspace-logo{width:52px;height:52px}.bills-workspace-hero h1{font-size:1.3rem}.bills-workspace-meta,.bills-workspace-grid{grid-template-columns:1fr}.bills-checkout-card{padding:17px}.bills-input-grid{grid-template-columns:1fr}.bills-verify-card{align-items:stretch;flex-direction:column}.bills-verify-card .btn{width:100%}.bills-review{grid-template-columns:1fr}.bills-provider-back{align-items:flex-start;flex-direction:column}.bills-meter-switch{align-items:flex-start;flex-direction:column}.bills-flow-note{font-size:.57rem}}
+
+
+/* CipherPay 3D profile avatars */
+.cp-avatar-image {
+  display: block;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 8px 24px rgba(39, 26, 72, .18), inset 0 0 0 1px rgba(255,255,255,.28);
+}
+.user-row > .cp-avatar-image { border-radius: 13px; }
+.cp-profile-identity > .cp-avatar-image { border-radius: 22px; }
+.recipient-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(124, 58, 237, .16);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(124,58,237,.07), rgba(255,255,255,.68));
+}
+.recipient-preview > div:not(.recipient-checking) { min-width: 0; flex: 1; }
+.recipient-preview b, .recipient-preview small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recipient-preview small { margin-top: 3px; color: var(--muted-foreground, #737373); font-size: 12px; }
+.recipient-verified {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  background: rgba(34,197,94,.1);
+  color: #15803d;
+}
+.recipient-checking { color: var(--muted-foreground, #737373); font-size: 12px; }
+.auth-form select {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid rgba(120, 90, 170, .18);
+  border-radius: 12px;
+  padding: 0 13px;
+  background: rgba(255,255,255,.72);
+  color: inherit;
+  font: inherit;
+}
