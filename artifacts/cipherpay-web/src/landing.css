@@ -1509,3 +1509,145 @@ html.dark .cp-support-close{
 .cp-3d-cta-prism span{
   box-shadow:inset 0 1px rgba(255,255,255,.65)!important;
 }
+
+
+/* =========================================================
+   CIPHERPAY — NEXT-LEVEL 3D LANDING LAYER
+   Pure CSS / no external runtime dependency.
+   ========================================================= */
+.cp-hero .cp-orbit-stage{
+  transform-style:preserve-3d!important;
+  isolation:isolate!important;
+}
+.cp-hero-depth-orbs{
+  position:absolute!important;
+  inset:0!important;
+  z-index:8!important;
+  pointer-events:none!important;
+  transform-style:preserve-3d!important;
+  perspective:1200px!important;
+}
+.cp-depth-orb{
+  position:absolute!important;
+  display:grid!important;
+  place-items:center!important;
+  border-radius:24px!important;
+  border:1px solid rgba(255,255,255,.68)!important;
+  color:#292333!important;
+  font-weight:850!important;
+  background:linear-gradient(145deg,rgba(255,255,255,.86),rgba(238,234,250,.44))!important;
+  box-shadow:0 22px 55px rgba(52,39,90,.16),inset 0 1px rgba(255,255,255,.92)!important;
+  backdrop-filter:blur(18px) saturate(135%)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(135%)!important;
+}
+.cp-depth-orb::after{
+  content:""!important;
+  position:absolute!important;
+  inset:2px!important;
+  border-radius:inherit!important;
+  border:1px solid rgba(255,255,255,.35)!important;
+  opacity:.7!important;
+}
+.cp-depth-orb.orb-a{width:64px!important;height:64px!important;left:7%!important;top:20%!important;transform:translateZ(90px) rotate(-14deg)!important;animation:cpDepthA 6s ease-in-out infinite!important;font-size:21px!important}
+.cp-depth-orb.orb-b{width:54px!important;height:54px!important;right:5%!important;top:25%!important;border-radius:50%!important;transform:translateZ(140px) rotate(12deg)!important;animation:cpDepthB 5s ease-in-out infinite!important;font-size:20px!important}
+.cp-depth-orb.orb-c{width:42px!important;height:42px!important;left:14%!important;bottom:13%!important;border-radius:50%!important;transform:translateZ(60px)!important;animation:cpDepthC 7s ease-in-out infinite!important;color:#735cff!important}
+.cp-depth-orb.orb-d{width:78px!important;height:38px!important;right:10%!important;bottom:18%!important;border-radius:13px!important;transform:translateZ(110px) rotate(7deg)!important;animation:cpDepthD 8s ease-in-out infinite!important;font-size:10px!important;letter-spacing:.18em!important}
+
+.cp-hero-data-ring{
+  position:absolute!important;
+  width:430px!important;height:430px!important;
+  left:50%!important;top:50%!important;
+  transform:translate(-50%,-50%) rotateX(68deg) rotateY(-12deg)!important;
+  transform-style:preserve-3d!important;
+  border:1px solid rgba(115,92,255,.13)!important;
+  border-radius:50%!important;
+  z-index:3!important;
+  pointer-events:none!important;
+  animation:cpDataRing 16s linear infinite!important;
+}
+.cp-hero-data-ring::before,.cp-hero-data-ring::after{
+  content:""!important;position:absolute!important;inset:24px!important;border:1px dashed rgba(255,132,82,.14)!important;border-radius:50%!important;
+}
+.cp-hero-data-ring::after{inset:72px!important;border-style:solid!important;border-color:rgba(115,92,255,.10)!important}
+.cp-hero-data-ring i{
+  position:absolute!important;width:8px!important;height:8px!important;border-radius:50%!important;
+  background:#735cff!important;box-shadow:0 0 18px rgba(115,92,255,.65)!important;
+}
+.cp-hero-data-ring i:nth-child(1){left:12%;top:17%}
+.cp-hero-data-ring i:nth-child(2){right:13%;top:27%;background:#ff8558!important}
+.cp-hero-data-ring i:nth-child(3){right:7%;bottom:27%}
+.cp-hero-data-ring i:nth-child(4){left:20%;bottom:11%;background:#ff8558!important}
+.cp-hero-data-ring i:nth-child(5){left:5%;top:48%}
+.cp-hero-data-ring i:nth-child(6){right:48%;top:2%}
+.cp-hero .cp-wallet-card{
+  transform-style:preserve-3d!important;
+  transition:transform .7s cubic-bezier(.22,.8,.2,1),box-shadow .7s ease!important;
+  animation:cpWalletHover 7s ease-in-out infinite!important;
+}
+.cp-hero .cp-wallet-card::before{
+  content:""!important;
+  position:absolute!important;
+  inset:0!important;
+  border-radius:inherit!important;
+  background:linear-gradient(115deg,transparent 25%,rgba(255,255,255,.48) 47%,transparent 63%)!important;
+  background-size:220% 100%!important;
+  animation:cpCardSheen 5.5s ease-in-out infinite!important;
+  pointer-events:none!important;
+}
+.cp-hero .cp-float-pill{
+  transform-style:preserve-3d!important;
+  transition:transform .35s ease,box-shadow .35s ease!important;
+}
+.cp-hero .cp-float-pill.one{animation:cpPillOne 5.5s ease-in-out infinite!important}
+.cp-hero .cp-float-pill.two{animation:cpPillTwo 6.5s ease-in-out infinite!important}
+
+.cp-feature-grid{perspective:1400px!important}
+.cp-feature{
+  transform-style:preserve-3d!important;
+  will-change:transform!important;
+  transition:transform .45s cubic-bezier(.22,.8,.2,1),box-shadow .45s ease,border-color .35s ease!important;
+}
+.cp-feature:hover{
+  transform:translateY(-10px) rotateX(4deg) rotateY(-3deg)!important;
+  box-shadow:0 28px 70px rgba(70,48,130,.14),inset 0 1px rgba(255,255,255,.75)!important;
+}
+.cp-feature-icon{
+  transform:translateZ(22px)!important;
+  box-shadow:0 12px 30px rgba(115,92,255,.14)!important;
+}
+.cp-show-card{
+  transform-style:preserve-3d!important;
+  transition:transform .5s cubic-bezier(.22,.8,.2,1),box-shadow .5s ease!important;
+}
+.cp-show-card:hover{
+  transform:translateY(-7px) rotateX(1.5deg) rotateY(-1deg)!important;
+  box-shadow:0 30px 75px rgba(65,48,120,.14)!important;
+}
+.cp-security-item{
+  transform:translateZ(10px)!important;
+  transition:transform .3s ease,background .3s ease!important;
+}
+.cp-security-item:hover{transform:translateZ(24px) translateX(3px)!important}
+
+@keyframes cpDepthA{50%{transform:translate3d(14px,-18px,130px) rotate(-7deg) rotateY(16deg)}}
+@keyframes cpDepthB{50%{transform:translate3d(-18px,13px,175px) rotate(20deg) rotateX(12deg)}}
+@keyframes cpDepthC{50%{transform:translate3d(11px,20px,95px) rotate(18deg) scale(1.12)}}
+@keyframes cpDepthD{50%{transform:translate3d(-13px,-14px,145px) rotate(-5deg)}}
+@keyframes cpDataRing{to{transform:translate(-50%,-50%) rotateX(68deg) rotateY(-12deg) rotateZ(360deg)}}
+@keyframes cpWalletHover{0%,100%{transform:translateZ(0) rotateX(0deg) rotateY(0deg)}50%{transform:translateZ(20px) rotateX(1deg) rotateY(-1.5deg)}}
+@keyframes cpCardSheen{0%,55%,100%{background-position:220% 0}70%{background-position:-40% 0}}
+@keyframes cpPillOne{50%{transform:translate3d(5px,-9px,28px) rotate(1deg)}}
+@keyframes cpPillTwo{50%{transform:translate3d(-6px,8px,35px) rotate(-1deg)}}
+
+@media(max-width:900px){
+  .cp-hero-data-ring{width:340px!important;height:340px!important}
+  .cp-depth-orb.orb-a{left:2%!important}
+  .cp-depth-orb.orb-b{right:1%!important}
+}
+@media(max-width:600px){
+  .cp-hero-depth-orbs,.cp-hero-data-ring{display:none!important}
+  .cp-feature:hover,.cp-show-card:hover{transform:translateY(-5px)!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .cp-hero-depth-orbs *,.cp-hero-data-ring,.cp-hero .cp-wallet-card,.cp-hero .cp-float-pill{animation:none!important}
+}
