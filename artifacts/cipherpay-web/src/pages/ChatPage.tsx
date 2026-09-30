@@ -26,6 +26,9 @@ export default function ChatPage() {
   const [messages,setMessages]=useState<Message[]>([]);
   const [decrypted,setDecrypted]=useState<any[]>([]);
   const [other,setOther]=useState<Person|null>(null);
+  const [currentUserId,setCurrentUserId]=useState<number|null>(null);
+  const [replyTo,setReplyTo]=useState<any|null>(null);
+  const swipeStartX=useRef<number|null>(null);
   const [text,setText]=useState('');
   const [error,setError]=useState('');
   const [searching,setSearching]=useState(false);
@@ -47,14 +50,14 @@ export default function ChatPage() {
       setChat(r.chat); setOther(r.other); setMessages(r.messages??[]); setBg(r.background||BGS[0]);
       if(r.other?.chatPublicKey){
         const decoded=await Promise.all((r.messages??[]).map(async (m:any)=>{
-          try { return { ...m, decrypted: await decryptChatPayload(Number(id), JSON.parse((m.senderId === r.chat.userOneId ? r.other.chatPublicKey : m.senderPublicKey) || 'null'), String(m.body??'')) }; }
+          try { return { ...m, decrypted: await decryptChatPayload(Number(id), JSON.parse((m.senderId === currentUserId ? r.other.chatPublicKey : m.senderPublicKey) || 'null'), String(m.body??'')) }; }
           catch { return { ...m, decrypted: { error: true } }; }
         }));
         setDecrypted(decoded);
       } else setDecrypted((r.messages??[]).map((m:any)=>({...m,decrypted:{error:true}})));
     }catch(e){setError(e instanceof Error?e.message:'Could not open chat.');}
   };
-  useEffect(()=>{void loadChats(); void (async()=>{try{const key=await ensureChatKey(); await apiRequest('/api/auth/chat-key',{method:'POST',body:{publicKey:JSON.stringify(key)}});}catch(e){setError(e instanceof Error?e.message:'Secure chat encryption could not be initialized.');}})();},[]);
+  useEffect(()=>{void loadChats(); void (async()=>{try{const me=await apiRequest<any>('/api/auth/me');if(me?.user?.id)setCurrentUserId(Number(me.user.id));}catch{}; try{const key=await ensureChatKey();try{const key=await ensureChatKey(); await apiRequest('/api/auth/chat-key',{method:'POST',body:{publicKey:JSON.stringify(key)}});}catch(e){setError(e instanceof Error?e.message:'Secure chat encryption could not be initialized.');}})();},[]);
   useEffect(()=>{if(params?.id) void loadChat(params.id); else {setChat(null);setOther(null);setMessages([]);}},[params?.id]);
   useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'});},[decrypted.length]);
 
@@ -66,7 +69,7 @@ export default function ChatPage() {
         setMessages(r.messages??[]); setOther(r.other); setChat(r.chat);
         if(r.other?.chatPublicKey){
           const key=JSON.parse(r.other.chatPublicKey);
-          const decoded=await Promise.all((r.messages??[]).map(async (m:any)=>{try{return {...m,decrypted:await decryptChatPayload(Number(params.id),JSON.parse((m.senderId === r.chat.userOneId ? r.other.chatPublicKey : m.senderPublicKey) || 'null'),String(m.body??''))};}catch{return {...m,decrypted:{error:true}};}}));
+          const decoded=await Promise.all((r.messages??[]).map(async (m:any)=>{try{return {...m,decrypted:await decryptChatPayload(Number(params.id),JSON.parse((m.senderId === currentUserId ? r.other.chatPublicKey : m.senderPublicKey) || 'null'),String(m.body??''))};}catch{return {...m,decrypted:{error:true}};}}));
           setDecrypted(decoded);
         }
       }catch{}
@@ -82,7 +85,7 @@ export default function ChatPage() {
   const openFound=async()=>{if(!found)return;try{const r=await apiRequest<any>('/api/chat/open',{method:'POST',body:{userId:found.id}});setCode('');setFound(null);setLocation(`/chat/${r.chatId}`);await loadChats();}catch(e){setError(e instanceof Error?e.message:'Could not open chat.');}};
   const sendMessage=async(extra:any={})=>{
     if(!params?.id || sending)return;
-    const payload={text:text.trim(), image:extra.image ?? null, gif:extra.gif ?? null};
+    const payload={text:text.trim(), image:extra.image ?? null, gif:extra.gif ?? null, replyToId:replyTo?.id ?? null, replyPreview:replyTo ? (replyTo.decrypted?.text || (replyTo.decrypted?.image ? 'Image' : replyTo.decrypted?.gif ? 'GIF' : 'Message')) : null};
     if(!payload.text&&!payload.image&&!payload.gif)return;
     if(!other?.chatPublicKey){setError('This chat is not ready for end-to-end encryption yet.');return;}
     setSending(true);setError('');
@@ -91,7 +94,7 @@ export default function ChatPage() {
       const r=await apiRequest<any>(`/api/chat/${params.id}/message`,{method:'POST',body:{body:ciphertext}});
       setMessages(m=>[...m,r.message]);
       setDecrypted(m=>[...m,{...r.message,decrypted:payload}]);
-      setText('');setShowEmoji(false);setShowGif(false);void loadChats();
+      setText('');setReplyTo(null);setShowEmoji(false);setShowGif(false);void loadChats();
     }catch(e){setError(e instanceof Error?e.message:'Could not send encrypted message.');}finally{setSending(false);}
   };
   const pickImage=async(file?:File)=>{
@@ -123,12 +126,20 @@ export default function ChatPage() {
       {showBg&&<div className="cp-chat-bg-picker">{BGS.map((v,i)=><button key={i} style={{background:v}} onClick={()=>void chooseBg(v)} aria-label={'Background '+(i+1)}/>)}</div>}
       <main className="cp-chat-messages" style={{background:bg, backgroundImage:'none'}}>{decrypted.map((m:any)=>{
         const d=m.decrypted||{};
-        return <div key={m.id} className={`cp-chat-message-row ${m.senderId===other.id?'incoming':'outgoing'}`}><div className="cp-chat-bubble">
-          {d.image&&<img src={d.image} alt="Shared image"/>}{d.gif&&<img src={d.gif} alt="GIF"/>}{d.text&&<span>{d.text}</span>}{d.error&&<span>🔒 Encrypted message</span>}
-          <small>{new Date(m.createdAt).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</small>
-        </div></div>;
+        const target= d.replyToId ? decrypted.find((x:any)=>x.id===Number(d.replyToId)) : null;
+        const replyPreview=target?.decrypted?.text || (target?.decrypted?.image ? 'Image' : target?.decrypted?.gif ? 'GIF' : d.replyPreview || null);
+        const doReply=()=>setReplyTo(m);
+        return <div key={m.id} className={`cp-chat-message-row ${m.senderId===other.id?'incoming':'outgoing'}`} onTouchStart={e=>{swipeStartX.current=e.changedTouches[0]?.clientX??null}} onTouchEnd={e=>{const start=swipeStartX.current;swipeStartX.current=null;const end=e.changedTouches[0]?.clientX??start??0;if(start!==null&&end-start>55)doReply();}}>
+          <div className="cp-chat-bubble">
+            {target&&replyPreview&&<button className="cp-chat-reply-preview" onClick={doReply}><span>↩ {target.senderId===currentUserId?'You':other.firstName}</span><b>{replyPreview}</b></button>}
+            {d.image&&<img className="cp-chat-image" src={d.image} alt="Shared image" draggable onDragStart={e=>e.stopPropagation()}/>} {d.gif&&<img className="cp-chat-gif" src={d.gif} alt="GIF" draggable onDragStart={e=>e.stopPropagation()}/>} {d.text&&<span>{d.text}</span>}{d.error&&<span>🔒 Encrypted message</span>}
+            <button className="cp-chat-reply-action" onClick={doReply}>↩ Reply</button>
+            <small>{new Date(m.createdAt).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</small>
+          </div>
+        </div>;
       })}<div ref={endRef}/></main>
       {error&&<div className="cp-chat-error"><X size={14}/>{error}</div>}
+      {replyTo&&<div className="cp-chat-reply-bar"><div><span>Replying to {replyTo.senderId===currentUserId?'yourself':other.firstName}</span><b>{replyTo.decrypted?.text || (replyTo.decrypted?.image ? 'Image' : replyTo.decrypted?.gif ? 'GIF' : 'Message')}</b></div><button onClick={()=>setReplyTo(null)}><X size={16}/></button></div>}
       {showEmoji&&<div className="cp-chat-emoji">{EMOJIS.map(e=><button key={e} onClick={()=>setText(v=>v+e)}>{e}</button>)}</div>}
       {showGif&&<div className="cp-chat-gif-panel"><div className="cp-chat-gif-search"><input value={gifSearch} onChange={e=>setGifSearch(e.target.value)} placeholder="Search GIFs"/><button onClick={()=>void loadGifs(gifSearch||'trending')}><Search size={15}/></button></div><div className="cp-gif-grid">{gifs.map(g=><button key={g.id} onClick={()=>void sendMessage({gif:g.url})}><img src={g.url} alt={g.title||'GIF'}/></button>)}</div></div>}
       <footer className="cp-chat-composer"><button onClick={()=>{setShowEmoji(v=>!v);setShowGif(false)}} title="Emoji"><Smile size={20}/></button><button onClick={()=>fileRef.current?.click()} title="Image"><ImageIcon size={20}/></button><button onClick={()=>{const next=!showGif;setShowGif(next);setShowEmoji(false);if(next&&!gifs.length)void loadGifs();}} title="GIF"><span className="cp-gif-label">GIF</span></button><input ref={fileRef} type="file" accept="image/*" hidden onChange={e=>void pickImage(e.target.files?.[0])}/><textarea value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void sendMessage();}}} placeholder={sending?'Sending…':'Write a message…'} rows={1}/><button className="cp-chat-send" onClick={()=>void sendMessage()} disabled={sending||!text.trim()}><Send size={18}/></button></footer>
