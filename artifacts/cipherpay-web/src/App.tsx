@@ -229,12 +229,18 @@ function AuthLayout({ children, title, detail }: { children: ReactNode; title: s
 }
 
 function LandingPage() {
+  const [authNavigating, setAuthNavigating] = useState<'login' | 'register' | null>(null);
   const [supportOpen, setSupportOpen] = useState(false);
   const [supportForm, setSupportForm] = useState({ email: '', subject: '', category: 'general', message: '' });
   const [supportSending, setSupportSending] = useState(false);
   const [supportSent, setSupportSent] = useState(false);
   const [supportError, setSupportError] = useState('');
   const scrollToSection = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const goToAuth = (mode: 'login' | 'register') => {
+    if (authNavigating) return;
+    setAuthNavigating(mode);
+    window.setTimeout(() => window.location.assign(mode === 'login' ? '/login' : '/register'), 360);
+  };
   const openSupport = () => { setSupportSent(false); setSupportError(''); setSupportOpen(true); };
   const submitSupport = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -258,7 +264,7 @@ function LandingPage() {
       <div className="cp-landing-nav-inner">
         <Logo />
         <div className="cp-landing-links"><button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('experience')}>Experience</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={() => { setSupportSent(false); setSupportOpen(true); }}>Support</button></div>
-        <div className="cp-landing-nav-actions"><Link className="cp-land-btn ghost" href="/login">Log in</Link><Link className="cp-land-btn primary" href="/register">Get started <ArrowRight size={15}/></Link></div>
+        <div className="cp-landing-nav-actions"><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={15}/></button></div>
       </div>
     </nav>
     <section className="cp-hero">
@@ -266,7 +272,7 @@ function LandingPage() {
         <span className="cp-kicker"><i/> EVERYTHING, IN ONE PLACE</span>
         <h1>Less friction.<span>More life.</span></h1>
         <p>CipherPay brings your wallet, payments, digital services and communication together in one beautifully simple platform.</p>
-        <div className="cp-hero-actions"><Link className="cp-land-btn primary" href="/register">Create your account <ArrowRight size={17}/></Link><Link className="cp-land-btn ghost" href="/login">I already have an account</Link></div>
+        <div className="cp-hero-actions"><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Create your account <ArrowRight size={17}/></button><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>I already have an account</button></div>
         <div className="cp-hero-note"><span><ShieldCheck size={13}/> Built around control</span><span><Bolt size={13}/> Fast everyday tools</span></div>
       </div>
       <div className="cp-orbit-stage">
@@ -292,11 +298,12 @@ function LandingPage() {
         <article className="cp-show-card large" id="security"><span className="cp-kicker">ONE ACCOUNT / MANY TOOLS</span><h3>Your digital sidekick, without the cringe.</h3><p>Move from funding to payments, verification, chat and digital services without losing the thread. CipherPay keeps the important pieces close and the clutter out of sight.</p><div className="cp-mini-list"><div className="cp-mini-row"><WalletCards size={16}/><span>Wallet & transfers</span><span>01</span></div><div className="cp-mini-row"><Receipt size={16}/><span>Bills & airtime</span><span>02</span></div><div className="cp-mini-row"><MessageSquare size={16}/><span>Find & chat</span><span>03</span></div><div className="cp-mini-row"><Globe2 size={16}/><span>Digital services</span><span>04</span></div></div></article>
       </div>
     </section>
-    <section className="cp-section"><div className="cp-cta"><span className="cp-kicker">CIPHERPAY</span><h2>Make everyday feel simpler.</h2><p>One place for the things you do often, with an interface that gets out of your way.</p><div className="cp-hero-actions"><Link className="cp-land-btn primary" href="/register">Get started <ArrowRight size={17}/></Link><Link className="cp-land-btn ghost" href="/login">Log in</Link></div></div></section>
+    <section className="cp-section"><div className="cp-cta"><span className="cp-kicker">CIPHERPAY</span><h2>Make everyday feel simpler.</h2><p>One place for the things you do often, with an interface that gets out of your way.</p><div className="cp-hero-actions"><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={17}/></button><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button></div></div></section>
     <footer className="cp-footer"><span>© 2026 CipherPay</span><span>Payments · Digital services · Communication</span></footer>
+    {authNavigating && <div className="cp-auth-transition" aria-hidden="true"><div className="cp-auth-transition-mark"><span className="brand-mark"><span /></span><b>Cipher<span className="brand-orange">Pay</span></b></div><div className="cp-auth-transition-line" /><span>{authNavigating === 'login' ? 'Opening your account' : 'Setting things up'}</span></div>}
     {supportOpen && <div className="cp-support-overlay" role="dialog" aria-modal="true" aria-labelledby="guest-support-title">
       <div className="cp-support-modal"><button className="cp-support-close" type="button" onClick={() => setSupportOpen(false)} aria-label="Close support form"><X size={19}/></button>
-        {!supportSent ? <form onSubmit={sendGuestSupport}><span className="cp-kicker">GUEST SUPPORT</span><h2 id="guest-support-title">How can we help?</h2><p>Send us the details and we’ll route your message to the CipherPay support team.</p>
+        {!supportSent ? <form onSubmit={submitSupport}><span className="cp-kicker">GUEST SUPPORT</span><h2 id="guest-support-title">How can we help?</h2><p>Send us the details and we’ll route your message to the CipherPay support team.</p>
           <div className="cp-support-fields"><label><span>Your email</span><input type="email" required value={supportForm.email} onChange={e=>setSupportForm({...supportForm,email:e.target.value})} placeholder="you@example.com"/></label><label><span>Subject</span><input required minLength={3} value={supportForm.subject} onChange={e=>setSupportForm({...supportForm,subject:e.target.value})} placeholder="What do you need help with?"/></label><label><span>Category</span><select value={supportForm.category} onChange={e=>setSupportForm({...supportForm,category:e.target.value})}><option value="general">General</option><option value="payment">Payment</option><option value="wallet">Wallet</option><option value="account">Account</option><option value="technical">Technical issue</option><option value="verification">KYC / verification</option></select></label><label><span>Message</span><textarea required minLength={5} rows={5} value={supportForm.message} onChange={e=>setSupportForm({...supportForm,message:e.target.value})} placeholder="Tell us what happened..."/></label></div>
           <button className="cp-support-submit" type="submit" disabled={supportSending}>{supportSending ? 'Sending…' : 'Send message'} <ArrowRight size={16}/></button>
         </form> : <div className="cp-support-success"><div className="cp-support-success-icon"><Check size={22}/></div><span className="cp-kicker">MESSAGE SENT</span><h2>We’ve got it.</h2><p>Your message has been sent to the CipherPay support team. Keep an eye on your email for a response.</p><button className="cp-support-submit" type="button" onClick={() => setSupportOpen(false)}>Done</button></div>}
