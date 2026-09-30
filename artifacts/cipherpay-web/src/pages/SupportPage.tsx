@@ -12,9 +12,34 @@ type ChatMessage = { id: string | number; chatId: string | number; sender: 'user
 type ChatResponse = { chat: Chat; messages: ChatMessage[] };
 type HistoryItem = { chat: Chat; messages: ChatMessage[] };
 
-function mergeMessages(current: ChatMessage[], incoming: ChatMessage[]) {
+function normalizeMessage(value: any): ChatMessage | null {
+  if (!value || typeof value !== 'object') return null;
+  const sender = value.sender === 'user' || value.sender === 'bot' || value.sender === 'agent' || value.sender === 'system'
+    ? value.sender
+    : 'system';
+  const body = typeof value.body === 'string'
+    ? value.body
+    : value.body == null
+      ? ''
+      : typeof value.body === 'object'
+        ? JSON.stringify(value.body)
+        : String(value.body);
+  return {
+    id: value.id ?? `support-w9jey2luos`,
+    chatId: value.chatId ?? '',
+    sender,
+    body,
+    imageUrl: typeof value.imageUrl === 'string' ? value.imageUrl : null,
+    createdAt: typeof value.createdAt === 'string' ? value.createdAt : undefined,
+  };
+}
+
+function mergeMessages(current: ChatMessage[], incoming: unknown[]) {
   const map = new Map(current.map((message) => [String(message.id), message]));
-  incoming.forEach((message) => map.set(String(message.id), message));
+  incoming.forEach((raw) => {
+    const message = normalizeMessage(raw);
+    if (message) map.set(String(message.id), message);
+  });
   return Array.from(map.values()).sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime());
 }
 
@@ -135,7 +160,7 @@ export function SupportPage() {
     setNetworkError('');
     try {
        const result = await apiRequest<ChatResponse>(`/api/support/chat/${chat.id}/message`, { method: 'POST', body: { body } });
-      setMessages((current) => mergeMessages(current, result.messages ?? []));
+      setMessages((current) => mergeMessages(current, Array.isArray(result.messages) ? result.messages : []));
       setChat(result.chat);
       setDraft('');
     } catch (caught) {
