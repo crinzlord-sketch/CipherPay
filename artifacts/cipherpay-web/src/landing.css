@@ -1883,3 +1883,8 @@ html.dark .cp-support-close{
 @media(max-width:900px){.auth-sidekick-device{width:105px;height:190px}.sidekick-one{left:3%;top:12%}.sidekick-two{right:3%;bottom:10%}.sidekick-orb{right:16%;top:12%;width:48px;height:48px}.sidekick-ring{width:190px;height:190px}}
 @media(max-width:700px){.auth-sidekick-device{opacity:.45}.sidekick-one{left:-8%;top:15%}.sidekick-two{right:-8%;bottom:12%}.sidekick-orb,.sidekick-ring{opacity:.5}.auth-quote{position:relative;z-index:10}}
 @media(prefers-reduced-motion:reduce){.auth-sidekick-device,.sidekick-orb,.sidekick-ring,.auth-visual:before,.auth-visual:after{animation:none!important}}
+
+/* SIDEKICK BENEFITS — guaranteed readable on the cinematic panel */
+.auth-benefits{position:relative!important;z-index:12!important;color:#17131f!important}
+.auth-benefits span{color:#17131f!important;background:rgba(255,255,255,.94)!important;border-color:rgba(255,255,255,.9)!important;box-shadow:0 10px 28px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.9)!important;text-shadow:none!important;backdrop-filter:blur(14px)!important}
+.auth-benefits span b{color:#7657e8!important;margin-right:5px}
