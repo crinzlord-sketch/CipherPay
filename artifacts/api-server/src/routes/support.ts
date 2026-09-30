@@ -87,10 +87,12 @@ router.get("/support/faq", (_req, res) => { res.json({ items: FAQ }); });
 
 router.post("/support/contact", async (req, res): Promise<void> => {
   const userId = getUserId(req);
-  const { subject, message, category } = (req.body ?? {}) as { subject?: string; message?: string; category?: string };
+  const { subject, message, category, email } = (req.body ?? {}) as { subject?: string; message?: string; category?: string; email?: string };
+  const guestEmail = String(email ?? "").trim();
+  if (!userId && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) { res.status(400).json({ error: "Please provide a valid email address so support can reply to you." }); return; }
   if (!message || message.trim().length < 5) { res.status(400).json({ error: "Please describe your issue (at least 5 characters)." }); return; }
   if (!subject || subject.trim().length < 3) { res.status(400).json({ error: "Please provide a short subject." }); return; }
-  let userInfo = "Anonymous (not logged in)";
+  let userInfo = guestEmail ? `Guest — ${guestEmail}` : "Anonymous (not logged in)";
   let replyEmail = "";
   if (userId) {
     const [u] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
