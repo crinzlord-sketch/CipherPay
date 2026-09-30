@@ -1,6 +1,6 @@
 export type ApiOptions = { method?: string; body?: unknown };
 
-const apiOrigin = (import.meta.env.VITE_API_URL ?? '').trim().replace(/\/+$/, '');
+const apiOrigin = (import.meta.env.VITE_API_URL ?? 'https://cipherpay-api.onrender.com').trim().replace(/\/+$/, '');
 
 export function apiUrl(path: string): string {
   return apiOrigin ? `${apiOrigin}${path}` : path;
