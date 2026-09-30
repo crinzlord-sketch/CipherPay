@@ -850,7 +850,7 @@ router.post("/auth/pin/set", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Confirm your new PIN to continue." });
     return;
   }
-  if (!userPinMatches(body.pin, body.confirmPin)) {
+  if (body.confirmPin !== body.pin) {
     res.status(400).json({ error: "PINs do not match." });
     return;
   }
