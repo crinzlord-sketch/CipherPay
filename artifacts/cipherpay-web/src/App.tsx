@@ -1584,15 +1584,19 @@ function Send() {
                 {settingPin ? 'Creating PIN…' : 'Create PIN and continue'} <ArrowRight size={17} />
               </Button>
             </div>
-          ) : (
+          ) : hasTransferPin === true ? (
             <div className="transfer-pin-card">
               <div><ShieldCheck size={18} /><div><b>Confirm with your transfer PIN</b><small>Enter the 6-digit PIN to authorize this transfer.</small></div></div>
               <input type="password" inputMode="numeric" autoComplete="current-password" maxLength={6} pattern="[0-9]{6}" placeholder="••••••" value={transferPin} onChange={(event) => setTransferPin(event.target.value.replace(/\D/g, '').slice(0, 6))} aria-label="6-digit transfer PIN" required data-testid="input-transfer-pin" />
             </div>
+          ) : (
+            <div className="transfer-pin-card">
+              <div><ShieldCheck size={18} /><div><b>Checking transfer PIN</b><small>Just a moment…</small></div></div>
+            </div>
           )}
 {error && <div className="error-box" role="alert">{error}</div>}
 
-        {(mode === 'cipherpay' || bankForm.accountName) && <Button type="submit" className="full-btn" disabled={busy || resolving} data-testid="button-send-submit">
+        {(mode === 'cipherpay' || bankForm.accountName) && <Button type="submit" className="full-btn" disabled={busy || resolving || hasTransferPin !== true} data-testid="button-send-submit">
           {busy ? 'Sending…' : mode === 'bank' ? 'Send to bank' : 'Review and send'} <ArrowRight size={17} />
         </Button>}
       </form>
