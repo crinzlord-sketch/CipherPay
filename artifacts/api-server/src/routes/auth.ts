@@ -60,13 +60,59 @@ function enforceOtpResendCooldown(target: string, purpose: string, res: any): bo
 
 // Pull device metadata the mobile client sends so we can show a meaningful
 // "logged-in devices" list. Falls back gracefully for older clients.
+function getClientIp(req: any): string | null {
+  const candidates = [
+    req.headers["cf-connecting-ip"],
+    req.headers["x-real-ip"],
+    req.headers["x-forwarded-for"],
+    req.headers["forwarded"],
+    req.ip,
+    req.socket?.remoteAddress,
+  ];
+  for (const candidate of candidates) {
+    const raw = Array.isArray(candidate) ? candidate[0] : candidate;
+    if (typeof raw !== "string") continue;
+    const first = raw.split(",")[0].trim().replace(/^for=/i, "").replace(/^"|"$/g, "");
+    const cleaned = first.replace(/^\[|\]$/g, "").replace(/^::ffff:/i, "");
+    if (cleaned && cleaned !== "::1" && cleaned !== "0.0.0.0") return cleaned;
+  }
+  return null;
+}
+
 function deviceInfo(req: any): { name: string; platform: string; ip: string | null } {
   const d = (req.body?.device ?? {}) as { name?: string; platform?: string };
-  const name = typeof d.name === "string" && d.name.trim() ? d.name.trim().slice(0, 80) : "Unknown device";
-  const platform = typeof d.platform === "string" && d.platform.trim() ? d.platform.trim().slice(0, 40) : "unknown";
-  const fwd = req.headers["x-forwarded-for"];
-  const ipRaw = Array.isArray(fwd) ? fwd[0] : (typeof fwd === "string" ? fwd.split(",")[0] : undefined);
-  return { name, platform, ip: (ipRaw ?? req.ip ?? null) || null };
+  const ua = String(req.headers["user-agent"] ?? "").trim();
+  const explicitName = typeof d.name === "string" ? d.name.trim() : "";
+  const explicitPlatform = typeof d.platform === "string" ? d.platform.trim() : "";
+
+  let platform = explicitPlatform;
+  if (!platform) {
+    if (/android/i.test(ua)) platform = "Android";
+    else if (/iphone|ipad|ipod/i.test(ua)) platform = /ipad/i.test(ua) ? "iPadOS" : "iOS";
+    else if (/windows/i.test(ua)) platform = "Windows";
+    else if (/macintosh|mac os x/i.test(ua)) platform = "macOS";
+    else if (/linux/i.test(ua)) platform = "Linux";
+    else platform = "Unknown";
+  }
+
+  let deviceName = explicitName;
+  if (!deviceName) {
+    if (/iphone/i.test(ua)) deviceName = "iPhone";
+    else if (/ipad/i.test(ua)) deviceName = "iPad";
+    else if (/android/i.test(ua)) {
+      const model = ua.match(/Android[^;)]*;\s*(?:[a-z]{2}(?:-[A-Z]{2})?;\s*)?(?:wv;\s*)?([^;)]+?)(?:\s+Build\/[^;)]+)?[;)]/i)?.[1]?.trim();
+      deviceName = model && model.length <= 80 ? model : "Android device";
+    } else if (/windows/i.test(ua)) deviceName = "Windows PC";
+    else if (/macintosh|mac os x/i.test(ua)) deviceName = "Mac";
+    else if (/linux/i.test(ua)) deviceName = "Linux PC";
+    else deviceName = "Web browser";
+  }
+
+  return {
+    name: deviceName.slice(0, 80),
+    platform: platform.slice(0, 40),
+    ip: getClientIp(req),
+  };
 }
 
 function getUserIdFromHeaders(req: any): number | null {
