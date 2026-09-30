@@ -94,6 +94,7 @@ function formatUser(user: typeof usersTable.$inferSelect, balance?: number) {
     kycLevel: user.kycLevel,
     referralCode: user.referralCode,
     userCode: user.userCode ?? null,
+    chatPublicKey: user.chatPublicKey ?? null,
     isAdmin: user.isAdmin,
     createdAt: user.createdAt.toISOString(),
   };
@@ -545,6 +546,26 @@ router.get("/auth/me", async (req, res): Promise<void> => {
 
   const wallet = await getOrCreateWallet(user.id);
   res.json(formatUser(user, parseFloat(wallet.balance)));
+});
+
+router.get("/auth/chat-key", async (req, res): Promise<void> => {
+  const rawId = req.headers["x-user-id"];
+  const userId = parseInt(Array.isArray(rawId) ? rawId[0] : (rawId ?? ""), 10);
+  if (!Number.isFinite(userId)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const [user] = await db.select({ chatPublicKey: usersTable.chatPublicKey }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+  res.json({ publicKey: user.chatPublicKey ?? null });
+});
+
+router.post("/auth/chat-key", async (req, res): Promise<void> => {
+  const rawId = req.headers["x-user-id"];
+  const userId = parseInt(Array.isArray(rawId) ? rawId[0] : (rawId ?? ""), 10);
+  if (!Number.isFinite(userId)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const publicKey = typeof req.body?.publicKey === "string" ? req.body.publicKey.trim() : "";
+  if (publicKey.length < 40 || publicKey.length > 4000) { res.status(400).json({ error: "Invalid chat public key." }); return; }
+  const [user] = await db.update(usersTable).set({ chatPublicKey: publicKey }).where(eq(usersTable.id, userId)).returning({ id: usersTable.id });
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+  res.json({ saved: true });
 });
 
 router.patch("/auth/update-profile", async (req, res): Promise<void> => {
