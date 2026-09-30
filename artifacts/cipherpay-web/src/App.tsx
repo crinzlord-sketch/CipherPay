@@ -489,7 +489,9 @@ function Login() {
   const acceptSession = (token: string, adminToken?: string) => {
     localStorage.setItem('cipherpay_token', token);
     if (adminToken) sessionStorage.setItem('cipherpay_admin_token', adminToken);
-    setLocation('/dashboard');
+    // Use a real browser navigation after authentication so the protected
+    // shell cannot race the token write or leave the landing route mounted.
+    window.location.assign('/dashboard');
   };
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -510,7 +512,7 @@ function Login() {
           }
           if (result.requiresEmailVerification) {
             reactFace('success');
-            setLocation(`/verify-email?email=${encodeURIComponent(result.email ?? email.trim().toLowerCase())}`);
+            window.location.assign(`/verify-email?email=${encodeURIComponent(result.email ?? email.trim().toLowerCase())}`);
             return;
           }
           if (!result.token) {
@@ -812,7 +814,7 @@ function Register() {
         if (result.requiresEmailVerification) {
           setLocation(`/verify-email?email=${encodeURIComponent(form.email.trim().toLowerCase())}`);
          } else {
-          setLocation('/dashboard');
+          window.location.assign('/dashboard');
         }
       },
        onError: (reason: any) => { setFaceMood('error'); setFaceReaction((value) => value + 1); setError(reason?.message ?? 'We could not create your account. Please review your details.'); },
