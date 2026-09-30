@@ -7,7 +7,7 @@ import { CipherAvatar } from '../components/CipherAvatar';
 import { decryptChatPayload, encryptChatPayload, ensureChatKey } from '../lib/chat-crypto';
 
 const EMOJIS = ['😀','😂','😍','🥹','😎','😭','😅','🤝','❤️','🔥','🎉','👏','🙏','💯','🤣','😘','🥰','😮','😢','😡','👍','👎','💙','✨','🚀','🫶','😈','🤔','🙌','💀'];
-const BGS = ['linear-gradient(135deg,#111827,#1f2937)','linear-gradient(135deg,#172554,#312e81)','linear-gradient(135deg,#052e16,#134e4a)','linear-gradient(135deg,#3b0764,#701a75)','linear-gradient(135deg,#431407,#7c2d12)','linear-gradient(135deg,#0f172a,#334155)'];
+const BGS = ['#ffffff','#f6f7fb','#f4f1ff','#eef6ff','#f4f8f5','#fff8ef'];
 
 type Person = { id:number; firstName:string; lastName:string; email:string; avatarUrl?:string|null; gender?:string|null; userCode?:string|null; chatPublicKey?:string|null };
 type Message = { id:number; senderId:number; body?:string|null; imageUrl?:string|null; gifUrl?:string|null; createdAt:string };
@@ -48,11 +48,11 @@ export default function ChatPage() {
       if(r.other?.chatPublicKey){
         const key=JSON.parse(r.other.chatPublicKey);
         const decoded=await Promise.all((r.messages??[]).map(async (m:any)=>{
-          try { return { ...m, decrypted: await decryptChatPayload(Number(id), key, String(m.body??'')) }; }
+          try { return { ...m, decrypted: await decryptChatPayload(Number(id), JSON.parse(m.senderPublicKey || r.other.chatPublicKey || 'null'), String(m.body??'')) }; }
           catch { return { ...m, decrypted: { error: true } }; }
         }));
         setDecrypted(decoded);
-      } else setDecrypted([]);
+      } else setDecrypted((r.messages??[]).map((m:any)=>({...m,decrypted:{error:true}})));
     }catch(e){setError(e instanceof Error?e.message:'Could not open chat.');}
   };
   useEffect(()=>{void loadChats(); void (async()=>{try{const key=await ensureChatKey(); await apiRequest('/api/auth/chat-key',{method:'POST',body:{publicKey:JSON.stringify(key)}});}catch(e){setError(e instanceof Error?e.message:'Secure chat encryption could not be initialized.');}})();},[]);
@@ -67,7 +67,7 @@ export default function ChatPage() {
         setMessages(r.messages??[]); setOther(r.other); setChat(r.chat);
         if(r.other?.chatPublicKey){
           const key=JSON.parse(r.other.chatPublicKey);
-          const decoded=await Promise.all((r.messages??[]).map(async (m:any)=>{try{return {...m,decrypted:await decryptChatPayload(Number(params.id),key,String(m.body??''))};}catch{return {...m,decrypted:{error:true}};}}));
+          const decoded=await Promise.all((r.messages??[]).map(async (m:any)=>{try{return {...m,decrypted:await decryptChatPayload(Number(params.id),JSON.parse(m.senderPublicKey || r.other.chatPublicKey || 'null'),String(m.body??''))};}catch{return {...m,decrypted:{error:true}};}}));
           setDecrypted(decoded);
         }
       }catch{}
@@ -122,7 +122,7 @@ export default function ChatPage() {
     <div className="cp-chat-shell">
       <header className="cp-chat-header"><button className="cp-chat-back" onClick={()=>setLocation('/chat')}><ArrowLeft size={18}/></button><CipherAvatar src={other.avatarUrl} seed={other.id||other.email} gender={other.gender} size={44} alt=""/><div className="cp-chat-person"><strong>{other.firstName} {other.lastName}</strong><span>{other.userCode}</span></div><div className="cp-chat-head-actions"><button onClick={()=>setShowBg(v=>!v)} title="Chat background"><Palette size={18}/></button><button onClick={()=>setShowMenu(v=>!v)} title="More"><MoreVertical size={18}/></button></div>{showMenu&&<div className="cp-chat-menu"><button onClick={()=>{setShowMenu(false);void apiRequest('/api/chat/'+chat.id+'/block',{method:'POST'}).then(()=>setError('User blocked.'));}}><Ban size={15}/> Block user</button><button onClick={()=>{setShowMenu(false);void apiRequest('/api/chat/'+chat.id,{method:'DELETE'}).then(()=>setLocation('/chat'));}}><Trash2 size={15}/> Delete chat</button></div>}</header>
       {showBg&&<div className="cp-chat-bg-picker">{BGS.map((v,i)=><button key={i} style={{background:v}} onClick={()=>void chooseBg(v)} aria-label={'Background '+(i+1)}/>)}</div>}
-      <main className="cp-chat-messages" style={{background:bg}}>{decrypted.map((m:any)=>{
+      <main className="cp-chat-messages" style={{background:bg, backgroundImage:'none'}}>{decrypted.map((m:any)=>{
         const d=m.decrypted||{};
         return <div key={m.id} className={`cp-chat-message-row ${m.senderId===other.id?'incoming':'outgoing'}`}><div className="cp-chat-bubble">
           {d.image&&<img src={d.image} alt="Shared image"/>}{d.gif&&<img src={d.gif} alt="GIF"/>}{d.text&&<span>{d.text}</span>}{d.error&&<span>🔒 Encrypted message</span>}
