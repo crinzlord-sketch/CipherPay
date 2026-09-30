@@ -1062,7 +1062,6 @@ function TransactionReceipt({ transaction, onClose }: { transaction: any; onClos
         ['Bank', bankDisplayName],
         ['Account number', meta.accountNumber || 'Not available'],
         ['Reference', transaction.reference || 'Not available'],
-        ['Date', transaction.createdAt ? new Date(transaction.createdAt).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not available' ],
         ['Fee', transaction.fee == null ? '—' : money.format(transaction.fee)],
       ]
     : [
