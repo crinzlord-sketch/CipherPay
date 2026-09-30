@@ -127,6 +127,7 @@ function Shell({ children }: { children: ReactNode }) {
   const [notificationReturnPath, setNotificationReturnPath] = useState<string>('/');
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [serviceFeatures, setServiceFeatures] = useState<Record<string, boolean> | null>(null);
+  const [serviceFeaturesCheckedFor, setServiceFeaturesCheckedFor] = useState<string | null>(null);
   const { confirm } = useAnimatedDialog();
   const me = useGetMe({ query: { enabled: !!useToken(), queryKey: ['/api/auth/me'] } });
   const user = me.data as any;
@@ -180,19 +181,36 @@ function Shell({ children }: { children: ReactNode }) {
     let active = true;
     const loadServiceFeatures = async () => {
       if (!useToken() || location.startsWith('/admin')) {
-        if (active) setServiceFeatures(null);
+        if (active) {
+          setServiceFeatures(null);
+          setServiceFeaturesCheckedFor(null);
+        }
         return;
       }
+
+      // Re-check immediately whenever the user navigates. This prevents a
+      // notification deep-link from opening a service that was just disabled
+      // while the previous 15-second polling window was still stale.
+      if (active) setServiceFeaturesCheckedFor(null);
       try {
-        const response = await fetch(apiUrl('/api/service-features'), { cache: 'no-store' });
+        const response = await fetch(apiUrl('/api/service-features'), {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' },
+        });
         const payload = await response.json();
-        if (active && response.ok) setServiceFeatures(payload.data ?? null);
+        if (active && response.ok) {
+          setServiceFeatures(payload.data ?? null);
+          setServiceFeaturesCheckedFor(location);
+        }
       } catch {
-        // Availability checks are fail-open so a temporary status request cannot lock users out.
+        // Keep the last known state during a transient network failure.
+        // A fresh check will run again shortly.
+        if (active) setServiceFeaturesCheckedFor(location);
       }
     };
+
     void loadServiceFeatures();
-    const interval = window.setInterval(() => void loadServiceFeatures(), 15_000);
+    const interval = window.setInterval(() => void loadServiceFeatures(), 2_000);
     return () => {
       active = false;
       window.clearInterval(interval);
@@ -266,7 +284,8 @@ function Shell({ children }: { children: ReactNode }) {
       }} aria-label={location === '/notifications' ? 'Close notifications' : unreadNotifications > 0 ? `Open notifications, ${unreadNotifications} unread` : 'Open notifications'} aria-pressed={location === '/notifications'} data-testid="button-notifications"><Bell size={19} />{unreadNotifications > 0 && <i />}</button>{user && <span className="topbar-name">{user.firstName}</span>}<button className="logout-link" onClick={() => void logout()} data-testid="button-logout"><LogOut size={16} /> <span>Log out</span></button></header>
       <div className="content">{(() => {
         const featureKey = serviceFeatureForPath(location);
-        const maintenance = featureKey && serviceFeatures && serviceFeatures[featureKey] === false;
+        const statusReady = !featureKey || serviceFeaturesCheckedFor === location;
+        const maintenance = statusReady && featureKey && serviceFeatures && serviceFeatures[featureKey] === false;
         const labels: Record<string, string> = {
           transfers: 'Transfers',
           wallet_funding: 'Wallet funding',
@@ -278,6 +297,7 @@ function Shell({ children }: { children: ReactNode }) {
           email_pro: 'Email Pro',
           crypto: 'Crypto',
         };
+        if (!statusReady) return <div className="service-status-loading" aria-live="polite"><RefreshCw size={18} className="spin" /><span>Checking service availability…</span></div>;
         return maintenance ? <ServiceMaintenance serviceLabel={labels[featureKey] ?? 'This service'} /> : children;
       })()}</div>
     </main>
