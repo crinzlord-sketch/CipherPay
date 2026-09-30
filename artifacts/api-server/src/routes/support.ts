@@ -214,7 +214,7 @@ router.post("/support/chat/:id/message", async (req, res): Promise<void> => {
     .where(and(eq(supportChatsTable.id, id), eq(supportChatsTable.status, "ai")))
     .returning({ id: supportChatsTable.id });
   if (stillAi) {
-    const reply = getBotReply(body);
+    const reply = await getBotReply(body);
     const [botMsg] = await db.insert(supportMessagesTable).values({ chatId: id, sender: "bot", body: reply.body }).returning();
     created.push(botMsg);
   }
