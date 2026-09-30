@@ -220,6 +220,11 @@ function AuthLayout({ children, title, detail }: { children: ReactNode; title: s
     <div className="auth-visual">
       <Logo />
       <div className="auth-visual-grid" aria-hidden="true" />
+      <div className="auth-sidekick-mockups" aria-hidden="true">
+        <div className="auth-sidekick-device sidekick-one"><div className="auth-sidekick-screen"><b>Wallet</b><strong>₦24,680</strong><span>Available balance</span><i>Ready to move</i></div></div>
+        <div className="auth-sidekick-device sidekick-two"><div className="auth-sidekick-screen"><b>Activity</b><strong>+₦20,000</strong><span>Wallet funded</span><i>Payment complete</i></div></div>
+        <div className="sidekick-orb"/><div className="sidekick-ring"/>
+      </div>
       <div className="auth-visual-ring auth-visual-ring-one" aria-hidden="true" />
       <div className="auth-visual-ring auth-visual-ring-two" aria-hidden="true" /><div className="auth-3d-shard auth-3d-shard-one" aria-hidden="true"><span>CP</span></div><div className="auth-3d-shard auth-3d-shard-two" aria-hidden="true"><span>01</span></div><div className="auth-3d-orb" aria-hidden="true"><span>PAY</span></div>
       <div className="orb orb-one" /><div className="orb orb-two" />
