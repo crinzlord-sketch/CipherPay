@@ -118,6 +118,14 @@ router.patch("/chat/:id/background", async (req, res): Promise<void> => {
   res.json({ background: bg });
 });
 
+router.post("/chat/:id/unblock", async (req, res): Promise<void> => {
+  const me = userId(req); if (!me) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const chat = await chatFor(Number(req.params.id), me); if (!chat) { res.status(404).json({ error: "Chat not found." }); return; }
+  const other = chat.userOneId === me ? chat.userTwoId : chat.userOneId;
+  await db.delete(blockedUsersTable).where(and(eq(blockedUsersTable.blockerId, me), eq(blockedUsersTable.blockedId, other)));
+  res.json({ blocked: false });
+});
+
 router.post("/chat/:id/block", async (req, res): Promise<void> => {
   const me = userId(req); if (!me) { res.status(401).json({ error: "Unauthorized" }); return; }
   const chat = await chatFor(Number(req.params.id), me); if (!chat) { res.status(404).json({ error: "Chat not found." }); return; }
