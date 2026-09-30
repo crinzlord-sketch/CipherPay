@@ -1,7 +1,7 @@
 import { Bot, CheckCircle2, ChevronDown, CircleHelp, Headphones, Image as ImageIcon, MessageCircle, Paperclip, Receipt, RefreshCw, Send, UserRound, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
-import { apiRequest, formatWhen } from './page-api';
+import { apiRequest, apiUrl, formatWhen } from './page-api';
 import { Button, ErrorState, LoadingState, Notice, PageHeading } from './PagePieces';
 import './cipherpay-pages.css';
 
@@ -105,6 +105,21 @@ export function SupportPage() {
     if (messagesRef.current) messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
   }, [messages.length]);
 
+
+  const [contactOpen, setContactOpen] = useState(false);
+  const [contact, setContact] = useState({ subject: '', category: 'general', message: '' });
+  const [contactSending, setContactSending] = useState(false);
+  const sendContact = async (event: React.FormEvent) => {
+    event.preventDefault(); if (contactSending) return;
+    setContactSending(true); setNetworkError('');
+    try {
+      await apiRequest('/api/support/contact', { method: 'POST', body: contact });
+      setContact({ subject: '', category: 'general', message: '' }); setContactOpen(false);
+      setNetworkError('Your support request was sent to the admin team.');
+    } catch (e) { setNetworkError(e instanceof Error ? e.message : 'Could not send your support request.'); }
+    finally { setContactSending(false); }
+  };
+
   const chatLabel = useMemo(() => {
     if (chat?.status === 'live') return 'A support specialist is here';
     if (chat?.status === 'waiting') return 'You are in the support queue';
@@ -185,6 +200,15 @@ export function SupportPage() {
   return (
     <main className="cp-page cp-page-reveal">
       <PageHeading eyebrow="Account / support" title="A steady hand when you need one" detail="Find a quick answer or continue with the CipherPay support desk. Your conversation stays attached to your account." />
+      <section className="cp-card cp-card-pad cp-contact-support">
+        <div><span className="cp-kicker">CONTACT SUPPORT</span><h2>Need to tell us something directly?</h2><p>Write the full details here. Your request goes straight into the admin support queue.</p></div>
+        {!contactOpen ? <Button type="button" variant="soft" onClick={() => setContactOpen(true)}><Headphones size={15}/> Contact support</Button> : <form className="cp-form" onSubmit={sendContact}>
+          <div className="cp-form-grid"><label className="cp-field"><span>Subject</span><input required value={contact.subject} onChange={e=>setContact({...contact,subject:e.target.value})} placeholder="What do you need help with?" /></label>
+          <label className="cp-field"><span>Category</span><select value={contact.category} onChange={e=>setContact({...contact,category:e.target.value})}><option value="general">General</option><option value="payment">Payment</option><option value="wallet">Wallet</option><option value="account">Account</option><option value="technical">Technical issue</option><option value="verification">KYC / verification</option></select></label></div>
+          <label className="cp-field"><span>Message</span><textarea required minLength={5} rows={6} value={contact.message} onChange={e=>setContact({...contact,message:e.target.value})} placeholder="Tell us exactly what happened, what you were trying to do, and anything else that may help." /></label>
+          <div style={{display:'flex',gap:10}}><Button type="button" variant="secondary" onClick={()=>setContactOpen(false)}>Cancel</Button><Button type="submit" disabled={contactSending}>{contactSending?'Sending…':'Send to support'} <Send size={15}/></Button></div>
+        </form>}
+      </section>
       <div className="cp-grid cp-grid-two cp-support-layout">
         <section className="cp-card cp-chat">
           <header className="cp-chat-head">
@@ -208,7 +232,7 @@ export function SupportPage() {
             ) : messages.map((message) => (
               <div className={`cp-message ${message.sender === 'user' ? 'mine' : ''}`} key={message.id} data-testid={`message-chat-${message.id}`}>
                 {message.sender !== 'user' && <small>{message.sender === 'agent' ? 'Support specialist' : message.sender === 'bot' ? 'CipherPay assistant' : 'CipherPay'}</small>}
-                <div className="cp-message-bubble">{message.imageUrl && <img src={message.imageUrl} alt="Attachment from support conversation" />}{message.body !== '📷 Image' && message.body}</div>
+                <div className="cp-message-bubble">{message.imageUrl && <a href={apiUrl(message.imageUrl ?? "")} target="_blank" rel="noreferrer" className="cp-support-image-link"><img src={apiUrl(message.imageUrl ?? "")} alt="Attachment from support conversation" /></a>}{message.body !== '📷 Image' && message.body}</div>
                 <time>{formatWhen(message.createdAt)}</time>
               </div>
             ))}
