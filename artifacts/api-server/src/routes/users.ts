@@ -10,6 +10,31 @@ function getUserId(req: any): number | null {
   return isNaN(id) ? null : id;
 }
 
+// Look up a CipherPay user by email so senders can confirm the recipient before transfer.
+router.get("/users/lookup-email", async (req, res): Promise<void> => {
+  const userId = getUserId(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const email = String(req.query.email ?? "").trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    res.status(400).json({ error: "Enter a valid email address" });
+    return;
+  }
+
+  const [u] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+  if (!u) { res.status(404).json({ error: "No CipherPay account found with that email" }); return; }
+
+  res.json({
+    id: u.id,
+    email: u.email,
+    firstName: u.firstName,
+    lastName: u.lastName,
+    avatarUrl: u.avatarUrl ?? null,
+    gender: u.gender ?? null,
+    isSelf: u.id === userId,
+  });
+});
+
 // Look up a CipherPay user by their account number so the sender can confirm
 // who they're paying before a P2P transfer. Returns only safe public fields.
 router.get("/users/lookup", async (req, res): Promise<void> => {
