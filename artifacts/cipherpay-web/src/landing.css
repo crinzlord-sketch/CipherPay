@@ -609,3 +609,76 @@
   .cp-reveal-section,.cp-feature{opacity:1;transform:none}
   .cp-3d-scene{animation:none}
 }
+
+
+/* 3D floating landing navigation — final polish */
+.cp-landing-nav{
+  perspective:1200px!important;
+  transform:translateZ(0)!important;
+}
+.cp-landing-nav-inner{
+  position:relative!important;
+  transform:translate3d(0,0,0) rotateX(1deg)!important;
+  transform-style:preserve-3d!important;
+  border:1px solid rgba(116,82,255,.42)!important;
+  border-radius:24px!important;
+  background:linear-gradient(135deg,rgba(255,255,255,.88),rgba(247,243,255,.78))!important;
+  box-shadow:
+    0 7px 0 rgba(101,70,205,.10),
+    0 22px 50px rgba(65,44,110,.15),
+    0 3px 0 rgba(255,255,255,.9) inset,
+    0 -1px 0 rgba(116,82,255,.14) inset!important;
+  overflow:visible!important;
+  animation:cpNavFloat 5.5s ease-in-out infinite!important;
+}
+.cp-landing-nav-inner::before{
+  content:""!important;
+  position:absolute!important;
+  inset:1px!important;
+  border-radius:23px!important;
+  border:1px solid rgba(255,255,255,.72)!important;
+  pointer-events:none!important;
+  transform:translateZ(8px)!important;
+}
+.cp-landing-nav-inner::after{
+  content:""!important;
+  position:absolute!important;
+  left:8%!important;
+  right:8%!important;
+  bottom:-13px!important;
+  height:18px!important;
+  border-radius:50%!important;
+  background:rgba(91,62,173,.16)!important;
+  filter:blur(12px)!important;
+  transform:translateZ(-20px)!important;
+  z-index:-1!important;
+}
+.cp-landing-nav .brand,
+.cp-landing-nav-links,
+.cp-landing-nav-actions{
+  transform:translateZ(16px)!important;
+}
+.cp-landing-links button{
+  border:1px solid transparent!important;
+}
+.cp-landing-links button:hover{
+  border-color:rgba(116,82,255,.18)!important;
+  background:rgba(116,82,255,.08)!important;
+}
+.cp-landing-nav-actions .cp-land-btn{
+  box-shadow:0 5px 14px rgba(62,43,105,.10)!important;
+}
+.cp-landing-nav-actions .cp-land-btn.primary{
+  box-shadow:0 7px 18px rgba(116,82,255,.24),0 2px 0 rgba(255,255,255,.22) inset!important;
+}
+@keyframes cpNavFloat{
+  0%,100%{transform:translate3d(0,0,0) rotateX(1deg) rotateZ(0deg)}
+  50%{transform:translate3d(0,-5px,0) rotateX(1.6deg) rotateZ(-.15deg)}
+}
+@media(max-width:600px){
+  .cp-landing-nav-inner{
+    border-radius:20px!important;
+    animation-duration:4.8s!important;
+  }
+  .cp-landing-nav-inner::before{border-radius:19px!important}
+}
