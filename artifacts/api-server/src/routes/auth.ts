@@ -544,6 +544,11 @@ router.get("/auth/me", async (req, res): Promise<void> => {
     return;
   }
 
+  if (!user.userCode) {
+    const code = generateUserCode();
+    const [updated] = await db.update(usersTable).set({ userCode: code }).where(eq(usersTable.id, user.id)).returning();
+    if (updated) Object.assign(user, updated);
+  }
   const wallet = await getOrCreateWallet(user.id);
   res.json(formatUser(user, parseFloat(wallet.balance)));
 });
