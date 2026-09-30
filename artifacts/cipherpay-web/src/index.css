@@ -2231,6 +2231,9 @@ a {
 .animated-dialog {
   position: relative;
   width: min(100%, 430px);
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 28px;
   border: 1px solid hsl(var(--border));
   border-radius: 22px;
@@ -2348,7 +2351,12 @@ a {
 }
 
 .transaction-receipt {
+  width: min(520px, calc(100vw - 36px));
   max-width: 520px;
+  max-height: min(680px, calc(100dvh - 36px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .receipt-status-icon {
