@@ -237,10 +237,12 @@ function LandingPage() {
   ];
   return <div className="cp-landing">
     <div className="cp-landing-grid" aria-hidden="true" />
-    <nav className="cp-landing-nav">
-      <Logo />
-      <div className="cp-landing-links"><a href="#features">Features</a><a href="#experience">Experience</a><a href="#security">Security</a></div>
-      <div className="cp-landing-nav-actions"><Link className="cp-land-btn ghost" href="/login">Log in</Link><Link className="cp-land-btn primary" href="/register">Get started <ArrowRight size={15}/></Link></div>
+    <nav className="cp-landing-nav" aria-label="Landing navigation">
+      <div className="cp-landing-nav-inner">
+        <Logo />
+        <div className="cp-landing-links"><a href="#features">Features</a><a href="#experience">Experience</a><a href="#security">Security</a><Link href="/support">Support</Link></div>
+        <div className="cp-landing-nav-actions"><Link className="cp-land-btn ghost" href="/login">Log in</Link><Link className="cp-land-btn primary" href="/register">Get started <ArrowRight size={15}/></Link></div>
+      </div>
     </nav>
     <section className="cp-hero">
       <div className="cp-hero-copy">
@@ -275,6 +277,13 @@ function LandingPage() {
     </section>
     <section className="cp-section"><div className="cp-cta"><span className="cp-kicker">CIPHERPAY</span><h2>Make everyday feel simpler.</h2><p>One place for the things you do often, with an interface that gets out of your way.</p><div className="cp-hero-actions"><Link className="cp-land-btn primary" href="/register">Get started <ArrowRight size={17}/></Link><Link className="cp-land-btn ghost" href="/login">Log in</Link></div></div></section>
     <footer className="cp-footer"><span>© 2026 CipherPay</span><span>Payments · Digital services · Communication</span></footer>
+    <section className="cp-endcap" aria-label="CipherPay closing section">
+      <div className="cp-endcap-inner">
+        <div><span className="cp-kicker">KEEP MOVING</span><h2>One account.<br/><span>Less to think about.</span></h2></div>
+        <Link className="cp-endcap-link" href="/register">Get started <ArrowRight size={17}/></Link>
+      </div>
+      <div className="cp-endcap-word">CIPHERPAY</div>
+    </section>
   </div>;
 }
 
