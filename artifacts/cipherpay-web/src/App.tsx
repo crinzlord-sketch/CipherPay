@@ -1474,6 +1474,7 @@ function Send() {
           accountNumber: bankForm.accountNumber,
           accountName: bankForm.accountName,
           narration: bankForm.narration || undefined,
+          bankName: bankForm.bankName || undefined,
           pin: transferPin,
         },
       });
