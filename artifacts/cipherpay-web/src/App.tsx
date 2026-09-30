@@ -284,6 +284,13 @@ function LandingPage() {
       </div>
       <div className="cp-endcap-word">CIPHERPAY</div>
     </section>
+    <section className="cp-endcap" aria-label="CipherPay closing section">
+      <div className="cp-endcap-inner">
+        <div><span className="cp-kicker">KEEP MOVING</span><h2>One account.<br/><span>Less to think about.</span></h2></div>
+        <Link className="cp-endcap-link" href="/register">Get started <ArrowRight size={17}/></Link>
+      </div>
+      <div className="cp-endcap-word">CIPHERPAY</div>
+    </section>
   </div>;
 }
 
