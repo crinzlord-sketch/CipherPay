@@ -1,3 +1,9 @@
+const savedCipherPayTheme = typeof window !== "undefined" ? window.localStorage.getItem("cipherpay_theme") : null;
+if (typeof document !== "undefined") {
+  const dark = savedCipherPayTheme === "dark";
+  document.documentElement.classList.toggle("dark", dark);
+  document.documentElement.style.colorScheme = dark ? "dark" : "light";
+}
 import { createRoot } from 'react-dom/client';
 
 import App from './App';
