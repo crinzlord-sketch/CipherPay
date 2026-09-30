@@ -40,6 +40,8 @@ export default function ChatPage() {
   const [currentUserId,setCurrentUserId]=useState<number|null>(null);
   const [replyTo,setReplyTo]=useState<any|null>(null);
   const swipeStartX=useRef<number|null>(null);
+  const [swipeId,setSwipeId]=useState<number|null>(null);
+  const [swipeOffset,setSwipeOffset]=useState(0);
   const [text,setText]=useState('');
   const [error,setError]=useState('');
   const [findError,setFindError]=useState('');
@@ -68,6 +70,9 @@ export default function ChatPage() {
   useEffect(()=>{void loadChats(); void (async()=>{try{const me=await apiRequest<any>('/api/auth/me');if(me?.user?.id)setCurrentUserId(Number(me.user.id));}catch{}})();},[]);
   useEffect(()=>{if(params?.id) void loadChat(params.id); else {setChat(null);setOther(null);setMessages([]);}},[params?.id]);
   useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'});},[decrypted.length]);
+  const touchStart=(e:any,id:number)=>{swipeStartX.current=e.changedTouches[0]?.clientX??null;setSwipeId(id);setSwipeOffset(0);};
+  const touchMove=(e:any)=>{const start=swipeStartX.current;if(start===null)return;const x=e.changedTouches[0]?.clientX??start;setSwipeOffset(Math.max(0,Math.min(72,x-start)));};
+  const touchEnd=(e:any,m:any)=>{const start=swipeStartX.current;swipeStartX.current=null;const x=e.changedTouches[0]?.clientX??start??0;const distance=x-(start??x);if(distance>42)setReplyTo(m);setSwipeOffset(0);window.setTimeout(()=>setSwipeId(null),180);};
 
   useEffect(()=>{
     if(!params?.id) return;
@@ -120,7 +125,7 @@ export default function ChatPage() {
       </section>
       <section className="cp-card cp-card-pad cp-chat-code-card"><span className="cp-kicker">YOUR CODE</span><h2>Share your code.</h2><p>Your unique code lets other CipherPay users find you without exposing extra personal details.</p><div className="cp-your-code">{/* populated from profile in a lightweight call */}<YourCode/></div></section>
     </div>
-    <section className="cp-card cp-card-pad cp-chat-list-card"><div className="cp-card-head"><div><span className="cp-kicker">MESSAGES</span><h2>Your conversations</h2></div></div>{chats.length===0?<div className="cp-chat-empty"><MessageCircle size={28}/><strong>No conversations yet</strong><span>Find someone above to start your first chat.</span></div>:<div className="cp-chat-list">{chats.map((item:any)=><button key={item.id} className="cp-chat-list-row" onClick={()=>setLocation('/chat/'+item.id)}><CipherAvatar src={item.other.avatarUrl} seed={item.other.id||item.other.email} gender={item.other.gender} size={50} alt=""/><div><strong>{item.other.firstName} {item.other.lastName}</strong><span>{item.lastMessage?.body ? '🔒 Encrypted message' : 'Start a conversation'}</span></div><small>{item.lastMessageAt?new Date(item.lastMessageAt).toLocaleDateString('en-NG',{day:'numeric',month:'short'}):''}</small></button>)}</div>}</section>
+    <section className="cp-card cp-card-pad cp-chat-list-card"><div className="cp-card-head"><div><span className="cp-kicker">MESSAGES</span><h2>Your conversations</h2></div></div>{chats.length===0?<div className="cp-chat-empty"><MessageCircle size={28}/><strong>No conversations yet</strong><span>Find someone above to start your first chat.</span></div>:<div className="cp-chat-list">{chats.map((item:any)=><button key={item.id} className="cp-chat-list-row" onClick={()=>setLocation('/chat/'+item.id)}><CipherAvatar src={item.other.avatarUrl} seed={item.other.id||item.other.email} gender={item.other.gender} size={50} alt=""/><div><strong>{item.other.firstName} {item.other.lastName}</strong><span>{item.lastMessage?.body ? 'Message' : 'Start a conversation'}</span></div><small>{item.lastMessageAt?new Date(item.lastMessageAt).toLocaleDateString('en-NG',{day:'numeric',month:'short'}):''}</small></button>)}</div>}</section>
   </div>;
 
   if(!chat||!other)return <div className="cp-page"><LoadingState label="Opening conversation" /></div>;
@@ -134,7 +139,7 @@ export default function ChatPage() {
         const target= d.replyToId ? decrypted.find((x:any)=>x.id===Number(d.replyToId)) : null;
         const replyPreview=target?.decrypted?.text || (target?.decrypted?.image ? 'Image' : target?.decrypted?.gif ? 'GIF' : d.replyPreview || null);
         const doReply=()=>setReplyTo(m);
-        return <div key={m.id} className={`cp-chat-message-row ${m.senderId===other.id?'incoming':'outgoing'}`} onTouchStart={e=>{swipeStartX.current=e.changedTouches[0]?.clientX??null}} onTouchEnd={e=>{const start=swipeStartX.current;swipeStartX.current=null;const end=e.changedTouches[0]?.clientX??start??0;if(start!==null&&end-start>55)doReply();}}>
+        return <div key={m.id} className={`cp-chat-message-row ${m.senderId===other.id?'incoming':'outgoing'}`} onTouchStart={e=>touchStart(e,m.id)} onTouchMove={touchMove} onTouchEnd={e=>touchEnd(e,m)} style={{transform:swipeId===m.id?`translateX(${swipeOffset}px)`:'translateX(0)',transition:swipeId===m.id?'transform 0s':'transform .18s ease-out',willChange:swipeId===m.id?'transform':'auto'}}>
           <div className="cp-chat-bubble">
             {target&&replyPreview&&<button className="cp-chat-reply-preview" onClick={doReply}><span>↩ {target.senderId===currentUserId?'You':other.firstName}</span><b>{replyPreview}</b></button>}
             {d.image&&<img className="cp-chat-image" src={d.image} alt="Shared image" draggable onDragStart={e=>e.stopPropagation()}/>} {d.gif&&<img className="cp-chat-gif" src={d.gif} alt="GIF" draggable onDragStart={e=>e.stopPropagation()}/>} {d.text&&<span>{d.text}</span>}{d.error&&!d.legacyEncrypted&&<span>Could not display this message.</span>}
