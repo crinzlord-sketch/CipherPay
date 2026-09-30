@@ -69,7 +69,24 @@ export default function ChatPage() {
   };
   useEffect(()=>{void loadChats(); void (async()=>{try{const me=await apiRequest<any>('/api/auth/me');if(me?.user?.id)setCurrentUserId(Number(me.user.id));}catch{}})();},[]);
   useEffect(()=>{if(params?.id) void loadChat(params.id); else {setChat(null);setOther(null);setMessages([]);}},[params?.id]);
-  useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'});},[decrypted.length]);
+  const messagesRef=useRef<HTMLElement>(null);
+  const shouldAutoScrollRef=useRef(true);
+  const lastMessageCountRef=useRef(0);
+  useEffect(()=>{
+    const el=messagesRef.current;
+    if(!el) return;
+    const distanceFromBottom=el.scrollHeight-el.scrollTop-el.clientHeight;
+    shouldAutoScrollRef.current=distanceFromBottom<120;
+  },[decrypted.length]);
+  useEffect(()=>{
+    const el=messagesRef.current;
+    if(!el) return;
+    const isNewMessage=decrypted.length>lastMessageCountRef.current;
+    if(isNewMessage && shouldAutoScrollRef.current){
+      el.scrollTo({top:el.scrollHeight,behavior:'smooth'});
+    }
+    lastMessageCountRef.current=decrypted.length;
+  },[decrypted]);
   const touchStart=(e:any,id:number)=>{swipeStartX.current=e.changedTouches[0]?.clientX??null;setSwipeId(id);setSwipeOffset(0);};
   const touchMove=(e:any)=>{const start=swipeStartX.current;if(start===null)return;const x=e.changedTouches[0]?.clientX??start;setSwipeOffset(Math.max(0,Math.min(72,x-start)));};
   const touchEnd=(e:any,m:any)=>{const start=swipeStartX.current;swipeStartX.current=null;const x=e.changedTouches[0]?.clientX??start??0;const distance=x-(start??x);if(distance>42)setReplyTo(m);setSwipeOffset(0);window.setTimeout(()=>setSwipeId(null),180);};
@@ -134,7 +151,7 @@ export default function ChatPage() {
     <div className="cp-chat-shell">
       <header className="cp-chat-header"><button className="cp-chat-back" onClick={()=>setLocation('/chat')}><ArrowLeft size={18}/></button><CipherAvatar src={other.avatarUrl} seed={other.id||other.email} gender={other.gender} size={44} alt=""/><div className="cp-chat-person"><strong>{other.firstName} {other.lastName}</strong><span>{other.userCode}</span></div><div className="cp-chat-head-actions"><button onClick={()=>setShowBg(v=>!v)} title="Chat background"><Palette size={18}/></button><button onClick={()=>setShowMenu(v=>!v)} title="More"><MoreVertical size={18}/></button></div>{showMenu&&<div className="cp-chat-menu"><button onClick={async()=>{setShowMenu(false);try{if(blockedState){await apiRequest('/api/chat/'+chat.id+'/unblock',{method:'POST'});setBlockedState(false);setError('');}else{await apiRequest('/api/chat/'+chat.id+'/block',{method:'POST'});setBlockedState(true);setError('');}}catch(e){setError(e instanceof Error?e.message:'Could not update block status.');}}}><Ban size={15}/> {blockedState?'Unblock user':'Block user'}</button><button onClick={()=>{setShowMenu(false);void apiRequest('/api/chat/'+chat.id,{method:'DELETE'}).then(()=>setLocation('/chat'));}}><Trash2 size={15}/> Delete chat</button></div>}</header>
       {showBg&&<div className="cp-chat-bg-picker">{BGS.map((v,i)=><button key={i} style={{background:v}} onClick={()=>void chooseBg(v)} aria-label={'Background '+(i+1)}/>)}</div>}
-      <main className="cp-chat-messages" style={{background:bg, backgroundImage:'none'}}>{decrypted.map((m:any)=>{
+      <main ref={messagesRef} className="cp-chat-messages" onScroll={(e)=>{const el=e.currentTarget;shouldAutoScrollRef.current=el.scrollHeight-el.scrollTop-el.clientHeight<120;}} style={{background:bg, backgroundImage:'none'}}>{decrypted.map((m:any)=>{
         const d=m.decrypted||{};
         const target= d.replyToId ? decrypted.find((x:any)=>x.id===Number(d.replyToId)) : null;
         const replyPreview=target?.decrypted?.text || (target?.decrypted?.image ? 'Image' : target?.decrypted?.gif ? 'GIF' : d.replyPreview || null);
