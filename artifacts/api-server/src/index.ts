@@ -30,7 +30,10 @@ if (!rawPort) throw new Error("PORT environment variable is required but was not
 const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) throw new Error(`Invalid PORT value: "${rawPort}"`);
 
-const start = async () => {\n  await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS gender text`);\n\n  app.listen(port, (err) => {
+const start = async () => {
+  await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS gender text`);
+
+  app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
@@ -49,7 +52,7 @@ const start = async () => {\n  await db.execute(sql`ALTER TABLE users ADD COLUMN
   startPayoutFundingPoller();
   void renewDueEmailProSubscriptions();
   setInterval(() => void renewDueEmailProSubscriptions(), 60_000);
-    if (process.env.MAILJET_RUN_TEST_ON_BOOT === "true") {
+  if (process.env.MAILJET_RUN_TEST_ON_BOOT === "true") {
     const recipient = process.env.MAILJET_TEST_RECIPIENT?.trim();
     if (recipient) {
       void import("./lib/email").then(async ({ sendMail }) => {
@@ -65,4 +68,10 @@ const start = async () => {\n  await db.execute(sql`ALTER TABLE users ADD COLUMN
   }
   setTimeout(() => void sendWeeklyUserEmails(), 30_000);
   setInterval(() => void sendWeeklyUserEmails(), 6 * 60 * 60 * 1000);
+  });
+};
+
+void start().catch((err: any) => {
+  logger.error({ err: err?.message }, "Server startup failed");
+  process.exit(1);
 });
