@@ -1726,3 +1726,43 @@ html.dark .cp-support-close{
 @keyframes cpAuthRing{to{transform:translate(-50%,-50%) rotateX(72deg) rotateZ(360deg)}}@keyframes cpAuthFloat{50%{translate:0 -24px}}@keyframes cpAuthOrb{50%{transform:translate3d(-12px,-20px,40px) scale(1.04) rotateY(18deg)}}
 @media(max-width:900px){.auth-3d-orb{right:4%!important;top:24%!important;transform:scale(.72)!important}.auth-3d-shard-one{left:4%;top:15%;transform:scale(.72) rotateX(25deg) rotateY(-28deg)!important}.auth-3d-shard-two{right:2%;bottom:12%;transform:scale(.7) rotateX(-20deg) rotateY(30deg)!important}.auth-quote h2{font-size:58px!important}}
 @media(max-width:600px){.auth-visual{min-height:310px!important}.auth-visual-ring-two{width:420px!important;height:420px!important}.auth-3d-orb{width:130px!important;height:130px!important;right:8%!important;top:19%!important}.auth-3d-shard{width:82px!important;height:82px!important}.auth-quote{padding:0 22px!important}.auth-quote h2{font-size:43px!important}.auth-benefits{display:none!important}}
+
+/* FINAL 3D PASS — integrate, don't add giant sections */
+.cp-landing{position:relative;overflow-x:clip}
+.cp-landing-nav,.cp-landing-nav-inner{position:fixed!important}
+.cp-landing-nav{top:16px!important;left:0!important;right:0!important;transform:none!important;will-change:auto!important;z-index:99999!important}
+.cp-landing-nav-inner{top:0!important;left:50%!important;transform:translateX(-50%)!important}
+.cp-landing-nav{backface-visibility:hidden!important;contain:layout paint!important}
+@supports not (position:fixed){.cp-landing-nav{position:fixed!important}}
+
+/* Hero: 10 floating product mockups around the existing hero card */
+.cp-orbit-stage{isolation:isolate;overflow:visible!important}
+.cp-hero-mockup-cloud{position:absolute;inset:-130px -170px -120px -170px;z-index:7;pointer-events:none;transform-style:preserve-3d;perspective:1500px}
+.cp-mockup{position:absolute;width:150px;height:245px;padding:6px;border-radius:25px;background:linear-gradient(145deg,#fff,#aaa0bc 38%,#201a2b 90%);box-shadow:0 35px 70px rgba(0,0,0,.35),inset 0 1px 1px rgba(255,255,255,.9);transform-style:preserve-3d;animation:cpMockFloat 7s ease-in-out infinite;opacity:.94}
+.cp-mock::before{content:"";position:absolute;top:8px;left:50%;transform:translateX(-50%);width:52px;height:12px;border-radius:9px;background:#09070d;z-index:3}
+.cp-mock::after{content:"";position:absolute;inset:0;border-radius:25px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4);pointer-events:none}
+.mock-screen{height:100%;border-radius:20px;background:linear-gradient(155deg,#171320,#30224d);padding:30px 12px 12px;color:#fff;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.mock-screen b{font-size:10px;letter-spacing:.06em}.mock-screen strong{font-size:19px;line-height:1.05;letter-spacing:-.04em}.mock-screen span{font-size:7px;color:rgba(255,255,255,.48)}.mock-screen i{font-style:normal;font-size:7px;padding:8px 7px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08);margin-top:auto}
+.m1{left:0;top:28%;transform:rotateY(34deg) rotateZ(-11deg) translateZ(-80px);animation-delay:-1s}.m2{left:10%;top:0;transform:rotateY(28deg) rotateZ(-8deg) translateZ(-40px);animation-delay:-3s}.m3{left:31%;top:-15px;transform:rotateY(16deg) rotateZ(-4deg) translateZ(30px);animation-delay:-5s}.m4{right:29%;top:-35px;transform:rotateY(-18deg) rotateZ(5deg) translateZ(20px);animation-delay:-2s}.m5{right:9%;top:2%;transform:rotateY(-28deg) rotateZ(9deg) translateZ(-30px);animation-delay:-4s}.m6{right:-2%;top:31%;transform:rotateY(-35deg) rotateZ(12deg) translateZ(-80px);animation-delay:-6s}.m7{right:4%;bottom:0;transform:rotateY(-27deg) rotateZ(8deg) translateZ(-30px);animation-delay:-2.5s}.m8{right:27%;bottom:-45px;transform:rotateY(-15deg) rotateZ(4deg);animation-delay:-4.5s}.m9{left:28%;bottom:-70px;transform:rotateY(18deg) rotateZ(-5deg);animation-delay:-1.5s}.m10{left:3%;bottom:0;transform:rotateY(30deg) rotateZ(-9deg) translateZ(-40px);animation-delay:-5.5s}
+.cp-mockup-orbit{position:absolute;border:1px solid rgba(148,121,255,.35);border-radius:50%;transform-style:preserve-3d}.o1{width:620px;height:260px;left:50%;top:50%;transform:translate(-50%,-50%) rotateX(67deg);animation:cpMockRing 13s linear infinite}.o2{width:720px;height:360px;left:50%;top:50%;transform:translate(-50%,-50%) rotateY(65deg);animation:cpMockRing2 18s linear infinite reverse}.o3{width:410px;height:410px;left:50%;top:50%;transform:translate(-50%,-50%) rotateX(72deg) rotateZ(25deg);animation:cpMockRing 9s linear infinite reverse}
+@keyframes cpMockFloat{50%{translate:0 -16px;filter:brightness(1.08)}}@keyframes cpMockRing{to{rotate:360deg}}@keyframes cpMockRing2{to{rotate:-360deg}}
+
+/* Make the existing wallet card feel like a real 3D object */
+.cp-wallet-card{transform-style:preserve-3d!important;transform:perspective(900px) rotateX(7deg) rotateY(-13deg) rotateZ(-2deg) translateZ(55px)!important;box-shadow:0 55px 100px rgba(0,0,0,.38),0 0 80px rgba(126,99,255,.2),inset 0 1px rgba(255,255,255,.55)!important}
+.cp-wallet-card::before,.cp-wallet-card::after{content:"";position:absolute;inset:8px;border:1px solid rgba(255,255,255,.12);border-radius:inherit;transform:translateZ(22px);pointer-events:none}.cp-wallet-card::after{inset:auto 12% -18px;height:30px;background:rgba(126,99,255,.28);filter:blur(18px);border:0;transform:translateZ(-20px)}
+.cp-wallet-card>*{transform:translateZ(32px)}
+.cp-card-chip{box-shadow:inset 0 0 0 1px rgba(255,255,255,.35),0 8px 20px rgba(0,0,0,.25)!important}
+
+/* Auth: dramatically darker so typography remains readable */
+.auth-visual{background:radial-gradient(circle at 50% 42%,rgba(83,55,145,.28),transparent 24%),linear-gradient(145deg,#08060e 0%,#171025 58%,#0a0811 100%)!important}
+.auth-visual::before{opacity:.22!important}
+.auth-visual-grid{opacity:.12!important}
+.auth-quote h2,.auth-quote p,.auth-quote .auth-benefits{filter:none!important;text-shadow:0 3px 18px rgba(0,0,0,.72)!important}
+.auth-quote h2{color:#fff!important}.auth-quote p{color:rgba(255,255,255,.72)!important}
+.auth-3d-orb{opacity:.72!important;box-shadow:0 40px 100px rgba(0,0,0,.55),inset 0 1px rgba(255,255,255,.3)!important}
+.auth-3d-shard{opacity:.68!important}
+
+/* Mobile: keep the fixed navbar and reduce the mockup cloud to a tight hero cluster */
+@media(max-width:900px){.cp-hero-mockup-cloud{inset:-80px -100px -80px -100px;transform:scale(.72)}.cp-mockup{width:125px;height:205px}.m1{left:0}.m6{right:0}.m7,.m8,.m9,.m10{display:none}}
+@media(max-width:600px){.cp-landing-nav{top:8px!important}.cp-landing-nav-inner{width:calc(100% - 16px)!important}.cp-hero-mockup-cloud{inset:-35px -40px -20px -40px;transform:scale(.48)}.cp-mockup{opacity:.72}.m2,.m3,.m4,.m5,.m8,.m9,.m10{display:none}.m1{left:0;top:28%}.m6{right:0;top:30%}.m7{right:9%;bottom:0}.cp-wallet-card{transform:perspective(700px) rotateX(5deg) rotateY(-7deg)!important}.auth-visual{min-height:320px!important}}
+@media(prefers-reduced-motion:reduce){.cp-mockup,.cp-mockup-orbit{animation:none!important}}
