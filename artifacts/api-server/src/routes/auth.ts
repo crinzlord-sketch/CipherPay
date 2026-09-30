@@ -82,6 +82,7 @@ function formatUser(user: typeof usersTable.$inferSelect, balance?: number) {
     lastName: user.lastName,
     phone: user.phone,
     avatarUrl: user.avatarUrl ?? null,
+    gender: user.gender ?? null,
     accountNumber: user.accountNumber ?? null,
     walletBalance: balance ?? 0,
     isVerified: user.isVerified,
@@ -100,6 +101,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   }
 
   const { email, password, firstName, lastName, phone, referralCode } = parsed.data;
+  const requestedGender = req.body?.gender === "male" || req.body?.gender === "female" ? req.body.gender : null;
 
   const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase()));
   if (existing) {
@@ -127,6 +129,10 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   // Do not block account creation on wallet provisioning. The wallet is created
   // immediately in the background, and the authenticated /api/wallet endpoint
   // also uses the same idempotent helper if the first attempt is delayed.
+  if (requestedGender) {
+    await db.update(usersTable).set({ gender: requestedGender }).where(eq(usersTable.id, user.id));
+  }
+
   void getOrCreateWallet(user.id).catch((e: any) => {
     req.log?.warn?.({ userId: user.id, err: e?.message }, "initial CipherPay wallet provisioning failed");
   });
