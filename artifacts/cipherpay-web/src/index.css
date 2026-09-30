@@ -5850,3 +5850,7 @@ html[data-route-transition="auth-switch"]::after {
   color: inherit;
   font: inherit;
 }
+
+
+/* Overview identity */
+.overview-head-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}.overview-user-badge{display:flex;align-items:center;gap:10px;padding:7px 11px 7px 7px;border:1px solid var(--border,#e5e7eb);border-radius:14px;background:var(--card,#fff);min-width:210px}.overview-user-badge .cp-avatar-image{display:block;border-radius:14px;flex:none}.overview-user-badge div{min-width:0;display:flex;flex-direction:column;gap:2px}.overview-user-badge b{font-size:13px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.overview-user-badge span{font-size:11px;color:var(--muted-foreground,#737373);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}@media(max-width:720px){.overview-head-actions{width:100%;justify-content:stretch}.overview-user-badge{flex:1;min-width:0}.overview-head-actions>.btn{flex:none}}
