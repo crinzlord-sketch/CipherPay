@@ -4,11 +4,12 @@ import { useLocation, useRoute } from 'wouter';
 import { apiRequest } from './page-api';
 import { Button, ErrorState, LoadingState, Notice, PageHeading } from './PagePieces';
 import { CipherAvatar } from '../components/CipherAvatar';
+import { decryptChatPayload, encryptChatPayload, ensureChatKey } from '../lib/chat-crypto';
 
 const EMOJIS = ['😀','😂','😍','🥹','😎','😭','😅','🤝','❤️','🔥','🎉','👏','🙏','💯','🤣','😘','🥰','😮','😢','😡','👍','👎','💙','✨','🚀','🫶','😈','🤔','🙌','💀'];
 const BGS = ['linear-gradient(135deg,#111827,#1f2937)','linear-gradient(135deg,#172554,#312e81)','linear-gradient(135deg,#052e16,#134e4a)','linear-gradient(135deg,#3b0764,#701a75)','linear-gradient(135deg,#431407,#7c2d12)','linear-gradient(135deg,#0f172a,#334155)'];
 
-type Person = { id:number; firstName:string; lastName:string; email:string; avatarUrl?:string|null; gender?:string|null; userCode?:string|null };
+type Person = { id:number; firstName:string; lastName:string; email:string; avatarUrl?:string|null; gender?:string|null; userCode?:string|null; chatPublicKey?:string|null };
 type Message = { id:number; senderId:number; body?:string|null; imageUrl?:string|null; gifUrl?:string|null; createdAt:string };
 
 function dataUrl(file: File): Promise<string> {
@@ -23,6 +24,7 @@ export default function ChatPage() {
   const [chats,setChats]=useState<any[]>([]);
   const [chat,setChat]=useState<any>(null);
   const [messages,setMessages]=useState<Message[]>([]);
+  const [decrypted,setDecrypted]=useState<any[]>([]);
   const [other,setOther]=useState<Person|null>(null);
   const [text,setText]=useState('');
   const [error,setError]=useState('');
@@ -39,14 +41,37 @@ export default function ChatPage() {
   const fileRef=useRef<HTMLInputElement>(null);
 
   const loadChats=async()=>{ try{const r=await apiRequest<any>('/api/chat/list');setChats(r.chats??[]);}catch{} };
-  const loadChat=async(id:string)=>{try{const r=await apiRequest<any>(`/api/chat/${id}`);setChat(r.chat);setOther(r.other);setMessages(r.messages??[]);setBg(r.background||BGS[0]);}catch(e){setError(e instanceof Error?e.message:'Could not open chat.');}};
-  useEffect(()=>{void loadChats();},[]);
+  const loadChat=async(id:string)=>{
+    try{
+      const r=await apiRequest<any>(`/api/chat/${id}`);
+      setChat(r.chat); setOther(r.other); setMessages(r.messages??[]); setBg(r.background||BGS[0]);
+      if(r.other?.chatPublicKey){
+        const key=JSON.parse(r.other.chatPublicKey);
+        const decoded=await Promise.all((r.messages??[]).map(async (m:any)=>{
+          try { return { ...m, decrypted: await decryptChatPayload(Number(id), key, String(m.body??'')) }; }
+          catch { return { ...m, decrypted: { error: true } }; }
+        }));
+        setDecrypted(decoded);
+      } else setDecrypted([]);
+    }catch(e){setError(e instanceof Error?e.message:'Could not open chat.');}
+  };
+  useEffect(()=>{void loadChats(); void (async()=>{try{const key=await ensureChatKey(); await apiRequest('/api/auth/chat-key',{method:'POST',body:{publicKey:JSON.stringify(key)}});}catch(e){setError(e instanceof Error?e.message:'Secure chat encryption could not be initialized.');}})();},[]);
   useEffect(()=>{if(params?.id) void loadChat(params.id); else {setChat(null);setOther(null);setMessages([]);}},[params?.id]);
-  useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'});},[messages.length]);
+  useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'});},[decrypted.length]);
 
   useEffect(()=>{
     if(!params?.id) return;
-    const t=window.setInterval(async()=>{try{const r=await apiRequest<any>(`/api/chat/${params.id}`);setMessages(r.messages??[]);setOther(r.other);setChat(r.chat);}catch{}},2500);
+    const t=window.setInterval(async()=>{
+      try{
+        const r=await apiRequest<any>(`/api/chat/${params.id}`);
+        setMessages(r.messages??[]); setOther(r.other); setChat(r.chat);
+        if(r.other?.chatPublicKey){
+          const key=JSON.parse(r.other.chatPublicKey);
+          const decoded=await Promise.all((r.messages??[]).map(async (m:any)=>{try{return {...m,decrypted:await decryptChatPayload(Number(params.id),key,String(m.body??''))};}catch{return {...m,decrypted:{error:true}};}}));
+          setDecrypted(decoded);
+        }
+      }catch{}
+    },2500);
     return()=>window.clearInterval(t);
   },[params?.id]);
 
@@ -58,11 +83,23 @@ export default function ChatPage() {
   const openFound=async()=>{if(!found)return;try{const r=await apiRequest<any>('/api/chat/open',{method:'POST',body:{userId:found.id}});setCode('');setFound(null);setLocation(`/chat/${r.chatId}`);await loadChats();}catch(e){setError(e instanceof Error?e.message:'Could not open chat.');}};
   const sendMessage=async(extra:any={})=>{
     if(!params?.id || sending)return;
-    if(!text.trim()&&!extra.imageUrl&&!extra.gifUrl)return;
+    const payload={text:text.trim(), image:extra.image ?? null, gif:extra.gif ?? null};
+    if(!payload.text&&!payload.image&&!payload.gif)return;
+    if(!other?.chatPublicKey){setError('This chat is not ready for end-to-end encryption yet.');return;}
     setSending(true);setError('');
-    try{const r=await apiRequest<any>(`/api/chat/${params.id}/message`,{method:'POST',body:{body:text.trim(),...extra}});setMessages(m=>[...m,r.message]);setText('');setShowEmoji(false);setShowGif(false);void loadChats();}catch(e){setError(e instanceof Error?e.message:'Could not send message.');}finally{setSending(false);}
+    try{
+      const ciphertext=await encryptChatPayload(Number(params.id),JSON.parse(other.chatPublicKey),payload);
+      const r=await apiRequest<any>(`/api/chat/${params.id}/message`,{method:'POST',body:{body:ciphertext}});
+      setMessages(m=>[...m,r.message]);
+      setDecrypted(m=>[...m,{...r.message,decrypted:payload}]);
+      setText('');setShowEmoji(false);setShowGif(false);void loadChats();
+    }catch(e){setError(e instanceof Error?e.message:'Could not send encrypted message.');}finally{setSending(false);}
   };
-  const pickImage=async(file?:File)=>{if(!file)return;if(file.size>8*1024*1024){setError('Images must be under 8MB.');return;}try{await sendMessage({imageUrl:await dataUrl(file)});}catch{}};
+  const pickImage=async(file?:File)=>{
+    if(!file)return;
+    if(file.size>8*1024*1024){setError('Images must be under 8MB.');return;}
+    try{await sendMessage({image:await dataUrl(file)});}catch{}
+  };
   const loadGifs=async(q='trending')=>{try{const r=await apiRequest<any>(`/api/chat/gifs?q=${encodeURIComponent(q)}`);setGifs(r.gifs??[]);if(!r.enabled)setError('GIFs are not enabled yet. Add a GIPHY API key to the server.');}catch(e){setError(e instanceof Error?e.message:'Could not load GIFs.');}};
   const chooseBg=async(value:string)=>{setBg(value);setShowBg(false);if(params?.id)await apiRequest('/api/chat/'+params.id+'/background',{method:'PATCH',body:{background:value}}).catch(()=>{});};
 
@@ -85,10 +122,16 @@ export default function ChatPage() {
     <div className="cp-chat-shell">
       <header className="cp-chat-header"><button className="cp-chat-back" onClick={()=>setLocation('/chat')}><ArrowLeft size={18}/></button><CipherAvatar src={other.avatarUrl} seed={other.id||other.email} gender={other.gender} size={44} alt=""/><div className="cp-chat-person"><strong>{other.firstName} {other.lastName}</strong><span>{other.userCode}</span></div><div className="cp-chat-head-actions"><button onClick={()=>setShowBg(v=>!v)} title="Chat background"><Palette size={18}/></button><button onClick={()=>setShowMenu(v=>!v)} title="More"><MoreVertical size={18}/></button></div>{showMenu&&<div className="cp-chat-menu"><button onClick={()=>{setShowMenu(false);void apiRequest('/api/chat/'+chat.id+'/block',{method:'POST'}).then(()=>setError('User blocked.'));}}><Ban size={15}/> Block user</button><button onClick={()=>{setShowMenu(false);void apiRequest('/api/chat/'+chat.id,{method:'DELETE'}).then(()=>setLocation('/chat'));}}><Trash2 size={15}/> Delete chat</button></div>}</header>
       {showBg&&<div className="cp-chat-bg-picker">{BGS.map((v,i)=><button key={i} style={{background:v}} onClick={()=>void chooseBg(v)} aria-label={'Background '+(i+1)}/>)}</div>}
-      <main className="cp-chat-messages" style={{background:bg}}>{messages.map(m=><div key={m.id} className={`cp-chat-message-row ${m.senderId===other.id?'incoming':'outgoing'}`}><div className="cp-chat-bubble">{m.imageUrl&&<img src={m.imageUrl} alt="Shared image"/>}{m.gifUrl&&<img src={m.gifUrl} alt="GIF"/>}{m.body&&<span>{m.body}</span>}<small>{new Date(m.createdAt).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</small></div></div>)}<div ref={endRef}/></main>
+      <main className="cp-chat-messages" style={{background:bg}}>{decrypted.map((m:any)=>{
+        const d=m.decrypted||{};
+        return <div key={m.id} className={`cp-chat-message-row ${m.senderId===other.id?'incoming':'outgoing'}`}><div className="cp-chat-bubble">
+          {d.image&&<img src={d.image} alt="Shared image"/>}{d.gif&&<img src={d.gif} alt="GIF"/>}{d.text&&<span>{d.text}</span>}{d.error&&<span>🔒 Encrypted message</span>}
+          <small>{new Date(m.createdAt).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</small>
+        </div></div>;
+      })}<div ref={endRef}/></main>
       {error&&<div className="cp-chat-error"><X size={14}/>{error}</div>}
       {showEmoji&&<div className="cp-chat-emoji">{EMOJIS.map(e=><button key={e} onClick={()=>setText(v=>v+e)}>{e}</button>)}</div>}
-      {showGif&&<div className="cp-chat-gif-panel"><div className="cp-chat-gif-search"><input value={gifSearch} onChange={e=>setGifSearch(e.target.value)} placeholder="Search GIFs"/><button onClick={()=>void loadGifs(gifSearch||'trending')}><Search size={15}/></button></div><div className="cp-gif-grid">{gifs.map(g=><button key={g.id} onClick={()=>void sendMessage({gifUrl:g.url})}><img src={g.url} alt={g.title||'GIF'}/></button>)}</div></div>}
+      {showGif&&<div className="cp-chat-gif-panel"><div className="cp-chat-gif-search"><input value={gifSearch} onChange={e=>setGifSearch(e.target.value)} placeholder="Search GIFs"/><button onClick={()=>void loadGifs(gifSearch||'trending')}><Search size={15}/></button></div><div className="cp-gif-grid">{gifs.map(g=><button key={g.id} onClick={()=>void sendMessage({gif:g.url})}><img src={g.url} alt={g.title||'GIF'}/></button>)}</div></div>}
       <footer className="cp-chat-composer"><button onClick={()=>{setShowEmoji(v=>!v);setShowGif(false)}} title="Emoji"><Smile size={20}/></button><button onClick={()=>fileRef.current?.click()} title="Image"><ImageIcon size={20}/></button><button onClick={()=>{const next=!showGif;setShowGif(next);setShowEmoji(false);if(next&&!gifs.length)void loadGifs();}} title="GIF"><span className="cp-gif-label">GIF</span></button><input ref={fileRef} type="file" accept="image/*" hidden onChange={e=>void pickImage(e.target.files?.[0])}/><textarea value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void sendMessage();}}} placeholder={sending?'Sending…':'Write a message…'} rows={1}/><button className="cp-chat-send" onClick={()=>void sendMessage()} disabled={sending||!text.trim()}><Send size={18}/></button></footer>
     </div>
   </div>;
