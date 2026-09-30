@@ -35,6 +35,22 @@ const start = async () => {
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS user_code text`);
   await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS users_user_code_unique ON users(user_code)`);
   await db.execute(sql`UPDATE users SET user_code = 'CP-' || upper(substr(md5(random()::text || id::text), 1, 10)) WHERE user_code IS NULL`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS direct_chats (
+    id serial PRIMARY KEY, user_one_id integer NOT NULL, user_two_id integer NOT NULL,
+    background_one text, background_two text, deleted_one boolean NOT NULL DEFAULT false,
+    deleted_two boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(), last_message_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE(user_one_id, user_two_id)
+  )`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS direct_messages (
+    id serial PRIMARY KEY, chat_id integer NOT NULL, sender_id integer NOT NULL,
+    body text, image_url text, gif_url text, created_at timestamptz NOT NULL DEFAULT now()
+  )`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS blocked_users (
+    id serial PRIMARY KEY, blocker_id integer NOT NULL, blocked_id integer NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(blocker_id, blocked_id)
+  )`);
+
 
   app.listen(port, (err) => {
   if (err) {
