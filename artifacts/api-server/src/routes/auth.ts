@@ -190,7 +190,8 @@ router.post("/auth/register", async (req, res): Promise<void> => {
       await sendOtpEmail(user.email, code, "verification");
     } catch (e: any) {
       req.log.error({ err: e?.message, userId: user.id }, "signup OTP setup failed");
-      // Don't fail the registration — let the user request a resend from the verify screen.
+      res.status(502).json({ error: "Account was created, but we could not send your verification code. Please try signing in again." });
+      return;
     }
   } else {
     const code = generateOtp();
