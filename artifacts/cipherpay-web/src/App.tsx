@@ -230,6 +230,23 @@ function AuthLayout({ children, title, detail }: { children: ReactNode; title: s
 
 function LandingPage() {
   const [supportOpen, setSupportOpen] = useState(false);
+  const [supportForm, setSupportForm] = useState({ email: '', subject: '', category: 'general', message: '' });
+  const [supportSending, setSupportSending] = useState(false);
+  const [supportSent, setSupportSent] = useState(false);
+  const [supportError, setSupportError] = useState('');
+  const scrollToSection = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const openSupport = () => { setSupportSent(false); setSupportError(''); setSupportOpen(true); };
+  const submitSupport = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSupportSending(true); setSupportError('');
+    try {
+      await apiRequest('/api/support/contact', { method: 'POST', body: JSON.stringify({ ...supportForm, message: `[Guest email: ${supportForm.email}]\\n\\n${supportForm.message}` }) });
+      setSupportSent(true);
+      setSupportForm({ email: '', subject: '', category: 'general', message: '' });
+    } catch (error: any) { setSupportError(error?.message ?? 'We could not send your message. Please try again.'); }
+    finally { setSupportSending(false); }
+  };
+  const [supportOpen, setSupportOpen] = useState(false);
   const [supportSending, setSupportSending] = useState(false);
   const [supportSent, setSupportSent] = useState(false);
   const [supportForm, setSupportForm] = useState({ email: '', subject: '', category: 'general', message: '' });
@@ -302,13 +319,7 @@ function LandingPage() {
         </form> : <div className="cp-support-success"><div className="cp-support-success-icon"><Check size={22}/></div><span className="cp-kicker">MESSAGE SENT</span><h2>We’ve got it.</h2><p>Your message has been sent to the CipherPay support team. Keep an eye on your email for a response.</p><button className="cp-support-submit" type="button" onClick={() => setSupportOpen(false)}>Done</button></div>}
       </div>
     </div>}
-    <section className="cp-endcap" aria-label="CipherPay closing section">
-      <div className="cp-endcap-inner">
-        <div><span className="cp-kicker">KEEP MOVING</span><h2>One account.<br/><span>Less to think about.</span></h2></div>
-        <Link className="cp-endcap-link" href="/register">Get started <ArrowRight size={17}/></Link>
-      </div>
-      <div className="cp-endcap-word">CIPHERPAY</div>
-    </section>
+
   </div>;
 }
 
