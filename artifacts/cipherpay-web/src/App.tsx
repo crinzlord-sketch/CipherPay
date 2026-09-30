@@ -446,7 +446,7 @@ function Login() {
   const acceptSession = (token: string, adminToken?: string) => {
     localStorage.setItem('cipherpay_token', token);
     if (adminToken) sessionStorage.setItem('cipherpay_admin_token', adminToken);
-    setLocation('/');
+    window.location.assign('/');
   };
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -769,7 +769,7 @@ function Register() {
         if (result.requiresEmailVerification) {
           setLocation(`/verify-email?email=${encodeURIComponent(form.email.trim().toLowerCase())}`);
         } else {
-          setLocation('/');
+          window.location.assign('/');
         }
       },
        onError: (reason: any) => { setFaceMood('error'); setFaceReaction((value) => value + 1); setError(reason?.message ?? 'We could not create your account. Please review your details.'); },
