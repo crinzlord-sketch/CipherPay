@@ -1339,11 +1339,12 @@ function Send() {
   const [error, setError] = useState('');
   const [recipient, setRecipient] = useState<any>(null);
   const [recipientChecking, setRecipientChecking] = useState(false);
-  const [transferPin, setTransferPin] = useState('');
   const [hasTransferPin, setHasTransferPin] = useState<boolean | null>(null);
-  const [pinSetup, setPinSetup] = useState('');
-  const [pinSetupConfirm, setPinSetupConfirm] = useState('');
-  const [settingPin, setSettingPin] = useState(false);
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [pinModalPin, setPinModalPin] = useState('');
+  const [pinModalConfirm, setPinModalConfirm] = useState('');
+  const [pinModalError, setPinModalError] = useState('');
+  const [pinModalBusy, setPinModalBusy] = useState(false);
   const recipientTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -1422,32 +1423,11 @@ function Send() {
     return () => { active = false; };
   }, []);
 
-  const createTransferPin = async () => {
-    setError('');
-    if (!/^\d{6}$/.test(pinSetup)) {
-      setError('Your transfer PIN must be exactly 6 digits.');
-      return;
-    }
-    if (pinSetup !== pinSetupConfirm) {
-      setError('The two PINs do not match.');
-      return;
-    }
-    setSettingPin(true);
-    try {
-      await apiRequest('/api/auth/pin/set', {
-        method: 'POST',
-        body: { pin: pinSetup, confirmPin: pinSetupConfirm },
-      });
-      setTransferPin(pinSetup);
-      setPinSetup('');
-      setPinSetupConfirm('');
-      setHasTransferPin(true);
-      setError('');
-    } catch (e: any) {
-      setError(e?.message ?? 'Could not create your transfer PIN.');
-    } finally {
-      setSettingPin(false);
-    }
+  const openTransferPinModal = () => {
+    setPinModalPin('');
+    setPinModalConfirm('');
+    setPinModalError('');
+    setPinModalOpen(true);
   };
 
   useEffect(() => {
@@ -1466,24 +1446,45 @@ function Send() {
     return () => { if (recipientTimer.current) clearTimeout(recipientTimer.current); };
   }, [form.recipientEmail, mode]);
 
-  const submit = async (event: React.FormEvent) => {
+  const submit = (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
     setResult(null);
     setResultStatus('pending');
 
-    if (hasTransferPin === false) {
-      setError('Create your transfer PIN above before sending.');
-      return;
-    }
-    if (hasTransferPin !== true || !/^\d{6}$/.test(transferPin)) {
-      setError('Enter your 6-digit transfer PIN before sending.');
-      return;
+    if (mode === 'cipherpay') {
+      const amount = parseGroupedDigits(form.amount);
+      if (!form.recipientEmail.trim()) {
+        setError('Enter the recipient email.');
+        return;
+      }
+      if (!(amount >= 100)) {
+        setError('Enter an amount of at least ₦100.');
+        return;
+      }
+    } else {
+      if (!bankForm.bankCode || !/^\d{10}$/.test(bankForm.accountNumber)) {
+        setError('Choose a bank and enter a valid 10-digit account number.');
+        return;
+      }
+      if (!bankForm.accountName) {
+        void resolveBankAccount();
+        return;
+      }
+      const amount = parseGroupedDigits(form.amount);
+      if (!(amount >= 100)) {
+        setError('Enter an amount of at least ₦100.');
+        return;
+      }
     }
 
+    openTransferPinModal();
+  };
+
+  const performTransfer = async (pin: string) => {
     if (mode === 'cipherpay') {
       mutation.mutate(
-        { data: { ...form, amount: parseGroupedDigits(form.amount), pin: transferPin } as any },
+        { data: { ...form, amount: parseGroupedDigits(form.amount), pin } as any },
         {
           onSuccess: (value: any) => { setResult(value); setResultStatus('success'); },
           onError: (reason: any) => setError(reason?.message ?? 'The transfer could not be completed.'),
@@ -1492,20 +1493,7 @@ function Send() {
       return;
     }
 
-    if (!bankForm.bankCode || !/^\d{10}$/.test(bankForm.accountNumber)) {
-      setError('Choose a bank and enter a valid 10-digit account number.');
-      return;
-    }
-    if (!bankForm.accountName) {
-      await resolveBankAccount();
-      return;
-    }
     const amount = parseGroupedDigits(form.amount);
-    if (!(amount > 0)) {
-      setError('Enter an amount to send.');
-      return;
-    }
-
     setSendingBank(true);
     try {
       const payload = await apiRequest<any>('/api/wallet/withdraw', {
@@ -1517,7 +1505,7 @@ function Send() {
           accountName: bankForm.accountName,
           narration: bankForm.narration || undefined,
           bankName: bankForm.bankName || undefined,
-          pin: transferPin,
+          pin,
         },
       });
       setResult(payload);
@@ -1542,6 +1530,66 @@ function Send() {
       setResultStatus('failed');
     } finally {
       setSendingBank(false);
+    }
+  };
+
+  const authorizeAndSend = async () => {
+    setPinModalError('');
+    const pin = pinModalPin.replace(/\D/g, '');
+
+    if (hasTransferPin === null) {
+      setPinModalError('Still checking your transaction PIN. Please wait a moment.');
+      return;
+    }
+    if (hasTransferPin === false) {
+      if (!/^\d{6}$/.test(pin)) {
+        setPinModalError('Create a 6-digit transfer PIN.');
+        return;
+      }
+      if (!/^\d{6}$/.test(pinModalConfirm)) {
+        setPinModalError('Confirm your 6-digit transfer PIN.');
+        return;
+      }
+      if (pin !== pinModalConfirm) {
+        setPinModalError('The two PINs do not match.');
+        return;
+      }
+    } else if (!/^\d{6}$/.test(pin)) {
+      setPinModalError('Enter your 6-digit transfer PIN.');
+      return;
+    }
+
+    setPinModalBusy(true);
+    try {
+      if (hasTransferPin === false) {
+        await apiRequest('/api/auth/pin/set', {
+          method: 'POST',
+          body: { pin, confirmPin: pinModalConfirm },
+        });
+        setHasTransferPin(true);
+      } else {
+        await apiRequest('/api/auth/pin/verify', {
+          method: 'POST',
+          body: { pin },
+        });
+      }
+
+      setPinModalOpen(false);
+      setPinModalPin('');
+      setPinModalConfirm('');
+      await performTransfer(pin);
+    } catch (e: any) {
+      const message = e?.message ?? 'Could not authorize this transfer.';
+      if (/no pin set on this account/i.test(message)) {
+        setHasTransferPin(false);
+        setPinModalPin('');
+        setPinModalConfirm('');
+        setPinModalError('Your transfer PIN was cleared. Create a new 6-digit PIN to continue.');
+      } else {
+        setPinModalError(message);
+      }
+    } finally {
+      setPinModalBusy(false);
     }
   };
 
@@ -1628,32 +1676,45 @@ function Send() {
         </div>}
 
         {resolving && <div className="muted-line">Verifying account details…</div>}
-                  {hasTransferPin === false ? (
-            <div className="transfer-pin-card transfer-pin-setup">
-              <div className="transfer-pin-heading"><ShieldCheck size={18} /><div><b>Create your transfer PIN</b><small>You don't have a transfer PIN yet. Create and confirm a 6-digit PIN now, then you can send money.</small></div></div>
-              <div className="field-row">
-                <Field label="Create 6-digit PIN" type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} placeholder="••••••" value={pinSetup} onChange={(event: any) => setPinSetup(event.target.value.replace(/\D/g, '').slice(0, 6))} data-testid="input-create-transfer-pin" />
-                <Field label="Confirm PIN" type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} placeholder="••••••" value={pinSetupConfirm} onChange={(event: any) => setPinSetupConfirm(event.target.value.replace(/\D/g, '').slice(0, 6))} data-testid="input-confirm-transfer-pin" />
-              </div>
-              <Button type="button" className="full-btn" disabled={settingPin} onClick={() => void createTransferPin()} data-testid="button-create-transfer-pin">
-                {settingPin ? 'Creating PIN…' : 'Create PIN and continue'} <ArrowRight size={17} />
-              </Button>
-            </div>
-          ) : hasTransferPin === true ? (
-            <div className="transfer-pin-card">
-              <div><ShieldCheck size={18} /><div><b>Confirm with your transfer PIN</b><small>Enter the 6-digit PIN to authorize this transfer.</small></div></div>
-              <input type="password" inputMode="numeric" autoComplete="current-password" maxLength={6} pattern="[0-9]{6}" placeholder="••••••" value={transferPin} onChange={(event) => setTransferPin(event.target.value.replace(/\D/g, '').slice(0, 6))} aria-label="6-digit transfer PIN" required data-testid="input-transfer-pin" />
-            </div>
-          ) : (
-            <div className="transfer-pin-card">
-              <div><ShieldCheck size={18} /><div><b>Checking transfer PIN</b><small>Just a moment…</small></div></div>
-            </div>
-          )}
-{error && <div className="error-box" role="alert">{error}</div>}
+        {error && <div className="error-box" role="alert">{error}</div>}
 
-        {(mode === 'cipherpay' || bankForm.accountName) && <Button type="submit" className="full-btn" disabled={busy || resolving || hasTransferPin !== true} data-testid="button-send-submit">
-          {busy ? 'Sending…' : mode === 'bank' ? 'Send to bank' : 'Review and send'} <ArrowRight size={17} />
+        {(mode === 'cipherpay' || bankForm.accountName) && <Button type="submit" className="full-btn" disabled={busy || resolving} data-testid="button-send-submit">
+          {busy ? 'Sending…' : 'Continue'} <ArrowRight size={17} />
         </Button>}
+
+        {pinModalOpen && createPortal(
+          <div className="transfer-pin-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !pinModalBusy) setPinModalOpen(false); }}>
+            <section className="transfer-pin-modal" role="dialog" aria-modal="true" aria-labelledby="transfer-pin-modal-title" onMouseDown={(event) => event.stopPropagation()}>
+              <button type="button" className="transfer-pin-modal-close" onClick={() => setPinModalOpen(false)} disabled={pinModalBusy} aria-label="Close transfer PIN prompt"><X size={19} /></button>
+              <div className="transfer-pin-modal-icon"><ShieldCheck size={22} /></div>
+              <span className="eyebrow">CIPHERPAY / SECURITY</span>
+              {hasTransferPin === null ? (
+                <>
+                  <h2 id="transfer-pin-modal-title">Checking your PIN</h2>
+                  <p>One moment while we check whether a transaction PIN is already set on your account.</p>
+                </>
+              ) : hasTransferPin === false ? (
+                <>
+                  <h2 id="transfer-pin-modal-title">Create your transfer PIN</h2>
+                  <p>You don't have a transaction PIN yet. Create a 6-digit PIN and confirm it to authorize this transfer.</p>
+                  <input className="transfer-pin-modal-input" type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} placeholder="Create 6-digit PIN" value={pinModalPin} onChange={(event) => setPinModalPin(event.target.value.replace(/\D/g, '').slice(0, 6))} aria-label="Create 6-digit transfer PIN" autoFocus />
+                  <input className="transfer-pin-modal-input" type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} placeholder="Confirm PIN" value={pinModalConfirm} onChange={(event) => setPinModalConfirm(event.target.value.replace(/\D/g, '').slice(0, 6))} aria-label="Confirm transfer PIN" />
+                </>
+              ) : (
+                <>
+                  <h2 id="transfer-pin-modal-title">Enter your transfer PIN</h2>
+                  <p>Enter your 6-digit PIN to authorize this transfer.</p>
+                  <input className="transfer-pin-modal-input" type="password" inputMode="numeric" autoComplete="current-password" maxLength={6} placeholder="••••••" value={pinModalPin} onChange={(event) => setPinModalPin(event.target.value.replace(/\D/g, '').slice(0, 6))} aria-label="6-digit transfer PIN" autoFocus onKeyDown={(event) => { if (event.key === 'Enter') void authorizeAndSend(); }} />
+                </>
+              )}
+              {pinModalError && <div className="error-box" role="alert">{pinModalError}</div>}
+              <Button type="button" className="full-btn" disabled={pinModalBusy || hasTransferPin === null} onClick={() => void authorizeAndSend()}>
+                {pinModalBusy ? 'Authorizing…' : hasTransferPin === false ? 'Create PIN & continue' : 'Confirm & continue'} <ArrowRight size={17} />
+              </Button>
+            </section>
+          </div>,
+          document.body,
+        )}
       </form>
       {result && <TransferResultPop status={resultStatus} mode={mode} amount={parseGroupedDigits(form.amount)} message={result.message} onClose={() => { if (resultStatus !== 'pending') { setResult(null); setError(''); } }} />}
       <div className="side-note violet">
