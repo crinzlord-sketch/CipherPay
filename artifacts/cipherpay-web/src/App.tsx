@@ -323,6 +323,19 @@ function LandingPage() {
           <i/><i/><i/><i/><i/><i/>
         </div>
         </div>
+        <div className="cp-hero-mockup-cloud" aria-hidden="true">
+          <div className="cp-mockup m1"><div className="mock-screen"><b>Wallet</b><strong>₦24,680</strong><span>Available balance</span><i>↗ Send</i><i>＋ Fund</i></div></div>
+          <div className="cp-mockup m2"><div className="mock-screen"><b>Pay bills</b><strong>Electricity</strong><span>₦12,500 • Successful</span><i>Receipt</i></div></div>
+          <div className="cp-mockup m3"><div className="mock-screen"><b>Messages</b><strong>You're all set.</strong><span>Just now</span><i>Reply</i></div></div>
+          <div className="cp-mockup m4"><div className="mock-screen"><b>Verify</b><strong>Code confirmed</strong><span>Secure service access</span><i>✓ Verified</i></div></div>
+          <div className="cp-mockup m5"><div className="mock-screen"><b>Activity</b><strong>+₦20,000</strong><span>Wallet funded</span><i>View details</i></div></div>
+          <div className="cp-mockup m6"><div className="mock-screen"><b>Data</b><strong>20 GB</strong><span>Renew anytime</span><i>Buy data</i></div></div>
+          <div className="cp-mockup m7"><div className="mock-screen"><b>Cipher ID</b><strong>CP • 0482</strong><span>Your personal code</span><i>Copy</i></div></div>
+          <div className="cp-mockup m8"><div className="mock-screen"><b>Security</b><strong>Protected</strong><span>Account shield active</span><i>Manage</i></div></div>
+          <div className="cp-mockup m9"><div className="mock-screen"><b>Services</b><strong>Everything</strong><span>In one place</span><i>Explore</i></div></div>
+          <div className="cp-mockup m10"><div className="mock-screen"><b>Transfer</b><strong>₦4,500</strong><span>To CipherPay user</span><i>Completed</i></div></div>
+          <span className="cp-mockup-orbit o1"/><span className="cp-mockup-orbit o2"/><span className="cp-mockup-orbit o3"/>
+        </div>
         <div className="cp-wallet-card">
           <div className="cp-card-top"><span className="cp-card-label">CIPHERPAY / WALLET</span><span className="cp-card-chip"/></div>
           <div className="cp-card-balance"><small>AVAILABLE BALANCE</small>₦24,680.00</div>
@@ -330,24 +343,6 @@ function LandingPage() {
         </div>
         <div className="cp-float-pill one"><i className="cp-dot"/> <strong>Payment complete</strong></div>
         <div className="cp-float-pill two"><Globe2 size={15}/> <strong>Digital services</strong></div>
-      </div>
-    </section>
-    <section className="cp-scroll-cinema" id="cinema" data-cp-reveal>
-      <div className="cp-scroll-cinema-bg" aria-hidden="true"><span/><span/><span/><span/><i/><i/><i/></div>
-      <div className="cp-cinema-copy">
-        <span className="cp-kicker">SCROLL INTO CIPHERPAY</span>
-        <h2>Watch the platform<br/><span>come alive.</span></h2>
-        <p>Scroll through the experience. The interface shifts, rotates and reveals the tools inside CipherPay instead of dumping everything on one screen.</p>
-        <div className="cp-cinema-rail"><span>SCROLL</span><i/></div>
-      </div>
-      <div className="cp-phone-stage" aria-label="CipherPay app preview">
-        <div className="cp-phone phone-left"><div className="cp-phone-frame"><div className="cp-phone-screen cp-screen-bills"><div className="cp-screen-top"><span>09:41</span><b>CipherPay</b><span>●●●</span></div><small>BILLS &amp; SERVICES</small><strong>Everything<br/>handled.</strong><div className="cp-screen-card"><span>Electricity</span><b>₦12,500</b><i/></div><div className="cp-screen-card"><span>Data</span><b>20 GB</b><i/></div></div></div></div>
-        <div className="cp-phone phone-main"><div className="cp-phone-frame"><div className="cp-phone-screen cp-screen-wallet"><div className="cp-screen-top"><span>09:41</span><b>CipherPay</b><span>●●●</span></div><span className="cp-screen-label">AVAILABLE BALANCE</span><strong className="cp-screen-balance">₦24,680.00</strong><div className="cp-screen-actions"><i>＋</i><i>↗</i><i>▣</i></div><div className="cp-screen-activity"><b>Recent activity</b><span>Payment <em>−₦4,500</em></span><span>Wallet funded <em>+₦20,000</em></span><span>SMS verification <em>−₦900</em></span></div></div></div></div>
-        <div className="cp-phone phone-right"><div className="cp-phone-frame"><div className="cp-phone-screen cp-screen-chat"><div className="cp-screen-top"><span>09:41</span><b>Chat</b><span>●●●</span></div><div className="cp-chat-bubble">You’re all set.</div><div className="cp-chat-bubble alt">Perfect. Thanks ✦</div><div className="cp-chat-input">Message...</div></div></div></div>
-        <div className="cp-phone-reflection" aria-hidden="true"/>
-      </div>
-      <div className="cp-cinema-bottom">
-        <span><b>01</b> WALLET</span><span><b>02</b> PAYMENTS</span><span><b>03</b> DIGITAL SERVICES</span><span><b>04</b> CHAT</span>
       </div>
     </section>
     <section className="cp-section cp-reveal-section" id="features" data-cp-reveal>
