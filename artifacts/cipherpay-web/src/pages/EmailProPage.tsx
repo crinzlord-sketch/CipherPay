@@ -286,7 +286,7 @@ export default function EmailProPage() {
   const [campaignDetail, setCampaignDetail] = useState<SentCampaignDetail | null>(null);
   const [campaignDetailLoading, setCampaignDetailLoading] = useState(false);
   const [campaignDetailError, setCampaignDetailError] = useState('');
-  const [subscription, setSubscription] = useState<{ unlocked: boolean; status: string; nextBillingAt: string | null; unlockFee: number; monthlyFee: number } | null>(null);
+  const [subscription, setSubscription] = useState<{ unlocked: boolean; status: string; nextBillingAt: string | null; unlockFee: number; monthlyFee: number; freeEmails: number; usedEmails: number; remainingFreeEmails: number } | null>(null);
   const [unlocking, setUnlocking] = useState(false);
 
   const refreshSent = useCallback(async (append = false) => {
@@ -304,7 +304,7 @@ export default function EmailProPage() {
     setPageError('');
     setLoading(true);
     try {
-      const subscriptionResponse = await apiRequest<{ unlocked: boolean; status: string; nextBillingAt: string | null; unlockFee: number; monthlyFee: number }>('/api/email/pro');
+      const subscriptionResponse = await apiRequest<{ unlocked: boolean; status: string; nextBillingAt: string | null; unlockFee: number; monthlyFee: number; freeEmails: number; usedEmails: number; remainingFreeEmails: number }>('/api/email/pro');
       setSubscription(subscriptionResponse);
       const [accountResponse, sentResponse] = await Promise.all([
         apiRequest<{ data: EmailAccount[] }>('/api/email/accounts'),
@@ -340,7 +340,8 @@ export default function EmailProPage() {
   const invalidRecipients = useMemo(() => recipients.filter((recipient) => !isValidEmail(recipient)), [recipients]);
   const activeGuide = guideContent[guideKey];
   const selectedAccount = accounts.find((account) => String(account.id) === sendForm.accountId);
-  const emailProLocked = subscription?.unlocked === false;
+  const emailProLocked = subscription?.unlocked === false && (subscription?.remainingFreeEmails ?? 0) <= 0;
+  const freeEmailsRemaining = subscription?.remainingFreeEmails ?? 0;
 
   const updateAccountField = <K extends keyof AccountForm>(field: K, value: AccountForm[K]) => {
     setAccountForm((current) => ({ ...current, [field]: value }));
@@ -379,7 +380,7 @@ export default function EmailProPage() {
 
   const handleSaveAccount = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (emailProLocked) return;
+    if (emailProLocked && freeEmailsRemaining <= 0) return;
     setAccountNotice(null);
     if (!accountForm.host || !accountForm.username || !accountForm.appPassword) {
       setAccountNotice({ tone: 'error', message: 'Add the SMTP host, username, and app password.' });
@@ -419,7 +420,7 @@ export default function EmailProPage() {
   };
 
   const handleTestAccount = async (account: EmailAccount) => {
-    if (emailProLocked) return;
+    if (emailProLocked && freeEmailsRemaining <= 0) return;
     setAccountNotice(null);
     setTestingAccount(account.id);
     try {
@@ -439,7 +440,7 @@ export default function EmailProPage() {
   };
 
   const handleDeleteAccount = async (account: EmailAccount) => {
-    if (emailProLocked) return;
+    if (emailProLocked && freeEmailsRemaining <= 0) return;
     if (!window.confirm(`Remove ${account.email} from Email Pro?`)) return;
     setAccountNotice(null);
     setDeletingAccount(account.id);
@@ -462,7 +463,7 @@ export default function EmailProPage() {
 
   const handleSend = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (emailProLocked) return;
+    if (emailProLocked && freeEmailsRemaining <= 0) return;
     setSendNotice(null);
     if (!sendForm.accountId || !sendForm.fromName.trim() || !sendForm.subject.trim() || !sendForm.body.trim() || recipients.length === 0) {
       setSendNotice({ tone: 'error', message: 'Choose a sending account and add a display name, subject, message, and at least one recipient.' });
@@ -497,6 +498,7 @@ export default function EmailProPage() {
       setCampaigns((current) => [response.campaign, ...current.filter((campaign) => campaign.id !== response.campaign.id)]);
       setLastSyncedAt(new Date());
       setSendNotice({ tone: 'success', message: `Campaign accepted for ${response.campaign.acceptedCount} of ${response.campaign.recipientCount} recipients.` });
+      await loadWorkspace();
       setSendForm((current) => ({ ...current, recipients: '', subject: '', body: '' }));
     } catch (error) {
       setSendNotice({ tone: 'error', message: error instanceof Error ? error.message : 'We could not send this campaign.' });
@@ -665,13 +667,13 @@ export default function EmailProPage() {
         actions={<Button variant="soft" type="button" onClick={() => void loadWorkspace()} data-testid="button-refresh-email-pro"><RefreshCw size={15} /> Refresh</Button>}
       />
 
-      {emailProLocked && (
+      {subscription?.unlocked === false && (
         <section className="email-pro-lock-banner" role="status" aria-label="Email Pro locked">
           <div className="email-pro-lock-banner-copy">
             <span className="email-pro-mark"><LockKeyhole size={18} /></span>
             <div>
-              <strong>Email Pro is locked</strong>
-              <p>You can still view your connected accounts and sending history. Unlock access for ₦3,000, then ₦3,000/month to send, manage accounts, and use Email Pro.</p>
+              <strong>{freeEmailsRemaining > 0 ? `${freeEmailsRemaining} free email${freeEmailsRemaining === 1 ? '' : 's'} remaining` : 'Your free emails are used'}</strong>
+              <p>{freeEmailsRemaining > 0 ? `You can send your first ${subscription?.freeEmails ?? 5} emails free. After that, unlock Email Pro for ₦3,000, then ₦3,000/month to keep sending.` : 'Your 5 free emails are used. Unlock Email Pro for ₦3,000, then ₦3,000/month to keep sending.'}</p>
             </div>
           </div>
           <Button type="button" onClick={async () => {
