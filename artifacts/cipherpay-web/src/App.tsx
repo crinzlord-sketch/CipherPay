@@ -290,7 +290,7 @@ function LandingPage() {
     <nav className="cp-landing-nav" aria-label="Landing navigation">
       <div className="cp-landing-nav-inner">
         <Logo />
-        <div className="cp-landing-links"><button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('experience')}>Experience</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={openSupport}>Support</button></div>
+        <div className="cp-landing-links"><button type="button" onClick={() => scrollToSection('cinema')}>Experience</button><button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={openSupport}>Support</button></div>
         <div className="cp-landing-nav-actions"><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={15}/></button><button type="button" className="cp-mobile-menu-toggle" aria-label="Open landing menu" aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen(v => !v)}><Menu size={19}/></button></div>
         <div className={`cp-mobile-menu ${mobileNavOpen ? 'open' : ''}`}>
           <button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('experience')}>Experience</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={openSupport}>Support</button><button type="button" onClick={() => { setMobileNavOpen(false); goToAuth('login'); }}>Log in</button><button type="button" onClick={() => { setMobileNavOpen(false); goToAuth('register'); }}>Get started</button>
@@ -330,6 +330,24 @@ function LandingPage() {
         </div>
         <div className="cp-float-pill one"><i className="cp-dot"/> <strong>Payment complete</strong></div>
         <div className="cp-float-pill two"><Globe2 size={15}/> <strong>Digital services</strong></div>
+      </div>
+    </section>
+    <section className="cp-scroll-cinema" id="cinema" data-cp-reveal>
+      <div className="cp-scroll-cinema-bg" aria-hidden="true"><span/><span/><span/><span/><i/><i/><i/></div>
+      <div className="cp-cinema-copy">
+        <span className="cp-kicker">SCROLL INTO CIPHERPAY</span>
+        <h2>Watch the platform<br/><span>come alive.</span></h2>
+        <p>Scroll through the experience. The interface shifts, rotates and reveals the tools inside CipherPay instead of dumping everything on one screen.</p>
+        <div className="cp-cinema-rail"><span>SCROLL</span><i/></div>
+      </div>
+      <div className="cp-phone-stage" aria-label="CipherPay app preview">
+        <div className="cp-phone phone-left"><div className="cp-phone-frame"><div className="cp-phone-screen cp-screen-bills"><div className="cp-screen-top"><span>09:41</span><b>CipherPay</b><span>●●●</span></div><small>BILLS &amp; SERVICES</small><strong>Everything<br/>handled.</strong><div className="cp-screen-card"><span>Electricity</span><b>₦12,500</b><i/></div><div className="cp-screen-card"><span>Data</span><b>20 GB</b><i/></div></div></div></div>
+        <div className="cp-phone phone-main"><div className="cp-phone-frame"><div className="cp-phone-screen cp-screen-wallet"><div className="cp-screen-top"><span>09:41</span><b>CipherPay</b><span>●●●</span></div><span className="cp-screen-label">AVAILABLE BALANCE</span><strong className="cp-screen-balance">₦24,680.00</strong><div className="cp-screen-actions"><i>＋</i><i>↗</i><i>▣</i></div><div className="cp-screen-activity"><b>Recent activity</b><span>Payment <em>−₦4,500</em></span><span>Wallet funded <em>+₦20,000</em></span><span>SMS verification <em>−₦900</em></span></div></div></div></div>
+        <div className="cp-phone phone-right"><div className="cp-phone-frame"><div className="cp-phone-screen cp-screen-chat"><div className="cp-screen-top"><span>09:41</span><b>Chat</b><span>●●●</span></div><div className="cp-chat-bubble">You’re all set.</div><div className="cp-chat-bubble alt">Perfect. Thanks ✦</div><div className="cp-chat-input">Message...</div></div></div></div>
+        <div className="cp-phone-reflection" aria-hidden="true"/>
+      </div>
+      <div className="cp-cinema-bottom">
+        <span><b>01</b> WALLET</span><span><b>02</b> PAYMENTS</span><span><b>03</b> DIGITAL SERVICES</span><span><b>04</b> CHAT</span>
       </div>
     </section>
     <section className="cp-section cp-reveal-section" id="features" data-cp-reveal>
