@@ -63,19 +63,34 @@ function enforceOtpResendCooldown(target: string, purpose: string, res: any): bo
 function getClientIp(req: any): string | null {
   const candidates = [
     req.headers["cf-connecting-ip"],
+    req.headers["true-client-ip"],
     req.headers["x-real-ip"],
     req.headers["x-forwarded-for"],
     req.headers["forwarded"],
     req.ip,
     req.socket?.remoteAddress,
   ];
+
   for (const candidate of candidates) {
-    const raw = Array.isArray(candidate) ? candidate[0] : candidate;
-    if (typeof raw !== "string") continue;
-    const first = raw.split(",")[0].trim().replace(/^for=/i, "").replace(/^"|"$/g, "");
-    const cleaned = first.replace(/^\[|\]$/g, "").replace(/^::ffff:/i, "");
-    if (cleaned && cleaned !== "::1" && cleaned !== "0.0.0.0") return cleaned;
+    const rawValue = Array.isArray(candidate) ? candidate[0] : candidate;
+    if (typeof rawValue !== "string") continue;
+
+    // Forwarded headers can contain "for=IP"; X-Forwarded-For can contain a
+    // comma-separated chain. The first public client address is the useful one.
+    let value = rawValue.split(",")[0].trim();
+    value = value.replace(/^for=/i, "").replace(/^"|"$/g, "").trim();
+
+    // Normalize bracketed IPv6 and IPv4 values accidentally accompanied by a port.
+    if (value.startsWith("[") && value.includes("]")) {
+      value = value.slice(1, value.indexOf("]"));
+    } else if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/.test(value)) {
+      value = value.replace(/:\d+$/, "");
+    }
+
+    value = value.replace(/^::ffff:/i, "").trim();
+    if (value && value !== "::1" && value !== "0.0.0.0") return value;
   }
+
   return null;
 }
 
@@ -95,22 +110,46 @@ function deviceInfo(req: any): { name: string; platform: string; ip: string | nu
     else platform = "Unknown";
   }
 
+  let browser = "Unknown browser";
+  if (/edg\//i.test(ua)) browser = "Microsoft Edge";
+  else if (/opr\//i.test(ua)) browser = "Opera";
+  else if (/samsungbrowser/i.test(ua)) browser = "Samsung Internet";
+  else if (/firefox\//i.test(ua)) browser = "Firefox";
+  else if (/chrome\//i.test(ua) && !/edg\//i.test(ua)) browser = "Google Chrome";
+  else if (/safari\//i.test(ua) && /version\//i.test(ua)) browser = "Safari";
+  else if (/wv\)/i.test(ua)) browser = "Android WebView";
+
   let deviceName = explicitName;
   if (!deviceName) {
-    if (/iphone/i.test(ua)) deviceName = "iPhone";
-    else if (/ipad/i.test(ua)) deviceName = "iPad";
-    else if (/android/i.test(ua)) {
+    if (/iphone/i.test(ua)) {
+      deviceName = "iPhone";
+    } else if (/ipad/i.test(ua)) {
+      deviceName = "iPad";
+    } else if (/ipod/i.test(ua)) {
+      deviceName = "iPod";
+    } else if (/android/i.test(ua)) {
       const model = ua.match(/Android[^;)]*;\s*(?:[a-z]{2}(?:-[A-Z]{2})?;\s*)?(?:wv;\s*)?([^;)]+?)(?:\s+Build\/[^;)]+)?[;)]/i)?.[1]?.trim();
       deviceName = model && model.length <= 80 ? model : "Android device";
-    } else if (/windows/i.test(ua)) deviceName = "Windows PC";
-    else if (/macintosh|mac os x/i.test(ua)) deviceName = "Mac";
-    else if (/linux/i.test(ua)) deviceName = "Linux PC";
-    else deviceName = "Web browser";
+    } else if (/windows/i.test(ua)) {
+      deviceName = "Windows PC";
+    } else if (/macintosh|mac os x/i.test(ua)) {
+      deviceName = "Mac";
+    } else if (/linux/i.test(ua)) {
+      deviceName = "Linux PC";
+    } else {
+      deviceName = "Web browser";
+    }
+  }
+
+  // Keep the stored session useful even when the client only supplies a generic
+  // device name: admins can distinguish the browser/engine as well.
+  if (!deviceName.toLowerCase().includes(browser.toLowerCase())) {
+    deviceName = `${deviceName} · ${browser}`;
   }
 
   return {
-    name: deviceName.slice(0, 80),
-    platform: platform.slice(0, 40),
+    name: deviceName.slice(0, 100),
+    platform: `${platform} · ${browser}`.slice(0, 70),
     ip: getClientIp(req),
   };
 }
