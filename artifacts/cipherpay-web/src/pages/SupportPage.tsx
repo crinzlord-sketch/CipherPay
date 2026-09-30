@@ -96,7 +96,13 @@ export function SupportPage() {
   const loadHistory = async () => {
     try {
       const result = await apiRequest<{ data: HistoryItem[] }>('/api/support/history');
-      setHistory(Array.isArray(result.data) ? result.data.map((item) => ({ ...item, messages: Array.isArray(item.messages) ? item.messages : [] })) : []);
+      const rows = Array.isArray(result?.data) ? result.data : [];
+      setHistory(rows
+        .filter((item: any) => item && item.chat && item.chat.id != null)
+        .map((item: any) => ({
+          chat: item.chat,
+          messages: Array.isArray(item.messages) ? mergeMessages([], item.messages) : [],
+        })));
     } catch {
       // History is secondary to the active support desk; keep the chat usable.
     }
@@ -220,6 +226,9 @@ export function SupportPage() {
   };
 
   if (chatLoading) return <main className="cp-page"><LoadingState label="Opening your support desk" /></main>;
+  if (chat && typeof chat.id === 'undefined') {
+    return <main className="cp-page"><ErrorState message="Your support session could not be opened. Please try again." retry={() => { setChatLoading(true); void loadChat(); }} /></main>;
+  }
 
   return (
     <main className="cp-page cp-page-reveal">
