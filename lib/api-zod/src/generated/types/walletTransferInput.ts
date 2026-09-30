@@ -11,4 +11,5 @@ export interface WalletTransferInput {
   amount: number;
   /** @nullable */
   note?: string | null;
+  pin: string;
 }
