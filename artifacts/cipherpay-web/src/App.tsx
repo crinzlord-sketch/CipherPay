@@ -237,11 +237,35 @@ function LandingPage() {
   const [supportSending, setSupportSending] = useState(false);
   const [supportSent, setSupportSent] = useState(false);
   const [supportError, setSupportError] = useState('');
-  const scrollToSection = (id: string) => { setMobileNavOpen(false); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  useEffect(() => {
+    const root = document.querySelector('.cp-landing');
+    if (!root) return;
+    const items = Array.from(root.querySelectorAll<HTMLElement>('[data-cp-reveal]'));
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        entry.target.classList.toggle('is-visible', entry.isIntersecting);
+      });
+    }, { threshold: 0.14, rootMargin: '-8% 0px -8% 0px' });
+    items.forEach((item) => observer.observe(item));
+    const onScroll = () => {
+      const y = window.scrollY;
+      root.style.setProperty('--cp-scroll', String(y));
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, []);
+  const scrollToSection = (id: string) => {
+    setMobileNavOpen(false);
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
   const goToAuth = (mode: 'login' | 'register') => {
     if (authNavigating) return;
     setAuthNavigating(mode);
-    window.setTimeout(() => setLocation(mode === 'login' ? '/login' : '/register'), 360);
+    window.setTimeout(() => setLocation(mode === 'login' ? '/login' : '/register'), 420);
   };
   const openSupport = () => { setMobileNavOpen(false); setSupportSent(false); setSupportError(''); setSupportOpen(true); };
   const submitSupport = async (event: React.FormEvent) => {
@@ -280,8 +304,15 @@ function LandingPage() {
         <div className="cp-hero-actions"><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Create your account <ArrowRight size={17}/></button><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>I already have an account</button></div>
         <div className="cp-hero-note"><span><ShieldCheck size={13}/> Built around control</span><span><Bolt size={13}/> Fast everyday tools</span></div>
       </div>
-      <div className="cp-orbit-stage">
+      <div className="cp-orbit-stage" data-cp-reveal="hero">
         <div className="cp-orbit-glow"/><div className="cp-orbit"/><div className="cp-orbit two"/>
+        <div className="cp-3d-scene" aria-hidden="true">
+          <div className="cp-3d-ring cp-3d-ring-a" />
+          <div className="cp-3d-ring cp-3d-ring-b" />
+          <div className="cp-3d-card cp-3d-card-back"><span>CP</span><small>PAYMENTS</small></div>
+          <div className="cp-3d-card cp-3d-card-front"><div><small>AVAILABLE</small><b>₦24,680</b></div><i /></div>
+          <div className="cp-3d-coin"><span>₵</span></div>
+        </div>
         <div className="cp-wallet-card">
           <div className="cp-card-top"><span className="cp-card-label">CIPHERPAY / WALLET</span><span className="cp-card-chip"/></div>
           <div className="cp-card-balance"><small>AVAILABLE BALANCE</small>₦24,680.00</div>
@@ -291,11 +322,11 @@ function LandingPage() {
         <div className="cp-float-pill two"><Globe2 size={15}/> <strong>Digital services</strong></div>
       </div>
     </section>
-    <section className="cp-section" id="features">
+    <section className="cp-section cp-reveal-section" id="features" data-cp-reveal>
       <div className="cp-section-head"><div><span className="cp-kicker">THE CIPHERPAY SYSTEM</span><h2>Everything you need.<br/>Nothing you don't.</h2></div><p>Designed to feel calm even when your day isn't. Every tool has a clear purpose, every flow gets out of your way.</p></div>
-      <div className="cp-feature-grid">{features.map(({icon:Icon,title,text})=><article className="cp-feature" key={title}><span className="cp-feature-icon"><Icon size={20}/></span><h3>{title}</h3><p>{text}</p></article>)}</div>
+      <div className="cp-feature-grid">{features.map(({icon:Icon,title,text}, index)=><article className="cp-feature" data-cp-reveal style={{'--cp-delay': `${index * 70}ms`} as CSSProperties} key={title}><span className="cp-feature-icon"><Icon size={20}/></span><h3>{title}</h3><p>{text}</p></article>)}</div>
     </section>
-    <section className="cp-section" id="experience">
+    <section className="cp-section cp-reveal-section" id="experience" data-cp-reveal>
       <div className="cp-showcase">
         <article className="cp-show-card"><span className="cp-kicker">A BETTER DEFAULT</span><h3>Small details. Big difference.</h3><p>Animated states, clear confirmations and focused screens make the platform feel responsive instead of mechanical.</p>
         <div className="cp-toggle-demo"><span>Stay in control</span><span className="cp-toggle"><i/></span></div>
@@ -303,7 +334,7 @@ function LandingPage() {
         <article className="cp-show-card large" id="security"><span className="cp-kicker">ONE ACCOUNT / MANY TOOLS</span><h3>Your digital sidekick, without the cringe.</h3><p>Move from funding to payments, verification, chat and digital services without losing the thread. CipherPay keeps the important pieces close and the clutter out of sight.</p><div className="cp-mini-list"><div className="cp-mini-row"><WalletCards size={16}/><span>Wallet & transfers</span><span>01</span></div><div className="cp-mini-row"><Receipt size={16}/><span>Bills & airtime</span><span>02</span></div><div className="cp-mini-row"><MessageSquare size={16}/><span>Find & chat</span><span>03</span></div><div className="cp-mini-row"><Globe2 size={16}/><span>Digital services</span><span>04</span></div></div></article>
       </div>
     </section>
-    <section className="cp-section"><div className="cp-cta"><span className="cp-kicker">CIPHERPAY</span><h2>Make everyday feel simpler.</h2><p>One place for the things you do often, with an interface that gets out of your way.</p><div className="cp-hero-actions"><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={17}/></button><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button></div></div></section>
+    <section className="cp-section cp-reveal-section" data-cp-reveal><div className="cp-cta"><span className="cp-kicker">CIPHERPAY</span><h2>Make everyday feel simpler.</h2><p>One place for the things you do often, with an interface that gets out of your way.</p><div className="cp-hero-actions"><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={17}/></button><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button></div></div></section>
     <footer className="cp-footer"><span>© 2026 CipherPay</span><span>Payments · Digital services · Communication</span></footer>
     {authNavigating && <div className="cp-auth-transition" aria-hidden="true"><div className="cp-auth-transition-mark"><span className="brand-mark"><span /></span><b>Cipher<span className="brand-orange">Pay</span></b></div><div className="cp-auth-transition-line" /><span>{authNavigating === 'login' ? 'Opening your account' : 'Setting things up'}</span></div>}
     {supportOpen && <div className="cp-support-overlay" role="dialog" aria-modal="true" aria-labelledby="guest-support-title">
@@ -451,7 +482,7 @@ function Login() {
   const acceptSession = (token: string, adminToken?: string) => {
     localStorage.setItem('cipherpay_token', token);
     if (adminToken) sessionStorage.setItem('cipherpay_admin_token', adminToken);
-    window.location.assign('/');
+    setLocation('/');
   };
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -774,7 +805,7 @@ function Register() {
         if (result.requiresEmailVerification) {
           setLocation(`/verify-email?email=${encodeURIComponent(form.email.trim().toLowerCase())}`);
         } else {
-          window.location.assign('/');
+          setLocation('/');
         }
       },
        onError: (reason: any) => { setFaceMood('error'); setFaceReaction((value) => value + 1); setError(reason?.message ?? 'We could not create your account. Please review your details.'); },
