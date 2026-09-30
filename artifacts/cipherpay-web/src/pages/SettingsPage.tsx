@@ -8,8 +8,14 @@ export function SettingsPage() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [notice, setNotice] = useState<{ text: string; tone: 'success' | 'error' } | null>(null);
-  useEffect(() => { const stored = window.localStorage.getItem('cipherpay_theme'); setTheme(stored === 'dark' ? 'dark' : 'light'); }, []);
-  const chooseTheme = (next: 'light' | 'dark') => { setTheme(next); window.localStorage.setItem('cipherpay_theme', next); document.documentElement.classList.toggle('dark', next === 'dark'); };
+  useEffect(() => {
+    const apply = (value: string | null) => { const next = value === 'dark' ? 'dark' : 'light'; setTheme(next); document.documentElement.classList.toggle('dark', next === 'dark'); document.documentElement.style.colorScheme = next; };
+    apply(window.localStorage.getItem('cipherpay_theme'));
+    const onStorage = (event: StorageEvent) => { if (event.key === 'cipherpay_theme') apply(event.newValue); };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+  const chooseTheme = (next: 'light' | 'dark') => { setTheme(next); document.documentElement.classList.toggle('dark', next === 'dark'); document.documentElement.style.colorScheme = next; window.localStorage.setItem('cipherpay_theme', next); window.dispatchEvent(new StorageEvent('storage', { key: 'cipherpay_theme', newValue: next })); };
   const submit = (event: React.FormEvent) => {
     event.preventDefault(); setNotice(null);
     if (form.newPassword.length < 6) { setNotice({ text: 'Use at least 6 characters for your new password.', tone: 'error' }); return; }
