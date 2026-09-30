@@ -517,8 +517,23 @@ export default function AdminConsole() {
   return <main className="cp-page admin-console cp-page-reveal">
 
   {detailAction && <div className="admin-modal-backdrop" onMouseDown={(e)=>{if(e.target===e.currentTarget)setDetailAction(null)}}><form className="cp-card cp-card-pad admin-detail-modal" onSubmit={submitDetailAction}>
-    <div className="admin-panel-head"><div><span className="cp-kicker">{detailAction.kind==='email'?'USER COMMUNICATION':'WALLET ACTION'}</span><h2>{detailAction.kind==='email'?'Detailed email':'Wallet action'}</h2><p>{detailAction.user.email} · Current balance {naira(detailAction.user.balance)}</p></div><AdminButton onClick={()=>setDetailAction(null)}><X size={15}/></AdminButton></div>
-    {detailAction.kind==='email' ? <>
+    <div className="admin-panel-head"><div><span className="cp-kicker">{detailAction.kind==='transaction'?'TRANSACTION DETAILS':detailAction.kind==='email'?'USER COMMUNICATION':'WALLET ACTION'}</span><h2>{detailAction.kind==='transaction'?'Transaction activity':detailAction.kind==='email'?'Detailed email':'Wallet action'}</h2><p>{detailAction.kind==='transaction' ? `${detailAction.transaction.userName || 'Customer'} · ${detailAction.transaction.userEmail || 'No email'} · User #${detailAction.transaction.userId}` : `${detailAction.user.email} · Current balance ${naira(detailAction.user.balance)}`}</p></div><AdminButton onClick={()=>setDetailAction(null)}><X size={15}/></AdminButton></div>
+    {detailAction.kind==='transaction' ? <div className="admin-transaction-detail">
+      <div className="admin-transaction-detail-hero"><span className={statusClass(detailAction.transaction.isFlagged ? 'flagged' : detailAction.transaction.status)}>{detailAction.transaction.isFlagged ? 'Flagged' : detailAction.transaction.status}</span><strong>{naira(detailAction.transaction.amount)}</strong><small>{formatLagosWhen(detailAction.transaction.createdAt)}</small></div>
+      <div className="admin-detail-facts">
+        <span><small>Reference</small><b className="admin-mono">{detailAction.transaction.reference || '—'}</b></span>
+        <span><small>Transaction ID</small><b>#{detailAction.transaction.id}</b></span>
+        <span><small>Type</small><b>{String(detailAction.transaction.type || '—').replaceAll('_',' ')}</b></span>
+        <span><small>Fee</small><b>{naira(detailAction.transaction.fee)}</b></span>
+        <span><small>Balance before</small><b>{detailAction.transaction.balanceBefore == null ? '—' : naira(detailAction.transaction.balanceBefore)}</b></span>
+        <span><small>Balance after</small><b>{detailAction.transaction.balanceAfter == null ? '—' : naira(detailAction.transaction.balanceAfter)}</b></span>
+        <span><small>Customer</small><b>{detailAction.transaction.userName || '—'}</b></span>
+        <span><small>Customer email</small><b>{detailAction.transaction.userEmail || '—'}</b></span>
+        <span><small>Created · Lagos</small><b>{formatLagosWhen(detailAction.transaction.createdAt)}</b></span>
+        <span><small>Flag reason</small><b>{detailAction.transaction.flagReason || 'None'}</b></span>
+      </div>
+      <div className="admin-transaction-description"><small>Description</small><p>{detailAction.transaction.description || 'No description recorded.'}</p></div>
+    </div> : detailAction.kind==='email' ? <>
       <label className="cp-field"><span>Subject</span><input required value={detailAction.subject||''} onChange={e=>setDetailAction({...detailAction,subject:e.target.value})} placeholder="Clear, specific subject"/></label>
       <label className="cp-field"><span>Greeting</span><input value={detailAction.greeting||''} onChange={e=>setDetailAction({...detailAction,greeting:e.target.value})} placeholder="Hi John,"/></label>
       <label className="cp-field"><span>Message</span><textarea required rows={8} value={detailAction.message||''} onChange={e=>setDetailAction({...detailAction,message:e.target.value})} placeholder="Write the full details, what happened, what the user needs to know, and any next steps."/></label>
@@ -528,7 +543,7 @@ export default function AdminConsole() {
       {detailAction.mode==='adjust' && <label className="cp-field"><span>Adjustment</span><select value={detailAction.direction||'credit'} onChange={e=>setDetailAction({...detailAction,direction:e.target.value})}><option value="credit">Credit</option><option value="debit">Debit</option></select></label>}
       <label className="cp-field"><span>Reason / audit note</span><textarea required rows={5} value={detailAction.reason||''} onChange={e=>setDetailAction({...detailAction,reason:e.target.value})} placeholder="Explain exactly why this wallet movement is being made. This is kept in the audit trail."/></label>
     </>}
-    <div className="admin-actions" style={{justifyContent:'flex-end'}}><AdminButton onClick={()=>setDetailAction(null)}>Cancel</AdminButton><button className="admin-btn admin-btn-primary" type="submit">{detailAction.kind==='email'?'Send detailed email':'Confirm action'}</button></div>
+    <div className="admin-actions" style={{justifyContent:'flex-end'}}><AdminButton onClick={()=>setDetailAction(null)}>Cancel</AdminButton>{detailAction.kind !== 'transaction' && <button className="admin-btn admin-btn-primary" type="submit">{detailAction.kind==='email'?'Send detailed email':'Confirm action'}</button>}</div>
   </form></div>}
 
   {selectedKyc && <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) { setSelectedKyc(null); setKycIdentityCheck(null); } }} style={{ position: 'fixed', inset: 0, zIndex: 1200, display: 'grid', placeItems: 'center', padding: 18, background: 'rgba(3,7,18,.72)', backdropFilter: 'blur(8px)' }}>
