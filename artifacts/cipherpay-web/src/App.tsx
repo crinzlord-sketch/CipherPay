@@ -1,4 +1,5 @@
 import { type CSSProperties, type ReactNode, type RefObject, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -330,14 +331,14 @@ function LandingPage() {
     <section className="cp-section cp-reveal-section" data-cp-reveal><div className="cp-cta"><span className="cp-kicker">CIPHERPAY</span><h2>Make everyday feel simpler.</h2><p>One place for the things you do often, with an interface that gets out of your way.</p><div className="cp-hero-actions"><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={17}/></button><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button></div></div></section>
     <footer className="cp-footer"><span>© 2026 CipherPay</span><span>Payments · Digital services · Communication</span></footer>
     {authNavigating && <div className="cp-auth-transition" aria-hidden="true"><div className="cp-auth-transition-mark"><span className="brand-mark"><span /></span><b>Cipher<span className="brand-orange">Pay</span></b></div><div className="cp-auth-transition-line" /><span>{authNavigating === 'login' ? 'Opening your account' : 'Setting things up'}</span></div>}
-    {supportOpen && <div className="cp-support-overlay" role="dialog" aria-modal="true" aria-labelledby="guest-support-title">
+    {supportOpen && createPortal(<div className="cp-support-overlay" role="dialog" aria-modal="true" aria-labelledby="guest-support-title">
       <div className="cp-support-modal"><button className="cp-support-close" type="button" onClick={() => setSupportOpen(false)} aria-label="Close support form"><X size={19}/></button>
         {!supportSent ? <form onSubmit={submitSupport}><span className="cp-kicker">GUEST SUPPORT</span><h2 id="guest-support-title">How can we help?</h2><p>Send us the details and we’ll route your message to the CipherPay support team.</p>
           <div className="cp-support-fields"><label><span>Your email</span><input type="email" required value={supportForm.email} onChange={e=>setSupportForm({...supportForm,email:e.target.value})} placeholder="you@example.com"/></label><label><span>Subject</span><input required minLength={3} value={supportForm.subject} onChange={e=>setSupportForm({...supportForm,subject:e.target.value})} placeholder="What do you need help with?"/></label><label><span>Category</span><select value={supportForm.category} onChange={e=>setSupportForm({...supportForm,category:e.target.value})}><option value="general">General</option><option value="payment">Payment</option><option value="wallet">Wallet</option><option value="account">Account</option><option value="technical">Technical issue</option><option value="verification">KYC / verification</option></select></label><label><span>Message</span><textarea required minLength={5} rows={5} value={supportForm.message} onChange={e=>setSupportForm({...supportForm,message:e.target.value})} placeholder="Tell us what happened..."/></label></div>
           <button className="cp-support-submit" type="submit" disabled={supportSending}>{supportSending ? 'Sending…' : 'Send message'} <ArrowRight size={16}/></button>
         </form> : <div className="cp-support-success"><div className="cp-support-success-icon"><Check size={22}/></div><span className="cp-kicker">MESSAGE SENT</span><h2>We’ve got it.</h2><p>Your message has been sent to the CipherPay support team. Keep an eye on your email for a response.</p><button className="cp-support-submit" type="button" onClick={() => setSupportOpen(false)}>Done</button></div>}
       </div>
-    </div>}
+    </div>, document.body)}
 
   </div>;
 }
