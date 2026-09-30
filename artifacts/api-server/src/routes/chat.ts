@@ -84,11 +84,7 @@ router.get("/chat/:id", async (req, res): Promise<void> => {
   if (!chat) { res.status(404).json({ error: "Chat not found." }); return; }
   const otherId = chat.userOneId === me ? chat.userTwoId : chat.userOneId;
   const [other] = await db.select({ id: usersTable.id, firstName: usersTable.firstName, lastName: usersTable.lastName, email: usersTable.email, avatarUrl: usersTable.avatarUrl, gender: usersTable.gender, userCode: usersTable.userCode, chatPublicKey: usersTable.chatPublicKey }).from(usersTable).where(eq(usersTable.id, otherId));
-  const rawMessages = await db.select().from(directMessagesTable).where(eq(directMessagesTable.chatId, chat.id)).orderBy(asc(directMessagesTable.id));
-  const senderIds = [...new Set(rawMessages.map((m) => m.senderId))];
-  const senderKeys = senderIds.length ? await db.select({ id: usersTable.id, chatPublicKey: usersTable.chatPublicKey }).from(usersTable).where(inArray(usersTable.id, senderIds)) : [];
-  const keyById = new Map(senderKeys.map((u) => [u.id, u.chatPublicKey]));
-  const messages = rawMessages.map((m) => ({ ...m, senderPublicKey: keyById.get(m.senderId) ?? null }));
+  const messages = await db.select().from(directMessagesTable).where(eq(directMessagesTable.chatId, chat.id)).orderBy(asc(directMessagesTable.id));
   res.json({ chat, other, messages, blocked: await blocked(me, otherId), background: chat.userOneId === me ? chat.backgroundOne : chat.backgroundTwo });
 });
 
@@ -98,13 +94,21 @@ router.post("/chat/:id/message", async (req, res): Promise<void> => {
   if (!chat) { res.status(404).json({ error: "Chat not found." }); return; }
   const other = chat.userOneId === me ? chat.userTwoId : chat.userOneId;
   if (await blocked(me, other)) { res.status(403).json({ error: "You cannot send messages in this chat." }); return; }
-  // Chat content is encrypted in the browser before it reaches this API.
-  // The server intentionally treats the body as opaque ciphertext and never
-  // receives plaintext text/images. Legacy plaintext rows remain readable by
-  // clients, but all new messages must use the E2EE envelope.
+  // Chat messages are intentionally stored as a simple JSON payload so the
+  // sender can immediately render the exact same text/image/GIF it sent.
+  // No client-side encryption envelope is used by the chat UI.
   const body = typeof req.body?.body === "string" ? req.body.body.trim() : "";
-  if (!body || !body.startsWith("E2EE1.")) { res.status(400).json({ error: "End-to-end encryption is required for chat messages." }); return; }
-  if (body.length > 16 * 1024 * 1024) { res.status(400).json({ error: "Encrypted message is too large." }); return; }
+  if (!body) { res.status(400).json({ error: "Message is empty." }); return; }
+  if (body.length > 16 * 1024 * 1024) { res.status(400).json({ error: "Message is too large." }); return; }
+  let payload: any;
+  try { payload = JSON.parse(body); } catch { res.status(400).json({ error: "Invalid chat message." }); return; }
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) { res.status(400).json({ error: "Invalid chat message." }); return; }
+  const text = typeof payload.text === "string" ? payload.text : "";
+  const image = typeof payload.image === "string" ? payload.image : null;
+  const gif = typeof payload.gif === "string" ? payload.gif : null;
+  if (!text.trim() && !image && !gif) { res.status(400).json({ error: "Message is empty." }); return; }
+  if (image && !/^data:image\/(jpeg|jpg|png|webp|gif);base64,/i.test(image)) { res.status(400).json({ error: "Invalid image." }); return; }
+  if (image && image.length > 12 * 1024 * 1024) { res.status(400).json({ error: "Image is too large." }); return; }
   const [message] = await db.insert(directMessagesTable).values({ chatId: chat.id, senderId: me, body, imageUrl: null, gifUrl: null }).returning();
   await db.update(directChatsTable).set({ updatedAt: new Date(), lastMessageAt: new Date(), ...(chat.userOneId === me ? { deletedTwo: false } : { deletedOne: false }) }).where(eq(directChatsTable.id, chat.id));
   res.json({ message });
