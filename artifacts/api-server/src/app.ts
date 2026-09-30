@@ -252,7 +252,7 @@ app.get("/api/uploads/kyc/:filename", (req: Request, res: Response): void => {
 // require auth will then see no x-user-id and 401 on their own.
 const serviceRouteFeature = (path: string): ServiceFeatureKey | null => {
   if (path === "/wallet/transfer" || path.startsWith("/wallet/transfer/")) return "transfers";
-  if (path === "/wallet/withdraw" || path.startsWith("/wallet/withdraw/")) return "withdrawals";
+  if (path === "/wallet/withdraw" || path.startsWith("/wallet/withdraw/")) return "transfers";
   if (path.startsWith("/wallet/fund") || path.startsWith("/wallet/deposit")) return "wallet_funding";
   if (path.startsWith("/airtime")) return "airtime";
   if (path.startsWith("/data")) return "data";
