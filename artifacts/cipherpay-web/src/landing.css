@@ -130,3 +130,17 @@
 .cp-support-modal h2{font-size:38px;letter-spacing:-.05em;margin:14px 0 8px;color:#17171c}.cp-support-modal>p{color:#70707c;font-size:14px;line-height:1.55;margin:0 0 22px}.cp-support-close{position:absolute;right:18px;top:18px;width:38px;height:38px;border:1px solid rgba(20,20,30,.09);border-radius:12px;background:#f5f5f8;color:#33333b;display:grid;place-items:center;cursor:pointer}
 .cp-support-form{display:grid;gap:14px}.cp-support-form label{display:grid;gap:7px;color:#393941;font-size:12px;font-weight:750}.cp-support-form input,.cp-support-form select,.cp-support-form textarea{width:100%;border:1px solid rgba(20,20,30,.12);border-radius:13px;background:#fafafd;color:#202027;padding:12px 13px;font:inherit;outline:none}.cp-support-form input:focus,.cp-support-form select:focus,.cp-support-form textarea:focus{border-color:rgba(124,92,255,.5);box-shadow:0 0 0 4px rgba(124,92,255,.08)}.cp-support-form textarea{resize:vertical}.cp-support-submit{width:100%;border:0;cursor:pointer}.cp-support-submit:disabled{opacity:.6;cursor:wait}.cp-support-error{padding:11px 13px;border-radius:12px;background:#fff0f0;color:#b33b3b;font-size:12px}.cp-support-success{display:grid;gap:10px;padding:20px;border-radius:18px;background:#f5f3ff;color:#30303a}.cp-support-success svg{color:#7256df}.cp-support-success b{font-size:18px}.cp-support-success span{color:#70707c;font-size:13px}.cp-support-success button{margin-top:8px;width:max-content}
 @media(max-width:600px){.cp-support-overlay{padding:12px}.cp-support-modal{padding:26px 20px;border-radius:22px}.cp-support-modal h2{font-size:31px}}
+
+
+/* Smooth auth handoff from the landing page */
+.cp-auth-transition{
+  position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;background:rgba(247,247,245,.96);backdrop-filter:blur(18px);animation:cpAuthIn .36s ease both;
+  color:#17171b;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+}
+.cp-auth-transition-mark{display:flex;align-items:center;gap:10px;font-size:25px;letter-spacing:-.04em;text-transform:none}
+.cp-auth-transition-mark .brand-mark{width:32px;height:32px}
+.cp-auth-transition-line{width:100px;height:2px;border-radius:999px;background:linear-gradient(90deg,transparent,#7c3aed,#f97316,transparent);animation:cpAuthLine .8s ease-in-out infinite}
+@keyframes cpAuthIn{from{opacity:0;transform:scale(1.025)}to{opacity:1;transform:scale(1)}}
+@keyframes cpAuthLine{0%,100%{transform:scaleX(.55);opacity:.45}50%{transform:scaleX(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.cp-auth-transition,.cp-auth-transition-line{animation:none}}
