@@ -429,7 +429,7 @@ router.get("/admin/users/:id/details", requireAdmin, async (req: AdminRequest, r
   const geoCache = new Map<string, any>();
   async function geolocate(ip: string) {
     if (geoCache.has(ip)) return geoCache.get(ip);
-    if (!ip || /^(127\\.|10\\.|192\\.168\\.|172\\.(1[6-9]|2\\d|3[0-1])\\.)/.test(ip)) return null;
+    if (!ip || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(ip)) return null;
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 3500);
