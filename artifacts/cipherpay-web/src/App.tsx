@@ -189,7 +189,7 @@ function Shell({ children }: { children: ReactNode }) {
   ));
   return <div className="app-shell">
     <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
-      <div className="sidebar-top"><Logo compact /><button className="icon-btn mobile-close" onClick={() => setMobileOpen(false)} data-testid="button-close-menu"><X size={19} /></button></div>
+      <div className="sidebar-top"><Logo compact /><button className="icon-btn mobile-close" onClick={() => setMobileOpen(false)} data-testid="button-close-menu" aria-label="Close navigation"><X size={19} /></button></div>
       <div className="nav-group"><span className="nav-caption">ALL</span>{linkList(nav)}</div>
       <div className="nav-group"><span className="nav-caption">Account</span>{linkList(utilityNav.filter((item) => item.href !== '/admin' || user?.isAdmin))}</div>
       <div className="sidebar-bottom">
@@ -204,9 +204,9 @@ function Shell({ children }: { children: ReactNode }) {
         </div>}
       </div>
     </aside>
-    {mobileOpen && <button className="scrim" onClick={() => setMobileOpen(false)} aria-label="Close navigation" data-testid="button-scrim" />}
+    <button className={`scrim ${mobileOpen ? "open" : ""}`} onClick={() => setMobileOpen(false)} aria-label="Close navigation" data-testid="button-scrim" />
     <main className="main-area">
-       <header className="topbar"><button className="icon-btn menu-toggle" onClick={() => setMobileOpen(true)} data-testid="button-open-menu"><Menu size={21} /></button><div className="mobile-logo"><Logo /></div><div className="topbar-spacer" /><button type="button" className="icon-btn notification-button" onClick={() => setLocation(location === '/notifications' ? '/' : '/notifications')} aria-label={location === '/notifications' ? 'Close notifications' : unreadNotifications > 0 ? `Open notifications, ${unreadNotifications} unread` : 'Open notifications'} aria-pressed={location === '/notifications'} data-testid="button-notifications"><Bell size={19} />{unreadNotifications > 0 && <i />}</button>{user && <span className="topbar-name">{user.firstName}</span>}<button className="logout-link" onClick={() => void logout()} data-testid="button-logout"><LogOut size={16} /> <span>Log out</span></button></header>
+       <header className="topbar"><button className={`icon-btn menu-toggle ${mobileOpen ? "is-open" : ""}`} onClick={() => setMobileOpen((open) => !open)} aria-expanded={mobileOpen} aria-label={mobileOpen ? "Close navigation" : "Open navigation"} data-testid="button-open-menu"><span className="cp-menu-icon"><Menu size={21} /><X size={21} /></span></button><div className="mobile-logo"><Logo /></div><div className="topbar-spacer" /><button type="button" className="icon-btn notification-button" onClick={() => setLocation(location === '/notifications' ? '/' : '/notifications')} aria-label={location === '/notifications' ? 'Close notifications' : unreadNotifications > 0 ? `Open notifications, ${unreadNotifications} unread` : 'Open notifications'} aria-pressed={location === '/notifications'} data-testid="button-notifications"><Bell size={19} />{unreadNotifications > 0 && <i />}</button>{user && <span className="topbar-name">{user.firstName}</span>}<button className="logout-link" onClick={() => void logout()} data-testid="button-logout"><LogOut size={16} /> <span>Log out</span></button></header>
       <div className="content">{children}</div>
     </main>
   </div>;
@@ -302,7 +302,7 @@ function LandingPage() {
           <Logo onHomeClick={() => { setMobileNavOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
           <div className="cp-landing-links"><button type="button" onClick={() => scrollToSection('experience')}>Experience</button><button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={openSupport}>Support</button></div>
           <div className="cp-landing-nav-actions"><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={15}/></button><button type="button" className="cp-mobile-menu-toggle" aria-label="Open landing menu" aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen(v => !v)}><Menu size={19}/></button></div>
-          <div className={`cp-mobile-menu ${mobileNavOpen ? 'open' : ''}`}>
+          <div className={`cp-mobile-menu ${mobileNavOpen ? "open" : ""}`} aria-hidden={!mobileNavOpen}>
             <button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('experience')}>Experience</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={openSupport}>Support</button><button type="button" onClick={() => { setMobileNavOpen(false); goToAuth('login'); }}>Log in</button><button type="button" onClick={() => { setMobileNavOpen(false); goToAuth('register'); }}>Get started</button>
           </div>
         </div>
