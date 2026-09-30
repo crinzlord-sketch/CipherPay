@@ -1029,10 +1029,37 @@ function TransactionReceipt({ transaction, onClose }: { transaction: any; onClos
   try { meta = typeof transaction.metadata === 'string' ? JSON.parse(transaction.metadata) : (transaction.metadata ?? {}); } catch { meta = {}; }
   const isExternal = String(transaction.type ?? '') === 'withdraw';
   const isInternal = String(transaction.type ?? '') === 'transfer_out' || String(transaction.type ?? '') === 'transfer_in';
+  const [resolvedBankName, setResolvedBankName] = useState('');
+
+  useEffect(() => {
+    if (!isExternal) return;
+    const storedName = String(meta.bankName ?? '').trim();
+    const bankCode = String(meta.bankCode ?? '').trim();
+    if (storedName && !/^\d+$/.test(storedName)) {
+      setResolvedBankName(storedName);
+      return;
+    }
+    let active = true;
+    apiRequest<{ data: Array<{ name: string; code: string }> }>('/api/bank/list')
+      .then((payload) => {
+        if (!active) return;
+        const match = (payload.data ?? []).find((bank) => String(bank.code) === bankCode || String(bank.code) === storedName);
+        setResolvedBankName(match?.name ?? '');
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [isExternal, meta.bankName, meta.bankCode]);
+
+  const bankDisplayName = resolvedBankName || (
+    meta.bankName && !/^\d+$/.test(String(meta.bankName).trim())
+      ? String(meta.bankName)
+      : 'Bank transfer'
+  );
+
   const details = isExternal
     ? [
         ['Recipient', meta.accountName || 'Bank account'],
-        ['Bank', meta.bankName || meta.bankCode || 'Bank transfer'],
+        ['Bank', bankDisplayName],
         ['Account number', meta.accountNumber || 'Not available'],
         ['Reference', transaction.reference || 'Not available'],
         ['Date', transaction.createdAt ? new Date(transaction.createdAt).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not available' ],
@@ -1045,6 +1072,7 @@ function TransactionReceipt({ transaction, onClose }: { transaction: any; onClos
         ['Date', transaction.createdAt ? new Date(transaction.createdAt).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not available'],
         ['Fee', transaction.fee == null ? '—' : money.format(transaction.fee)],
       ];
+
   return <div className="animated-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="animated-dialog transaction-receipt" role="dialog" aria-modal="true" aria-labelledby="transaction-receipt-title" onMouseDown={(event) => event.stopPropagation()}>
       <button type="button" className="animated-dialog-close" onClick={onClose} aria-label="Close transaction receipt"><X size={17} /></button>
@@ -1057,6 +1085,7 @@ function TransactionReceipt({ transaction, onClose }: { transaction: any; onClos
     </section>
   </div>;
 }
+
 function EmptyState({ icon, title, text, action }: { icon: ReactNode; title: string; text: string; action?: ReactNode }) { return <div className="empty-state"><span className="empty-icon">{icon}</span><b>{title}</b><p>{text}</p>{action}</div>; }
 function LoadingPage({ title = 'Loading' }: { title?: string }) { return <div className="loading-state"><div className="loading-mark" /><h2>{title}</h2><div className="skeleton-block" /><div className="skeleton-block short" /></div>; }
 function ErrorPage({ retry }: { retry: () => void }) { return <div className="center-state"><div className="error-symbol">!</div><h2>Something went off course</h2><p>We could not load this view. Your money is safe.</p><Button onClick={retry} variant="secondary" data-testid="button-retry"><RefreshCw size={16} /> Try again</Button></div>; }
