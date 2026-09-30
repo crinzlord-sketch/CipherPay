@@ -10,6 +10,7 @@ import { isSessionActive } from "./lib/sessions";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { LOGOS_DIR } from "./lib/logos";
+import { getServiceFeatureStatus, type ServiceFeatureKey } from "./lib/service-features";
 
 
 function cipherPayPngChunk(type: string, data: Buffer): Buffer {
@@ -249,6 +250,27 @@ app.get("/api/uploads/kyc/:filename", (req: Request, res: Response): void => {
 // on mismatch. Requests without a token are left untouched so public endpoints
 // (login, register, forgot/reset password, OTP) still work; those routes that
 // require auth will then see no x-user-id and 401 on their own.
+const serviceRouteFeature = (path: string): ServiceFeatureKey | null => {
+  if (path === "/wallet/transfer" || path.startsWith("/wallet/transfer/")) return "transfers";
+  if (path === "/wallet/withdraw" || path.startsWith("/wallet/withdraw/")) return "withdrawals";
+  if (path.startsWith("/wallet/fund") || path.startsWith("/wallet/deposit")) return "wallet_funding";
+  if (path.startsWith("/airtime")) return "airtime";
+  if (path.startsWith("/data")) return "data";
+  if (path.startsWith("/bills")) return "bills";
+  if (path.startsWith("/sms")) return "sms";
+  if (path.startsWith("/temporary-email")) return "temporary_email";
+  if (path.startsWith("/email")) return "email_pro";
+  if (path.startsWith("/services")) return "services";
+  if (path.startsWith("/crypto")) return "crypto";
+  return null;
+};
+
+app.get("/api/service-features", async (_req: Request, res: Response): Promise<void> => {
+  res.setHeader("Cache-Control", "no-store");
+  const status = await getServiceFeatureStatus();
+  res.json({ data: status });
+});
+
 app.use("/api", async (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization ?? "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
@@ -313,6 +335,29 @@ app.use("/api", async (req: Request, res: Response, next: NextFunction) => {
   // Bind the verified identity so downstream routes can trust x-user-id.
   req.headers["x-user-id"] = String(tokenUserId);
   next();
+});
+
+app.use("/api", async (req: Request, res: Response, next: NextFunction) => {
+  const feature = serviceRouteFeature(req.path);
+  if (!feature) {
+    next();
+    return;
+  }
+  try {
+    const status = await getServiceFeatureStatus();
+    if (status[feature]) {
+      next();
+      return;
+    }
+    res.status(503).json({
+      error: "This service is temporarily unavailable while we carry out scheduled maintenance. Your account and funds remain safe. Please try again shortly.",
+      code: "SERVICE_MAINTENANCE",
+      feature,
+    });
+  } catch (error: any) {
+    req.log?.warn?.({ err: error?.message, feature }, "Service availability check failed");
+    next();
+  }
 });
 
 app.use("/api", router);
