@@ -15,6 +15,7 @@ import AdminConsole from './pages/AdminConsole';
 import ServicesPage from './pages/ServicesPage';
 import SocialBoostPage from './pages/SocialBoostPage';
 import EmailProPage from './pages/EmailProPage';
+import ChatPage from './pages/ChatPage';
 import BillsPage from './pages/BillsPage';
 import { apiRequest, apiUrl } from './pages/page-api';
 import { CipherAvatar } from './components/CipherAvatar';
@@ -53,6 +54,7 @@ const nav = [
   { href: '/', label: 'Overview', icon: Home },
   { href: '/fund', label: 'Fund wallet', icon: Plus },
   { href: '/send', label: 'Send money', icon: SendIcon },
+  { href: '/chat', label: 'Find & chat', icon: MessageSquare },
   { href: '/airtime', label: 'Airtime & data', icon: Smartphone },
   { href: '/bills', label: 'Pay bills', icon: Receipt },
   { href: '/sms', label: 'SMS verification', icon: MessageSquare },
@@ -1460,6 +1462,8 @@ function App() {
             <Route path="/social-boost"><ProtectedArea><SocialBoostPage /></ProtectedArea></Route>
             <Route path="/email-pro"><ProtectedArea><EmailProPage /></ProtectedArea></Route>
             <Route path="/transactions"><ProtectedArea><TransactionsPage /></ProtectedArea></Route>
+            <Route path="/chat/:id"><ProtectedArea><ChatPage /></ProtectedArea></Route>
+            <Route path="/chat"><ProtectedArea><ChatPage /></ProtectedArea></Route>
             <Route path="/notifications"><ProtectedArea><NotificationsPage /></ProtectedArea></Route>
             <Route path="/profile"><ProtectedArea><ProfilePage /></ProtectedArea></Route>
             <Route path="/settings"><ProtectedArea><SettingsPage /></ProtectedArea></Route>
