@@ -15,6 +15,7 @@ export const usersTable = pgTable("users", {
   isVerified: boolean("is_verified").notNull().default(false),
   kycLevel: integer("kyc_level").notNull().default(0),
   referralCode: text("referral_code").notNull(),
+  userCode: text("user_code").unique(),
   referredBy: text("referred_by"),
   isAdmin: boolean("is_admin").notNull().default(false),
   isSuspended: boolean("is_suspended").notNull().default(false),
