@@ -2429,7 +2429,7 @@ a {
 .receipt-details {
   display: grid;
   gap: 0;
-  margin-top: 21px;
+  margin-top: 14px;
   border-top: 1px solid hsl(var(--border));
 }
 
@@ -2437,9 +2437,9 @@ a {
   display: flex;
   justify-content: space-between;
   gap: 15px;
-  padding: 10px 0;
+  padding: 7px 0;
   border-bottom: 1px solid hsl(var(--border));
-  font-size: 0.78rem;
+  font-size: 0.74rem;
 }
 
 .receipt-details span {
