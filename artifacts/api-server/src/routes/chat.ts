@@ -53,7 +53,7 @@ router.get("/chat/list", async (req, res): Promise<void> => {
   const chats = await db.select().from(directChatsTable).where(or(eq(directChatsTable.userOneId, me), eq(directChatsTable.userTwoId, me))).orderBy(desc(directChatsTable.lastMessageAt));
   const visible = chats.filter(c => c.userOneId === me ? !c.deletedOne : !c.deletedTwo);
   const otherIds = visible.map(c => c.userOneId === me ? c.userTwoId : c.userOneId);
-  const people = otherIds.length ? await db.select({ id: usersTable.id, firstName: usersTable.firstName, lastName: usersTable.lastName, email: usersTable.email, avatarUrl: usersTable.avatarUrl, gender: usersTable.gender, userCode: usersTable.userCode }).from(usersTable).where(sql`${usersTable.id} in ${otherIds}`) : [];
+  const people = otherIds.length ? await db.select({ id: usersTable.id, firstName: usersTable.firstName, lastName: usersTable.lastName, email: usersTable.email, avatarUrl: usersTable.avatarUrl, gender: usersTable.gender, userCode: usersTable.userCode }).from(usersTable).where(inArray(usersTable.id, otherIds)) : [];
   const byId = new Map(people.map(p => [p.id, p]));
   const rows = await Promise.all(visible.map(async c => {
     const otherId = c.userOneId === me ? c.userTwoId : c.userOneId;
@@ -84,7 +84,11 @@ router.get("/chat/:id", async (req, res): Promise<void> => {
   if (!chat) { res.status(404).json({ error: "Chat not found." }); return; }
   const otherId = chat.userOneId === me ? chat.userTwoId : chat.userOneId;
   const [other] = await db.select({ id: usersTable.id, firstName: usersTable.firstName, lastName: usersTable.lastName, email: usersTable.email, avatarUrl: usersTable.avatarUrl, gender: usersTable.gender, userCode: usersTable.userCode, chatPublicKey: usersTable.chatPublicKey }).from(usersTable).where(eq(usersTable.id, otherId));
-  const messages = await db.select().from(directMessagesTable).where(eq(directMessagesTable.chatId, chat.id)).orderBy(asc(directMessagesTable.id));
+  const rawMessages = await db.select().from(directMessagesTable).where(eq(directMessagesTable.chatId, chat.id)).orderBy(asc(directMessagesTable.id));
+  const senderIds = [...new Set(rawMessages.map((m) => m.senderId))];
+  const senderKeys = senderIds.length ? await db.select({ id: usersTable.id, chatPublicKey: usersTable.chatPublicKey }).from(usersTable).where(inArray(usersTable.id, senderIds)) : [];
+  const keyById = new Map(senderKeys.map((u) => [u.id, u.chatPublicKey]));
+  const messages = rawMessages.map((m) => ({ ...m, senderPublicKey: keyById.get(m.senderId) ?? null }));
   res.json({ chat, other, messages, blocked: await blocked(me, otherId), background: chat.userOneId === me ? chat.backgroundOne : chat.backgroundTwo });
 });
 
