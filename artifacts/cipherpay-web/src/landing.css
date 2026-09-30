@@ -2563,3 +2563,84 @@ html.dark .cp-support-close{
     transition:none!important;
   }
 }
+
+
+/* Logo consistency: the same CipherPay mark geometry everywhere. */
+.cp-landing-nav .brand-mark{
+  width:30px!important;
+  height:30px!important;
+  border-radius:10px!important;
+}
+.cp-landing-nav .brand-mark::before,
+.cp-landing-nav .brand-mark::after,
+.cp-landing-nav .brand-mark > span{
+  height:3px!important;
+  border-radius:4px!important;
+  transform:rotate(-45deg)!important;
+}
+.cp-landing-nav .brand-mark::before{
+  width:13px!important;
+  margin-top:-7px!important;
+  margin-left:-4px!important;
+}
+.cp-landing-nav .brand-mark > span{
+  width:17px!important;
+  margin-left:1px!important;
+}
+.cp-landing-nav .brand-mark::after{
+  width:13px!important;
+  margin-top:7px!important;
+  margin-left:4px!important;
+}
+
+.auth-visual > .brand .brand-mark{
+  width:48px!important;
+  height:48px!important;
+  border-radius:15px!important;
+}
+.auth-visual > .brand .brand-mark::before,
+.auth-visual > .brand .brand-mark::after,
+.auth-visual > .brand .brand-mark > span{
+  height:4px!important;
+  border-radius:5px!important;
+  transform:rotate(-45deg)!important;
+}
+.auth-visual > .brand .brand-mark::before{
+  width:22px!important;
+  margin-top:-11px!important;
+  margin-left:-7px!important;
+}
+.auth-visual > .brand .brand-mark > span{
+  width:28px!important;
+  margin-left:1px!important;
+}
+.auth-visual > .brand .brand-mark::after{
+  width:22px!important;
+  margin-top:11px!important;
+  margin-left:7px!important;
+}
+
+@media(max-width:700px){
+  .auth-visual > .brand .brand-mark{
+    width:40px!important;
+    height:40px!important;
+    border-radius:13px!important;
+  }
+  .auth-visual > .brand .brand-mark::before,
+  .auth-visual > .brand .brand-mark::after{
+    width:18px!important;
+    height:3px!important;
+  }
+  .auth-visual > .brand .brand-mark > span{
+    width:23px!important;
+    height:3px!important;
+  }
+  .auth-visual > .brand .brand-mark::before{
+    margin-top:-9px!important;
+    margin-left:-6px!important;
+  }
+  .auth-visual > .brand .brand-mark::after{
+    margin-top:9px!important;
+    margin-left:6px!important;
+  }
+}
