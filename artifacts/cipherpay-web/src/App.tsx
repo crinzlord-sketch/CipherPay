@@ -1425,9 +1425,7 @@ function InfoPage({ title, detail }: { title: string; detail: string }) {
 }
 
 function KycDetailRoute() {
-  const [, params] = useRoute<{ verificationType: string }>('/kyc/:verificationType');
-  const detailType = params?.verificationType === 'advanced' ? 'advanced' : 'basic';
-  return <ProtectedArea><KycPage detailType={detailType} /></ProtectedArea>;
+  return <ProtectedArea><KycPage /></ProtectedArea>;
 }
 
 function App() {
