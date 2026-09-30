@@ -86,7 +86,7 @@ export default function ChatPage() {
   };
   const openFound=async()=>{if(!found)return;try{const r=await apiRequest<any>('/api/chat/open',{method:'POST',body:{userId:found.id}});setCode('');setFound(null);setLocation(`/chat/${r.chatId}`);await loadChats();}catch(e){setError(e instanceof Error?e.message:'Could not open chat.');}};
   const sendMessage=async(extra:any={})=>{
-    if(!params?.id || sending)return;
+    if(!params?.id || sending || blockedState)return;
     const payload={text:text.trim(), image:extra.image ?? null, gif:extra.gif ?? null, replyToId:replyTo?.id ?? null, replyPreview:replyTo ? (replyTo.decrypted?.text || (replyTo.decrypted?.image ? 'Image' : replyTo.decrypted?.gif ? 'GIF' : 'Message')) : null};
     if(!payload.text&&!payload.image&&!payload.gif)return;
     if(!other?.chatPublicKey){setError('This chat is not ready for end-to-end encryption yet.');return;}
