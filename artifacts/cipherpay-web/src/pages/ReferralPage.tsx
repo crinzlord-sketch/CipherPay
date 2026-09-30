@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, Check, Copy, Gift, Link2, Share2, UsersRound, WalletCards } from "lucide-react";
 import { apiRequest } from "./page-api";
+import "./cipherpay-pages.css";
 
 type ReferralData = {
   referralCode: string;
