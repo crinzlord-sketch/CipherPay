@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, asc, desc, eq, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, or, inArray } from "drizzle-orm";
 import { db, usersTable, directChatsTable, directMessagesTable, blockedUsersTable } from "@workspace/db";
 import path from "path";
 import fs from "fs/promises";
