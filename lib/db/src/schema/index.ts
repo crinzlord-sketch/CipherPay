@@ -20,3 +20,5 @@ export * from "./email-pro";
 export * from "./email-pro-subscriptions";
 
 export * from "./user-email-events";
+
+export * from "./direct-chats";
