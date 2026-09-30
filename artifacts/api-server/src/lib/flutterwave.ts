@@ -301,12 +301,18 @@ function slugify(name: string): string {
 }
 
 export async function listBanks(): Promise<FlwBank[]> {
-  const { status, body } = await flwGet<any>("/banks/NG");
+  const { status, body } = await flwGet<any>("/banks/NG?include_provider_type=1");
   if (status < 200 || status >= 300 || body?.status === "error") {
     throw new Error(body?.message || `Flutterwave bank list failed (HTTP ${status})`);
   }
   const data: Array<{ name: string; code: string }> = body?.data ?? [];
-  return data.map((b) => ({ name: b.name, code: b.code, slug: slugify(b.name), logo: null }));
+  const banks = data.map((b) => ({ name: b.name, code: b.code, slug: slugify(b.name), logo: null }));
+  // Flutterwave's current NGN transfer documentation identifies OPay as code 100004.
+  // Keep it selectable even if an account's bank-list response omits the provider.
+  if (!banks.some((bank) => /opay/i.test(bank.name)) && !banks.some((bank) => bank.code === "100004")) {
+    banks.push({ name: "OPay", code: "100004", slug: "opay", logo: null });
+  }
+  return banks;
 }
 
 // ── Account resolution (name enquiry) ────────────────────────────────────────
