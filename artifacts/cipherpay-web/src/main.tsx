@@ -6,6 +6,13 @@ import { setBaseUrl } from '@workspace/api-client-react';
 
 import './index.css';
 
+// Apply the saved theme before React paints so every page switches together.
+if (typeof document !== 'undefined') {
+  const savedTheme = window.localStorage.getItem('cipherpay_theme');
+  document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+  document.documentElement.style.colorScheme = savedTheme === 'dark' ? 'dark' : 'light';
+}
+
 const apiBaseUrl = import.meta.env.VITE_API_URL ?? 'https://cipherpay-api.onrender.com';
 setBaseUrl(apiBaseUrl);
 
