@@ -1160,3 +1160,148 @@ table tbody tr:hover{
   .auth-visual::before,.auth-visual::after{animation:none!important}
   .btn,.icon-btn,.logout-link,.nav-item,.panel{transition:none!important}
 }
+
+
+/* Landing repair: restore the three premium 3D moments, keep auth clean. */
+.cp-landing-nav{
+  position:fixed!important;
+  top:18px!important;
+  left:0!important;
+  right:0!important;
+  z-index:5000!important;
+  transform:none!important;
+  animation:none!important;
+  will-change:auto!important;
+}
+.cp-landing-nav-inner{
+  position:relative!important;
+  transform:none!important;
+  animation:none!important;
+  transform-style:flat!important;
+}
+@media(max-width:600px){
+  .cp-landing-nav{top:10px!important}
+  .cp-landing-nav-inner{transform:none!important}
+}
+/* The old mobile rule used display:none!important, which beat .open. */
+@media(max-width:900px){
+  .cp-mobile-menu-toggle{display:grid!important}
+  .cp-mobile-menu{display:grid!important;position:absolute!important;top:calc(100% + 9px)!important;left:0!important;right:0!important}
+  .cp-mobile-menu:not(.open){opacity:0!important;transform:translateY(-8px) scale(.98)!important;pointer-events:none!important}
+  .cp-mobile-menu.open{opacity:1!important;transform:none!important;pointer-events:auto!important}
+}
+
+/* 3D #1 — hero wallet sculpture */
+.cp-3d-scene{
+  position:absolute!important;
+  z-index:6!important;
+  width:460px!important;
+  height:420px!important;
+  left:50%!important;
+  top:50%!important;
+  transform:translate(-50%,-50%) rotateX(58deg) rotateZ(-24deg)!important;
+  transform-style:preserve-3d!important;
+  animation:cpSceneFloat 7s ease-in-out infinite!important;
+  pointer-events:none!important;
+  opacity:.92!important;
+}
+.cp-3d-card{
+  position:absolute!important;
+  width:255px!important;
+  height:165px!important;
+  border-radius:26px!important;
+  border:1px solid rgba(255,255,255,.78)!important;
+  transform-style:preserve-3d!important;
+  box-shadow:0 35px 70px rgba(35,30,70,.16),inset 0 1px rgba(255,255,255,.95)!important;
+  backdrop-filter:blur(18px)!important;
+}
+.cp-3d-card-back{left:85px!important;top:72px!important;transform:translateZ(-36px) rotateZ(-10deg)!important;background:linear-gradient(135deg,rgba(115,92,255,.32),rgba(255,255,255,.68))!important;padding:22px!important;color:#6d5ce4!important;font-size:29px!important;font-weight:900!important}
+.cp-3d-card-back small{display:block!important;margin-top:70px!important;font-size:9px!important;letter-spacing:.18em!important;color:#777489!important}
+.cp-3d-card-front{left:110px!important;top:50px!important;transform:translateZ(25px) rotateZ(7deg)!important;background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(244,241,255,.76))!important;padding:23px!important;color:#17171c!important}
+.cp-3d-card-front small{display:block!important;color:#8a8795!important;font-size:9px!important;letter-spacing:.16em!important}
+.cp-3d-card-front b{display:block!important;margin-top:7px!important;font-size:31px!important;letter-spacing:-.06em!important}
+.cp-3d-card-front i{position:absolute!important;right:22px!important;bottom:20px!important;width:32px!important;height:22px!important;border-radius:6px!important;background:linear-gradient(135deg,#ddd,#8f8b98)!important}
+.cp-3d-coin{position:absolute!important;right:42px!important;top:28px!important;width:74px!important;height:74px!important;border-radius:50%!important;display:grid!important;place-items:center!important;background:linear-gradient(145deg,#ffb58f,#735cff 70%)!important;color:#fff!important;font-size:25px!important;font-weight:900!important;box-shadow:0 25px 45px rgba(115,92,255,.26),inset 0 2px rgba(255,255,255,.65)!important;transform:translateZ(70px)!important;animation:cpCoinFloat 4s ease-in-out infinite!important}
+.cp-3d-ring{position:absolute!important;border:1px solid rgba(115,92,255,.18)!important;border-radius:50%!important;transform-style:preserve-3d!important}
+.cp-3d-ring-a{width:370px!important;height:190px!important;left:50px!important;top:115px!important;transform:rotateX(70deg) rotateY(15deg) translateZ(-25px)!important}
+.cp-3d-ring-b{width:430px!important;height:230px!important;left:15px!important;top:95px!important;border-color:rgba(255,134,83,.15)!important;transform:rotateX(70deg) rotateY(-10deg) translateZ(-50px)!important;animation:cpRingDrift 9s ease-in-out infinite!important}
+
+/* 3D #2 — feature cube */
+.cp-3d-feature-stage{
+  position:absolute!important;
+  right:4%!important;
+  margin-top:-245px!important;
+  width:180px!important;
+  height:180px!important;
+  perspective:900px!important;
+  pointer-events:none!important;
+  z-index:3!important;
+}
+.cp-3d-feature-cube{
+  position:absolute!important;
+  inset:25px!important;
+  transform-style:preserve-3d!important;
+  transform:rotateX(-22deg) rotateY(38deg) rotateZ(8deg)!important;
+  animation:cpFeatureCube 8s ease-in-out infinite!important;
+}
+.cp-3d-feature-cube span{
+  position:absolute!important;
+  inset:0!important;
+  display:block!important;
+  border:1px solid rgba(115,92,255,.25)!important;
+  background:linear-gradient(135deg,rgba(115,92,255,.20),rgba(255,255,255,.22))!important;
+  backdrop-filter:blur(5px)!important;
+}
+.cp-3d-feature-cube span:nth-child(1){transform:translateZ(55px)}
+.cp-3d-feature-cube span:nth-child(2){transform:rotateY(180deg) translateZ(55px)}
+.cp-3d-feature-cube span:nth-child(3){transform:rotateY(90deg) translateZ(55px)}
+.cp-3d-feature-cube span:nth-child(4){transform:rotateY(-90deg) translateZ(55px)}
+.cp-3d-feature-cube span:nth-child(5){transform:rotateX(90deg) translateZ(55px)}
+.cp-3d-feature-cube span:nth-child(6){transform:rotateX(-90deg) translateZ(55px)}
+.cp-3d-cube-shadow{
+  position:absolute!important;left:35px!important;right:35px!important;bottom:8px!important;height:22px!important;border-radius:50%!important;background:rgba(93,70,170,.16)!important;filter:blur(14px)!important;transform:rotateX(65deg)!important;
+}
+
+/* 3D #3 — CTA prism */
+.cp-3d-cta-prism{
+  position:absolute!important;
+  width:170px!important;
+  height:170px!important;
+  right:7%!important;
+  top:50%!important;
+  transform:translateY(-50%) rotate(20deg)!important;
+  opacity:.42!important;
+  pointer-events:none!important;
+  z-index:0!important;
+  animation:cpPrismFloat 7s ease-in-out infinite!important;
+}
+.cp-3d-cta-prism span{position:absolute!important;inset:0!important;border:1px solid rgba(115,92,255,.34)!important;background:linear-gradient(135deg,rgba(115,92,255,.13),rgba(255,132,82,.08))!important;clip-path:polygon(50% 0,100% 27%,86% 82%,27% 100%,0 50%)!important}
+.cp-3d-cta-prism span:nth-child(2){transform:translateZ(22px) rotate(14deg)}
+.cp-3d-cta-prism span:nth-child(3){transform:translateZ(44px) rotate(28deg)}
+.cp-3d-cta-prism span:nth-child(4){transform:translateZ(66px) rotate(42deg)}
+
+@keyframes cpFeatureCube{0%,100%{transform:rotateX(-22deg) rotateY(38deg) rotateZ(8deg) translateY(0)}50%{transform:rotateX(-28deg) rotateY(68deg) rotateZ(12deg) translateY(-10px)}}
+@keyframes cpPrismFloat{50%{transform:translateY(calc(-50% - 12px)) rotate(28deg) scale(1.04)}}
+
+/* Auth: purple, clean, no 3D decorations. */
+.auth-visual{
+  background:
+    radial-gradient(circle at 18% 15%,rgba(174,139,255,.34),transparent 30%),
+    radial-gradient(circle at 84% 82%,rgba(255,125,180,.18),transparent 28%),
+    linear-gradient(145deg,#4d2a78 0%,#6b3fb0 48%,#321b52 100%)!important;
+}
+.auth-visual::before,.auth-visual::after,
+.auth-visual-grid,.auth-visual-ring,
+.auth-3d-shard,.auth-3d-orb,.orb{display:none!important}
+.auth-quote{position:relative!important;z-index:2!important}
+.auth-visual .brand{position:relative!important;z-index:3!important}
+@media(max-width:900px){
+  .cp-3d-scene{transform:translate(-50%,-50%) scale(.72) rotateX(58deg) rotateZ(-24deg)!important}
+  .cp-3d-feature-stage{right:0!important;transform:scale(.72)!important;transform-origin:right center!important}
+  .cp-3d-cta-prism{right:-25px!important;transform:translateY(-50%) scale(.72) rotate(20deg)!important}
+}
+@media(max-width:600px){
+  .cp-3d-scene{transform:translate(-50%,-50%) scale(.58) rotateX(58deg) rotateZ(-24deg)!important}
+  .cp-3d-feature-stage{display:none!important}
+  .cp-3d-cta-prism{right:-45px!important;opacity:.25!important}
+}
