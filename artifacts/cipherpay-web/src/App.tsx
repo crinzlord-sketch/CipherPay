@@ -82,7 +82,7 @@ const serviceFeatureForPath = (path: string) => {
   if (path === '/bills' || path.startsWith('/bills/')) return 'bills';
   if (path === '/sms' || path.startsWith('/sms/')) return 'sms';
   if (path === '/temporary-email' || path.startsWith('/temporary-email/')) return 'temporary_email';
-  if (path === '/services' || path.startsWith('/services/')) return 'services';
+  if (path === '/social-boost' || path.startsWith('/social-boost/')) return 'social_boost';
   if (path === '/email-pro' || path.startsWith('/email-pro/')) return 'email_pro';
   if (path === '/crypto' || path.startsWith('/crypto/')) return 'crypto';
   return null;
@@ -282,7 +282,7 @@ function Shell({ children }: { children: ReactNode }) {
           bills: 'Bill payments',
           sms: 'SMS verification',
           temporary_email: 'Temporary email',
-          services: 'Services',
+          social_boost: 'Social Boost',
           email_pro: 'Email Pro',
           crypto: 'Crypto',
         };
