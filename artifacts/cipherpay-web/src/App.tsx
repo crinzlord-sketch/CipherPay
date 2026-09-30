@@ -239,7 +239,7 @@ function LandingPage() {
   const goToAuth = (mode: 'login' | 'register') => {
     if (authNavigating) return;
     setAuthNavigating(mode);
-    window.setTimeout(() => window.location.assign(mode === 'login' ? '/login' : '/register'), 360);
+    window.setTimeout(() => setLocation(mode === 'login' ? '/login' : '/register'), 360);
   };
   const openSupport = () => { setSupportSent(false); setSupportError(''); setSupportOpen(true); };
   const submitSupport = async (event: React.FormEvent) => {
@@ -258,7 +258,7 @@ function LandingPage() {
     { icon: MessageSquare, title: 'Connect instantly.', text: 'Find people by CipherPay code and chat with text, images, GIFs and replies.' },
     { icon: Smartphone, title: 'SMS verification.', text: 'Access practical digital services from one account instead of juggling tools.' },
   ];
-  return <div className="cp-landing">
+  return <div className={`cp-landing ${authNavigating ? 'cp-auth-exit' : ''}`}>
     <div className="cp-landing-grid" aria-hidden="true" />
     <nav className="cp-landing-nav" aria-label="Landing navigation">
       <div className="cp-landing-nav-inner">
@@ -270,7 +270,7 @@ function LandingPage() {
     <section className="cp-hero">
       <div className="cp-hero-copy">
         <span className="cp-kicker"><i/> EVERYTHING, IN ONE PLACE</span>
-        <h1>Less friction.<span>More life.</span></h1>
+        <h1>Spend less.<span>Do more.</span></h1>
         <p>CipherPay brings your wallet, payments, digital services and communication together in one beautifully simple platform.</p>
         <div className="cp-hero-actions"><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Create your account <ArrowRight size={17}/></button><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>I already have an account</button></div>
         <div className="cp-hero-note"><span><ShieldCheck size={13}/> Built around control</span><span><Bolt size={13}/> Fast everyday tools</span></div>
@@ -1532,7 +1532,7 @@ function App() {
             <Route path="/forgot-password"><ForgotPassword /></Route>
             <Route path="/verify-email"><VerifyEmail /></Route>
             <Route path="/reset-password"><ResetPassword /></Route>
-            <Route path="/"><LandingPage /></Route>
+            <Route path="/"><HomeRoute /></Route>
             <Route path="/fund"><ProtectedArea><Fund /></ProtectedArea></Route>
             <Route path="/send"><ProtectedArea><Send /></ProtectedArea></Route>
             <Route path="/airtime"><ProtectedArea><Airtime /></ProtectedArea></Route>
@@ -1561,6 +1561,11 @@ function App() {
       </TooltipProvider>
     </QueryClientProvider>
   );
+}
+
+function HomeRoute() {
+  const token = useToken();
+  return token ? <ProtectedArea><Dashboard /></ProtectedArea> : <LandingPage />;
 }
 
 function AdminOnly({ children }: { children: ReactNode }) {
