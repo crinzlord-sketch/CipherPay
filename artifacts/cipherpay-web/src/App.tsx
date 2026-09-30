@@ -1532,7 +1532,11 @@ function Send() {
         </div>}
 
         {resolving && <div className="muted-line">Verifying account details…</div>}
-        {error && <div className="error-box" role="alert">{error}</div>}
+                  <div className="transfer-pin-card">
+            <div><ShieldCheck size={18} /><div><b>Confirm with your transfer PIN</b><small>Enter the 6-digit PIN you created in Security settings. It is required before any money is sent.</small></div></div>
+            <input type="password" inputMode="numeric" autoComplete="off" maxLength={6} pattern="[0-9]{6}" placeholder="••••••" value={transferPin} onChange={(event) => setTransferPin(event.target.value.replace(/\D/g, '').slice(0, 6))} aria-label="6-digit transfer PIN" required data-testid="input-transfer-pin" />
+          </div>
+{error && <div className="error-box" role="alert">{error}</div>}
 
         {(mode === 'cipherpay' || bankForm.accountName) && <Button type="submit" className="full-btn" disabled={busy || resolving} data-testid="button-send-submit">
           {busy ? 'Sending…' : mode === 'bank' ? 'Send to bank' : 'Review and send'} <ArrowRight size={17} />
