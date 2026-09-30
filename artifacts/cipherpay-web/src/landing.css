@@ -2353,3 +2353,213 @@ html.dark .cp-support-close{
 .sidekick-orb{
   will-change:transform;
 }
+
+
+/* =========================================================
+   INTERACTION MOTION PASS — mobile menus + support + auth logo
+   ========================================================= */
+
+/* Landing mobile menu: animate the panel itself on open/close. */
+@media(max-width:600px){
+  .cp-mobile-menu{
+    display:grid!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+    transform:translate3d(0,-12px,0) scale(.97)!important;
+    transform-origin:top center!important;
+    transition:
+      opacity .24s cubic-bezier(.22,.8,.2,1),
+      transform .32s cubic-bezier(.22,.8,.2,1),
+      visibility 0s linear .32s!important;
+    animation:none!important;
+    will-change:transform,opacity;
+  }
+  .cp-mobile-menu.open{
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+    transform:translate3d(0,0,0) scale(1)!important;
+    transition:
+      opacity .22s cubic-bezier(.22,.8,.2,1),
+      transform .34s cubic-bezier(.22,.8,.2,1),
+      visibility 0s!important;
+  }
+  .cp-mobile-menu button{
+    opacity:0;
+    transform:translate3d(0,-6px,0);
+    transition:opacity .2s ease,transform .3s cubic-bezier(.22,.8,.2,1),background .2s ease;
+  }
+  .cp-mobile-menu.open button{
+    opacity:1;
+    transform:none;
+  }
+  .cp-mobile-menu.open button:nth-child(1){transition-delay:.035s}
+  .cp-mobile-menu.open button:nth-child(2){transition-delay:.055s}
+  .cp-mobile-menu.open button:nth-child(3){transition-delay:.075s}
+  .cp-mobile-menu.open button:nth-child(4){transition-delay:.095s}
+  .cp-mobile-menu.open button:nth-child(5){transition-delay:.115s}
+  .cp-mobile-menu.open button:nth-child(6){transition-delay:.135s}
+}
+
+/* Landing hamburger morphs into a close icon instead of snapping. */
+.cp-mobile-menu-toggle .cp-menu-icon,
+.menu-toggle .cp-menu-icon{
+  position:relative;
+  display:grid;
+  place-items:center;
+  width:22px;
+  height:22px;
+}
+.cp-mobile-menu-toggle .cp-menu-icon > svg,
+.menu-toggle .cp-menu-icon > svg{
+  grid-area:1/1;
+  transition:opacity .22s ease,transform .3s cubic-bezier(.22,.8,.2,1);
+  will-change:transform,opacity;
+}
+.cp-mobile-menu-toggle .cp-menu-icon > svg:nth-child(2),
+.menu-toggle .cp-menu-icon > svg:nth-child(2){
+  opacity:0;
+  transform:rotate(-90deg) scale(.72);
+}
+.cp-mobile-menu-toggle.is-open .cp-menu-icon > svg:first-child,
+.menu-toggle.is-open .cp-menu-icon > svg:first-child{
+  opacity:0;
+  transform:rotate(90deg) scale(.72);
+}
+.cp-mobile-menu-toggle.is-open .cp-menu-icon > svg:nth-child(2),
+.menu-toggle.is-open .cp-menu-icon > svg:nth-child(2){
+  opacity:1;
+  transform:none;
+}
+.cp-mobile-menu-toggle{
+  transition:transform .25s ease,background .25s ease,border-color .25s ease;
+}
+.cp-mobile-menu-toggle:active{transform:scale(.94)}
+
+/* Main product mobile drawer: smooth slide + scrim instead of a hard jump. */
+@media(max-width:900px){
+  .sidebar{
+    z-index:1201!important;
+    transform:translate3d(-105%,0,0)!important;
+    transition:transform .42s cubic-bezier(.22,.8,.2,1),box-shadow .42s ease!important;
+    will-change:transform;
+  }
+  .sidebar.open{
+    transform:translate3d(0,0,0)!important;
+    box-shadow:28px 0 90px rgba(24,15,39,.34)!important;
+  }
+  .scrim{
+    display:block!important;
+    position:fixed!important;
+    inset:0!important;
+    z-index:1200!important;
+    opacity:0!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+    transition:opacity .34s ease,visibility 0s linear .34s,backdrop-filter .34s ease!important;
+    background:rgba(19,13,28,.34)!important;
+    backdrop-filter:blur(0)!important;
+    -webkit-backdrop-filter:blur(0)!important;
+  }
+  .scrim.open{
+    opacity:1!important;
+    visibility:visible!important;
+    pointer-events:auto!important;
+    transition:opacity .34s ease,visibility 0s,backdrop-filter .34s ease!important;
+    backdrop-filter:blur(5px)!important;
+    -webkit-backdrop-filter:blur(5px)!important;
+  }
+  .menu-toggle{
+    position:relative!important;
+    z-index:1202!important;
+  }
+  .mobile-close{
+    transition:transform .25s ease,background .25s ease;
+  }
+  .sidebar.open .mobile-close{
+    animation:cpDrawerCloseButtonIn .4s cubic-bezier(.22,.8,.2,1) both;
+  }
+}
+@keyframes cpDrawerCloseButtonIn{
+  from{opacity:0;transform:translateX(-8px) rotate(-45deg) scale(.78)}
+  to{opacity:1;transform:none}
+}
+
+/* Guest support opens like a physical glass sheet, not a sudden modal. */
+.cp-support-overlay{
+  animation:cpSupportOverlayIn .34s cubic-bezier(.22,.8,.2,1) both!important;
+  will-change:opacity;
+}
+.cp-support-modal{
+  animation:cpSupportModalIn .46s cubic-bezier(.16,1,.3,1) both;
+  will-change:transform,opacity;
+}
+.cp-support-close{
+  transition:transform .22s ease,background .22s ease,box-shadow .22s ease;
+}
+.cp-support-close:hover{
+  transform:rotate(8deg) scale(1.04);
+  box-shadow:0 8px 22px rgba(40,25,65,.10);
+}
+@keyframes cpSupportOverlayIn{
+  from{opacity:0}
+  to{opacity:1}
+}
+@keyframes cpSupportModalIn{
+  from{opacity:0;transform:translate3d(0,28px,0) scale(.94) rotateX(3deg)}
+  to{opacity:1;transform:translate3d(0,0,0) scale(1) rotateX(0)}
+}
+
+/* Auth logo: give the brand enough presence on the cinematic side. */
+.auth-visual > .brand{
+  font-size:40px!important;
+  line-height:1!important;
+  gap:11px!important;
+  letter-spacing:-.055em!important;
+  transform-origin:left center;
+  animation:cpAuthLogoIn .7s cubic-bezier(.22,.8,.2,1) both;
+}
+.auth-visual > .brand .brand-mark{
+  width:48px!important;
+  height:48px!important;
+  border-radius:15px!important;
+}
+.auth-visual > .brand .brand-mark span{
+  width:21px!important;
+  height:21px!important;
+}
+@keyframes cpAuthLogoIn{
+  from{opacity:0;transform:translate3d(-10px,0,0) scale(.9)}
+  to{opacity:1;transform:none}
+}
+
+@media(max-width:700px){
+  .auth-visual > .brand{
+    font-size:32px!important;
+  }
+  .auth-visual > .brand .brand-mark{
+    width:40px!important;
+    height:40px!important;
+    border-radius:13px!important;
+  }
+  .auth-visual > .brand .brand-mark span{
+    width:17px!important;
+    height:17px!important;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .cp-mobile-menu,
+  .cp-mobile-menu button,
+  .cp-mobile-menu-toggle .cp-menu-icon > svg,
+  .menu-toggle .cp-menu-icon > svg,
+  .sidebar,
+  .scrim,
+  .cp-support-overlay,
+  .cp-support-modal,
+  .auth-visual > .brand{
+    animation:none!important;
+    transition:none!important;
+  }
+}
