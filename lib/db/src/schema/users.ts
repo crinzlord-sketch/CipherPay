@@ -10,6 +10,7 @@ export const usersTable = pgTable("users", {
   lastName: text("last_name").notNull(),
   phone: text("phone").notNull(),
   avatarUrl: text("avatar_url"),
+  gender: text("gender"),
   accountNumber: text("account_number").unique(),
   isVerified: boolean("is_verified").notNull().default(false),
   kycLevel: integer("kyc_level").notNull().default(0),
