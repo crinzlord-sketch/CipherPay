@@ -292,6 +292,9 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     } else req.log.info({ target: user.email, code }, "login OTP generated (email not configured)");
   } catch (e: any) {
     req.log.error({ err: e?.message, userId: user.id }, "login OTP email failed");
+    // Do not advance to the OTP screen unless the provider accepted the code.
+    res.status(502).json({ error: "We could not send your sign-in code. Please try again." });
+    return;
   }
   res.json({ requiresOtp: true, email: user.email, otpDelivery });
 });
