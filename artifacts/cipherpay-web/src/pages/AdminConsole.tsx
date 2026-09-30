@@ -81,6 +81,9 @@ export default function AdminConsole() {
   const [userQuery, setUserQuery] = useState('');
   const [transactions, setTransactions] = useState<any[]>([]);
   const [referenceQuery, setReferenceQuery] = useState('');
+  const [transactionStatusFilter, setTransactionStatusFilter] = useState('all');
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState('all');
+  const [transactionLastUpdated, setTransactionLastUpdated] = useState<string | null>(null);
   const [supportChats, setSupportChats] = useState<any[]>([]);
   const [supportFilter, setSupportFilter] = useState<'open' | 'closed' | 'all'>('open');
   const [selectedSupport, setSelectedSupport] = useState<any>(null);
@@ -264,7 +267,7 @@ export default function AdminConsole() {
     try {
       const result = await adminRequest<any>(`/api/admin/transactions?limit=100&reference=${encodeURIComponent(reference)}`, token);
       setTransactions(result.data ?? []);
-      setTab('activity');
+      setTab('money');
       setError('');
       if (!(result.data ?? []).length) setNotice('No transaction matched that reference.');
     } catch (caught) {
@@ -449,7 +452,28 @@ export default function AdminConsole() {
   };
 
 
-  const visibleTransactions = useMemo(() => transactions.slice(0, 60), [transactions]);
+  const filteredTransactions = useMemo(() => transactions.filter((row: any) => (transactionStatusFilter === 'all' || row.status === transactionStatusFilter) && (transactionTypeFilter === 'all' || row.type === transactionTypeFilter)), [transactions, transactionStatusFilter, transactionTypeFilter]);
+
+  const refreshTransactions = useCallback(async () => {
+    if (!token) return;
+    try {
+      const query = new URLSearchParams({ limit: '200' });
+      if (transactionStatusFilter !== 'all') query.set('status', transactionStatusFilter);
+      if (transactionTypeFilter !== 'all') query.set('type', transactionTypeFilter);
+      const result = await adminRequest<any>(`/api/admin/transactions?${query.toString()}`, token);
+      setTransactions(result.data ?? []);
+      setTransactionLastUpdated(new Date().toISOString());
+    } catch {}
+  }, [token, transactionStatusFilter, transactionTypeFilter]);
+
+  useEffect(() => {
+    if (!token || tab !== 'money') return;
+    void refreshTransactions();
+    const timer = window.setInterval(() => void refreshTransactions(), 5000);
+    return () => window.clearInterval(timer);
+  }, [token, tab, refreshTransactions]);
+
+
   const supportGroups = useMemo(() => {
     const groups = new Map<string, { label: string; chats: any[] }>();
     supportChats.forEach((chat) => {
@@ -539,7 +563,7 @@ export default function AdminConsole() {
     {notice && <div className="cp-notice cp-notice-success admin-notice"><CheckCircle2 size={16} />{notice}<button type="button" onClick={() => setNotice('')} aria-label="Dismiss notice"><X size={15} /></button></div>}
     <nav className="admin-tabs" aria-label="Admin areas">{([
        ['overview', 'Overview', Zap], ['users', 'Users', Users], ['support', 'Support inbox', LifeBuoy],
-      ['money', 'Money operations', CircleDollarSign], ['verification', 'Verification', ClipboardCheck], ['activity', 'Activity & tools', Database], ['services', 'Service controls', Zap], ['admins', 'Add admin', ShieldCheck],
+      ['money', 'Transactions', Activity], ['verification', 'Verification', ClipboardCheck],  ['services', 'Service controls', Zap], ['admins', 'Add admin', ShieldCheck],
     ] as const).map(([key, label, Icon]) => {
       const unread = key === 'verification'
         ? adminAlertCounts.verification
@@ -592,67 +616,25 @@ export default function AdminConsole() {
      {tab === 'users' && <section className="admin-section">{selectedUser ? <UserDetailView detail={selectedUser} loading={userDetailLoading} onBack={() => setSelectedUser(null)} onRefresh={() => void openUserDetail(selectedUser.user)} /> : <section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">Account control</span><h2>Every registered user</h2><p>Click any customer name to open their complete account, security, device, location, wallet, and activity profile.</p></div><Users size={20} /></div><form className="admin-search" onSubmit={searchUsers}><Search size={17} /><input value={userQuery} onChange={(event) => setUserQuery(event.target.value)} placeholder="Search name, email, or phone" /><button type="submit">Search</button></form><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>User</th><th>Status</th><th>Wallet</th><th>Joined</th><th>Actions</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td><div className="admin-user-cell"><span className="admin-avatar">{String(user.firstName?.[0] ?? '')}{String(user.lastName?.[0] ?? '')}</span><span><button type="button" className="admin-user-name-button" onClick={() => void openUserDetails(user)}><b>{user.firstName} {user.lastName}</b></button><small>{user.email}<br />{user.phone}</small></span></div></td><td><span className={statusClass(user.isSuspended ? 'suspended' : user.isVerified ? 'verified' : 'unverified')}>{user.isSuspended ? 'Suspended' : user.isVerified ? 'Verified' : 'Unverified'}</span><small className="admin-muted">KYC L{user.kycLevel ?? 0}</small></td><td><b>{naira(user.balance)}</b></td><td><small>{formatWhen(user.createdAt)}</small></td><td><div className="admin-action-grid"><AdminButton variant="primary" onClick={() => void openUserDetails(user)}><FileText size={13} /> View profile</AdminButton><AdminButton onClick={() => void userAction(user, 'adjust')}>Adjust wallet</AdminButton><AdminButton onClick={() => void userAction(user, 'set-balance')}>Set balance</AdminButton><AdminButton onClick={() => void userAction(user, 'debit-to-admin')}>Debit → admin</AdminButton><AdminButton onClick={() => void userAction(user, 'kyc')}>Set KYC</AdminButton><AdminButton onClick={() => void userAction(user, 'notify')}><MessageCircle size={13} /> Notify</AdminButton><AdminButton onClick={() => void userAction(user, 'email')}><Mail size={13} /> Email</AdminButton><AdminButton onClick={() => void userAction(user, 'suspend')} variant={user.isSuspended ? 'primary' : 'soft'}>{user.isSuspended ? <><UserCheck size={13} /> Restore</> : <><Ban size={13} /> Suspend</>}</AdminButton><AdminButton onClick={() => void userAction(user, 'verify')}><Check size={13} /> {user.isVerified ? 'Unverify' : 'Verify'}</AdminButton><AdminButton onClick={() => void userAction(user, 'pin')}><ShieldCheck size={13} /> Clear PIN</AdminButton><AdminButton onClick={() => void userAction(user, 'activity')} variant="danger"><RefreshCw size={13} /> Reset activity</AdminButton>{user.isAdmin ? <span className="admin-protected-label">Admin · protected</span> : <AdminButton onClick={() => void userAction(user, 'delete')} variant="danger"><Trash2 size={13} /> Delete</AdminButton>}</div></td></tr>)}</tbody></table>{!users.length && <div className="admin-empty"><Users size={22} />No users match this search.</div>}</div></section>}</section>}
 
     {tab === 'money' && <section className="admin-section">
-      <div className="admin-money-hero">
-        <div>
-          <span className="cp-kicker">MONEY OPERATIONS</span>
-          <h2>Control the movement of funds.</h2>
-          <p>Review funding requests, monitor withdrawals, and keep every money movement tied to a real transaction.</p>
+      <section className="cp-card cp-card-pad admin-live-transactions">
+        <div className="admin-card-title"><div><span className="cp-kicker">LIVE LEDGER MONITOR</span><h2>All recent site transactions</h2><p>Every wallet transaction recorded across CipherPay, newest first. This view refreshes automatically while you are here.</p></div><div className="admin-live-status"><span className="admin-live-dot" /> Live · {transactionLastUpdated ? formatLagosWhen(transactionLastUpdated) : 'checking…'} <AdminButton onClick={() => void refreshTransactions()}><RefreshCw size={14} /> Refresh</AdminButton></div></div>
+        <div className="admin-money-stats">
+          <StatCard icon={Activity} label="Showing" value={filteredTransactions.length} detail="Recent transaction records" tone="blue" />
+          <StatCard icon={CircleDollarSign} label="Pending" value={filteredTransactions.filter((row: any) => row.status === 'pending').length} detail="Awaiting completion" tone="orange" />
+          <StatCard icon={Flag} label="Flagged" value={filteredTransactions.filter((row: any) => row.isFlagged).length} detail="Needs admin attention" tone="red" />
+          <StatCard icon={CheckCircle2} label="Successful" value={filteredTransactions.filter((row: any) => row.status === 'success').length} detail="Completed successfully" tone="green" />
         </div>
-        <button type="button" className="admin-money-refresh" onClick={() => void loadAll()}><RefreshCw size={15} /> Refresh</button>
-      </div>
-      <div className="admin-money-stats">
-        <StatCard icon={CreditCard} label="Pending deposits" value={deposits.length} detail="Funding requests awaiting action" tone="orange" />
-        <StatCard icon={WalletCards} label="Pending withdrawals" value={withdrawals.filter((row) => row.status === 'pending').length} detail="Currently awaiting payout" tone="purple" />
-        <StatCard icon={CircleDollarSign} label="Wallets held" value={naira(stats?.totalWalletBalance)} detail="Total customer wallet balance" tone="green" />
-        <StatCard icon={AlertTriangle} label="Flagged" value={transactions.filter((row) => row.isFlagged).length} detail="Transactions needing review" tone="red" />
-      </div>
-
-      <div className="admin-money-grid">
-        <section className="cp-card cp-card-pad">
-          <div className="admin-card-title">
-            <div><span className="cp-kicker">FUNDING QUEUE</span><h2>Deposits</h2><p>These are pending wallet-funding records that may need manual review.</p></div>
-            <CreditCard size={20} />
-          </div>
-          <div className="admin-money-list">
-            {deposits.length ? deposits.map((row: any) => <div className="admin-money-row" key={row.id}>
-              <div className="admin-money-main">
-                <span className="admin-money-avatar"><WalletCards size={16} /></span>
-                <div><b>{row.userName || row.userEmail || 'Customer'}</b><small>{row.userEmail || '—'} · #{row.id} · {row.reference || 'No reference'}</small><small>{formatWhen(row.createdAt)}{row.isFlagged ? ' · FLAGGED' : ''}</small></div>
-              </div>
-              <strong className="admin-money-amount">{naira(row.amount)}</strong>
-              <div className="admin-money-actions">
-                {row.isFlagged && <span className="admin-protected-label">Held</span>}
-                <AdminButton variant="primary" disabled={row.isFlagged} onClick={() => void run(`/api/admin/deposits/${row.id}/approve`, { method: 'POST' }, 'Deposit approved and credited.')}>Approve</AdminButton>
-                <AdminButton variant="danger" onClick={async () => { const reason = await prompt({ title: 'Decline this deposit?', description: 'Give a reason for declining the funding request.', defaultValue: 'Payment could not be verified.', placeholder: 'Reason', confirmLabel: 'Decline deposit', destructive: true }); if (reason) void run(`/api/admin/deposits/${row.id}/decline`, { method: 'POST', body: { reason } }, 'Deposit declined.'); }}>Decline</AdminButton>
-              </div>
-            </div>) : <div className="admin-money-empty"><CreditCard size={24} /><b>No pending deposits</b><span>New funding requests will appear here automatically.</span></div>}
-          </div>
-        </section>
-
-        <section className="cp-card cp-card-pad">
-          <div className="admin-card-title">
-            <div><span className="cp-kicker">PAYOUT WATCH</span><h2>Withdrawals</h2><p>Live withdrawal records with clear status and payout controls.</p></div>
-            <ArrowDownLeft size={20} />
-          </div>
-          <div className="admin-money-list">
-            {withdrawals.length ? withdrawals.slice(0, 30).map((row: any) => <div className="admin-money-row" key={row.id}>
-              <div className="admin-money-main">
-                <span className="admin-money-avatar"><ArrowDownLeft size={16} /></span>
-                <div><b>{row.userEmail || 'Customer'}</b><small>#{row.id} · {row.reference || 'No reference'}</small><small>{formatWhen(row.createdAt)}</small></div>
-              </div>
-              <strong className="admin-money-amount">{naira(row.amount)}</strong>
-              <div className="admin-money-actions">
-                <span className={statusClass(row.status)}>{row.status}</span>
-                {row.status === 'pending' && <AdminButton variant="primary" onClick={async () => { if (await confirm({ title: 'Approve this withdrawal?', description: 'Confirm that the payout has been reviewed and is ready to be finalized.', confirmLabel: 'Approve withdrawal', destructive: false })) void run(`/api/admin/withdrawals/${row.id}/approve`, { method: 'POST' }, 'Withdrawal approved.'); }}>Approve</AdminButton>}
-                {row.status === 'pending' && <AdminButton variant="danger" onClick={async () => { const reason = await prompt({ title: 'Reject this withdrawal?', defaultValue: 'Withdrawal rejected after review.', placeholder: 'Reason', confirmLabel: 'Reject withdrawal', destructive: true }); if (reason) void run(`/api/admin/withdrawals/${row.id}/reject`, { method: 'POST', body: { reason } }, 'Withdrawal rejected and refunded.'); }}>Reject</AdminButton>}
-                {row.status === 'pending' && <AdminButton onClick={() => void run(`/api/admin/withdrawals/${row.id}/reconcile`, { method: 'POST' }, 'Withdrawal reconciled.')}>Reconcile</AdminButton>}
-              </div>
-            </div>) : <div className="admin-money-empty"><WalletCards size={24} /><b>No withdrawal records</b><span>Withdrawal activity will appear here as customers cash out.</span></div>}
-          </div>
-        </section>
-      </div>
-    </section>}
-
+        <div className="admin-transaction-filters">
+          <form className="admin-search" onSubmit={searchTransactions}><Search size={17} /><input value={referenceQuery} onChange={(event) => setReferenceQuery(event.target.value)} placeholder="Search reference, provider reference, or metadata" /><button type="submit">Search</button></form>
+          <select value={transactionStatusFilter} onChange={(event) => setTransactionStatusFilter(event.target.value)}><option value="all">All statuses</option><option value="pending">Pending</option><option value="success">Successful</option><option value="failed">Failed</option></select>
+          <select value={transactionTypeFilter} onChange={(event) => setTransactionTypeFilter(event.target.value)}><option value="all">All transaction types</option>{[...new Set(transactions.map((row: any) => row.type).filter(Boolean))].map((type: string) => <option key={type} value={type}>{type.replaceAll('_', ' ')}</option>)}</select>
+        </div>
+        <div className="admin-table-wrap"><table className="admin-table admin-live-transaction-table"><thead><tr><th>Time · Lagos</th><th>Customer</th><th>Transaction</th><th>Amount</th><th>Status</th><th>Balance</th><th>Action</th></tr></thead><tbody>
+          {filteredTransactions.map((tx: any) => <tr key={tx.id}><td><small>{formatLagosWhen(tx.createdAt)}</small></td><td><b>{tx.userName || 'Customer'}</b><small>{tx.userEmail || '—'} · User #{tx.userId}</small></td><td><b>#{tx.id} · {String(tx.type || 'transaction').replaceAll('_', ' ')}</b><small>{tx.reference}<br />{tx.description || '—'}</small></td><td><b>{naira(tx.amount)}</b>{Number(tx.fee) > 0 && <small>Fee {naira(tx.fee)}</small>}</td><td><span className={statusClass(tx.isFlagged ? 'flagged' : tx.status)}>{tx.isFlagged ? 'Flagged' : tx.status}</span></td><td><small>Before {tx.balanceBefore == null ? '—' : naira(tx.balanceBefore)}<br />After {tx.balanceAfter == null ? '—' : naira(tx.balanceAfter)}</small></td><td><div className="admin-actions"><AdminButton onClick={() => setDetailAction({ kind: 'transaction', transaction: tx })}><FileText size={13} /> Details</AdminButton><AdminButton onClick={() => void run(`/api/admin/transactions/${tx.id}/flag`, { method: 'POST', body: { flagged: !tx.isFlagged, reason: tx.isFlagged ? null : 'Flagged for admin review' } }, tx.isFlagged ? 'Transaction unflagged.' : 'Transaction flagged.')}>{tx.isFlagged ? 'Unflag' : 'Flag'}</AdminButton>{tx.status === 'pending' && <AdminButton variant="primary" onClick={() => void run(`/api/admin/transactions/${tx.id}/mark-success`, { method: 'POST' }, 'Transaction marked successful.')}>Complete</AdminButton>}</div></td></tr>)}
+        </tbody></table>{!filteredTransactions.length && <div className="admin-empty"><Activity size={22} />No transactions match these filters.</div>}</div>
+        <p className="admin-time-note">All timestamps are displayed in <b>Africa/Lagos · WAT (UTC+1)</b>. New transactions are checked every 5 seconds while this tab is open.</p>
+      </section>
+    </section>
     {tab === 'support' && <section className="admin-section admin-support-grid"><section className="cp-card admin-chat-list"><div className="admin-panel-head"><div><span className="cp-kicker">Support records</span><h2>{supportFilter === 'closed' ? 'Conversation history' : 'Support inbox'}</h2><p>{supportFilter === 'closed' ? 'Ended conversations grouped by customer.' : 'Every request from the customer support desk.'}</p></div><AdminButton onClick={() => void loadAll()}><RefreshCw size={14} /></AdminButton></div><div className="admin-support-filters">{(['open', 'closed', 'all'] as const).map((filter) => <button type="button" key={filter} className={supportFilter === filter ? 'active' : ''} onClick={() => { setSelectedSupport(null); setSupportFilter(filter); }}>{filter === 'open' ? 'Open now' : filter === 'closed' ? 'History' : 'All records'}</button>)}</div>{supportChats.length ? supportGroups.map((group) => <div key={group.label}><div className="admin-support-user-heading"><span><Users size={13} />{group.label}</span><small>{group.chats.length} conversation{group.chats.length === 1 ? '' : 's'}</small></div>{group.chats.map((chat) => <button type="button" className={`admin-chat-row ${selectedSupport?.chat?.id === chat.id ? 'active' : ''}`} key={chat.id} onClick={() => void openSupport(chat.id)}><span className={`admin-chat-dot ${chat.status}`} /><span><b>Conversation #{chat.id}</b><small>{chat.userEmail} · {chat.status} · {formatWhen(chat.lastMessageAt)}</small></span>{chat.unreadForAdmin > 0 && <strong>{chat.unreadForAdmin}</strong>}<ChevronRight size={15} /></button>)}</div>) : <div className="admin-empty"><LifeBuoy size={22} />{supportFilter === 'closed' ? 'No ended support conversations.' : 'No open support requests.'}</div>}</section><section className="cp-card admin-chat-detail">{selectedSupport ? <><div className="admin-panel-head"><div><span className="cp-kicker">Conversation #{selectedSupport.chat.id}</span><h2>{selectedSupport.user?.firstName} {selectedSupport.user?.lastName}</h2><p>{selectedSupport.user?.email} · KYC L{selectedSupport.user?.kycLevel ?? 0} · {selectedSupport.user?.isSuspended ? 'Suspended' : 'Active'}</p></div><div className="admin-actions">{selectedSupport.chat.status !== 'live' && selectedSupport.chat.status !== 'closed' && <AdminButton variant="primary" onClick={() => void supportAction('join')}><Headphones size={14} /> Join chat</AdminButton>}{selectedSupport.chat.status !== 'closed' && <AdminButton onClick={() => void supportAction('close')}><Check size={14} /> Close</AdminButton>}</div></div><div className="admin-chat-messages">{(selectedSupport.messages ?? []).map((message: any) => <div className={`admin-message ${message.sender === 'agent' ? 'agent' : message.sender === 'user' ? 'user' : 'system'}`} key={message.id}><small>{message.sender === 'agent' ? 'You / Support' : message.sender === 'user' ? 'Customer' : 'System'} · {formatWhen(message.createdAt)}</small><p>{message.imageUrl && <a href={apiUrl(message.imageUrl ?? "")} target="_blank" rel="noreferrer"><img src={apiUrl(message.imageUrl ?? "")} alt="Attachment from support conversation" /></a>}{message.body !== '📷 Image' && message.body}</p></div>)}</div>{selectedSupport.chat.status !== 'closed' && <form className="admin-chat-compose" onSubmit={sendSupportMessage}><input ref={supportImageRef} className="admin-sr-only" type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadSupportImage(file); }} /><button className="admin-chat-attach" type="button" onClick={() => supportImageRef.current?.click()} disabled={supportUploading}><Paperclip size={16} /></button><input value={supportDraft} onChange={(event) => { setSupportDraft(event.target.value); void adminRequest(`/api/admin/support/chats/${selectedSupport.chat.id}/typing`, token, { method: 'POST' }); }} placeholder={supportUploading ? 'Uploading image…' : 'Reply as Support…'} /><button type="submit" disabled={!supportDraft.trim() || supportUploading}><Send size={16} /></button></form>}</> : <div className="admin-detail-empty"><MessageCircle size={25} /><b>Select a support request</b><span>Messages, customer details, and live controls will appear here.</span></div>}</section></section>}
 
 
