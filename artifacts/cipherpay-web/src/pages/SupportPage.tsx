@@ -86,7 +86,10 @@ export function SupportPage() {
       const result = await apiRequest<ChatResponse>('/api/support/chat');
       setChat(result?.chat ?? null);
       setMessages(mergeMessages([], Array.isArray(result?.messages) ? result.messages : []));
+      setNetworkError('');
     } catch (caught) {
+      setChat(null);
+      setMessages([]);
       setChatError(caught instanceof Error ? caught.message : 'Your support chat could not be loaded.');
     } finally {
       setChatLoading(false);
@@ -226,6 +229,7 @@ export function SupportPage() {
   };
 
   if (chatLoading) return <main className="cp-page"><LoadingState label="Opening your support desk" /></main>;
+  if (chatError && !chat) return <main className="cp-page cp-page-reveal"><ErrorState message={chatError} retry={() => { void loadChat(); }} /></main>;
   if (chat && typeof chat.id === 'undefined') {
     return <main className="cp-page"><ErrorState message="Your support session could not be opened. Please try again." retry={() => { setChatLoading(true); void loadChat(); }} /></main>;
   }
@@ -265,7 +269,7 @@ export function SupportPage() {
             ) : messages.map((message) => (
               <div className={`cp-message ${message.sender === 'user' ? 'mine' : ''}`} key={message.id} data-testid={`message-chat-${message.id}`}>
                 {message.sender !== 'user' && <small>{message.sender === 'agent' ? 'Support specialist' : message.sender === 'bot' ? 'CipherPay assistant' : 'CipherPay'}</small>}
-                <div className="cp-message-bubble">{message.imageUrl && <a href={apiUrl(message.imageUrl ?? "")} target="_blank" rel="noreferrer" className="cp-support-image-link"><img src={apiUrl(message.imageUrl ?? "")} alt="Attachment from support conversation" /></a>}{message.body !== '📷 Image' && message.body}</div>
+                <div className="cp-message-bubble">{message.imageUrl && <a href={apiUrl(message.imageUrl)} target="_blank" rel="noreferrer" className="cp-support-image-link"><img src={apiUrl(message.imageUrl)} alt="Attachment from support conversation" /></a>}{message.body !== '📷 Image' && message.body}</div>
                 <time>{formatWhen(message.createdAt)}</time>
               </div>
             ))}
