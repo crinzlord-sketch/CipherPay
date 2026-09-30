@@ -116,7 +116,7 @@ const INTENTS: Intent[] = [
   {
     id: "contact",
     keywords: ["email support", "support email", "contact email", "phone number support", "reach support"],
-    answer: "You can email us at team.2025@gmail.com — replies usually within a few hours. Or stay in this chat and tap 'Talk to a live agent' to reach our team directly.",
+    answer: "You can use this support chat to reach us directly, or tap “Talk to a live agent” when you want a person.",
   },
   {
     id: "limits",
@@ -177,4 +177,4 @@ export function getBotReply(message: string): BotReply {
 }
 
 export const WELCOME_MESSAGE =
-  "👋 Welcome to CipherPay Support! I'm the support assistant — I can answer questions about wallet funding, transfers, KYC, airtime, bills, social boost, SMS verification, and more.\n\nAsk me anything, or tap **'Talk to a live agent'** anytime to chat with our team directly.";
+  "👋 Welcome to CipherPay Support! I'm the support assistant — I can answer questions about wallet funding, transfers, KYC, airtime, bills, social boost, SMS verification, and more.\n\nAsk me anything in your own words — I’ll help you work through it. If you need a person, tap **Talk to a live agent** anytime.";
