@@ -21,7 +21,8 @@ export function KycPage() {
   const [form, setForm] = useState({ nin: '', fullName: '', dateOfBirth: '', address: '' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState<{ text: string; tone: 'success' | 'error' } | null>(null);\n  const [openForm, setOpenForm] = useState(false);
+  const [notice, setNotice] = useState<{ text: string; tone: 'success' | 'error' } | null>(null);
+  const [openForm, setOpenForm] = useState(false);
 
   const load = async () => {
     setLoading(true);
