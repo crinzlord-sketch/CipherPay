@@ -291,3 +291,107 @@
   opacity: .8;
 }
 .admin-tabs button.admin-tab:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+
+
+/* Detailed customer profile drawer */
+.admin-user-name-button {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.admin-user-name-button:hover b { color: hsl(var(--primary)); text-decoration: underline; }
+.admin-user-detail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(18, 12, 26, .48);
+  backdrop-filter: blur(5px);
+}
+.admin-user-detail-drawer {
+  width: min(1120px, 96vw);
+  height: 100%;
+  overflow-y: auto;
+  background: hsl(var(--background));
+  box-shadow: -18px 0 60px rgba(20, 12, 30, .2);
+  animation: admin-user-drawer-in .2s ease-out;
+}
+@keyframes admin-user-drawer-in { from { transform: translateX(3%); opacity: .4; } to { transform: translateX(0); opacity: 1; } }
+.admin-user-detail-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 26px;
+  border-bottom: 1px solid var(--cp-line);
+  background: hsl(var(--background) / .96);
+  backdrop-filter: blur(12px);
+}
+.admin-user-detail-identity { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.admin-user-detail-identity h2 { margin: 3px 0 3px; font-size: 1.35rem; }
+.admin-user-detail-identity p { margin: 0; color: var(--cp-muted); font-size: .82rem; overflow-wrap: anywhere; }
+.admin-avatar-large { width: 48px; height: 48px; font-size: .9rem; }
+.admin-user-detail-header-actions { display: flex; align-items: center; gap: 10px; }
+.admin-icon-close {
+  display: grid; place-items: center; width: 38px; height: 38px;
+  border: 1px solid var(--cp-line); border-radius: 10px; background: hsl(var(--muted));
+  color: var(--cp-ink); cursor: pointer;
+}
+.admin-user-detail-meta {
+  display: flex; flex-wrap: wrap; gap: 8px 18px;
+  padding: 11px 26px; border-bottom: 1px solid var(--cp-line);
+  color: var(--cp-muted); font-size: .72rem;
+}
+.admin-user-detail-meta span { display: inline-flex; gap: 5px; }
+.admin-user-detail-meta b { color: var(--cp-ink); }
+.admin-user-detail-body { padding: 20px 26px 40px; display: grid; gap: 16px; }
+.admin-user-detail-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.admin-user-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.admin-detail-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; }
+.admin-detail-facts span { min-width: 0; display: grid; gap: 3px; }
+.admin-detail-facts small { color: var(--cp-muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; }
+.admin-detail-facts b { color: var(--cp-ink); font-size: .78rem; overflow-wrap: anywhere; }
+.admin-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.admin-financial-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.admin-financial-strip span { padding: 11px 12px; border: 1px solid var(--cp-line); border-radius: 11px; background: hsl(var(--muted) / .55); display: grid; gap: 4px; min-width: 0; }
+.admin-financial-strip small { color: var(--cp-muted); font-size: .66rem; }
+.admin-financial-strip b { font-size: .78rem; overflow-wrap: anywhere; }
+.admin-session-list { display: grid; gap: 8px; }
+.admin-session-row {
+  display: grid; grid-template-columns: 38px minmax(0,1fr) auto; gap: 12px; align-items: center;
+  padding: 12px; border: 1px solid var(--cp-line); border-radius: 12px; background: hsl(var(--muted) / .42);
+}
+.admin-session-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; background: hsl(var(--primary) / .1); color: hsl(var(--primary)); }
+.admin-session-main { min-width: 0; display: grid; gap: 3px; }
+.admin-session-main b { font-size: .78rem; }
+.admin-session-main span { color: var(--cp-muted); font-size: .68rem; overflow-wrap: anywhere; }
+.admin-session-time { display: grid; gap: 5px; justify-items: end; text-align: right; }
+.admin-session-time small { color: var(--cp-muted); font-size: .65rem; line-height: 1.3; }
+.admin-user-transactions td { vertical-align: top; }
+.admin-user-transactions td small { display: block; line-height: 1.45; }
+.admin-user-transactions td:nth-child(1) { min-width: 155px; }
+.admin-user-transactions td:nth-child(2) { min-width: 180px; }
+.admin-user-transactions td:nth-child(5) { min-width: 130px; }
+
+@media (max-width: 900px) {
+  .admin-user-detail-drawer { width: 100vw; }
+  .admin-user-detail-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-user-detail-grid { grid-template-columns: 1fr; }
+  .admin-financial-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .admin-user-detail-header, .admin-user-detail-body { padding-left: 15px; padding-right: 15px; }
+  .admin-user-detail-meta { padding-left: 15px; padding-right: 15px; }
+  .admin-user-detail-stats, .admin-financial-strip, .admin-detail-facts { grid-template-columns: 1fr 1fr; }
+  .admin-session-row { grid-template-columns: 34px minmax(0,1fr); }
+  .admin-session-time { grid-column: 2; justify-items: start; text-align: left; display: flex; flex-wrap: wrap; align-items: center; }
+}
