@@ -100,8 +100,49 @@ router.put("/admin/service-features/:key", requireAdmin, async (req: AdminReques
 
   const enabled = req.body?.enabled === true;
   const status = await setServiceFeatureStatus({ [key]: enabled });
-  req.log?.info?.({ adminId: req.admin!.id, feature: key, enabled }, "Admin changed service availability");
-  res.json({ success: true, feature: { ...feature, enabled: status[feature.key] } });
+
+  // Keep every customer informed when a service changes state. The message is
+  // stored in the user's notification inbox and also reaches registered push
+  // devices through the existing notification service.
+  const notificationTitle = enabled
+    ? `${feature.label} is back online`
+    : `${feature.label} is temporarily unavailable`;
+  const notificationBody = enabled
+    ? `${feature.label} has been restored and is available again. Thanks for your patience.`
+    : `We’re carrying out scheduled maintenance on ${feature.label}. The service is temporarily unavailable, but your account and funds remain safe. We’ll let you know when it’s back.`;
+  const notificationLink = feature.key === "transfers"
+    ? "/send"
+    : feature.key === "wallet_funding"
+      ? "/fund"
+      : feature.key === "airtime" || feature.key === "data"
+        ? "/airtime"
+        : feature.key === "bills"
+          ? "/bills"
+          : feature.key === "sms"
+            ? "/sms"
+            : feature.key === "temporary_email"
+              ? "/temporary-email"
+              : feature.key === "services"
+                ? "/services"
+                : feature.key === "email_pro"
+                  ? "/email-pro"
+                  : feature.key === "crypto"
+                    ? "/crypto"
+                    : null;
+
+  const customers = await db.select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.isAdmin, false));
+  await Promise.allSettled(customers.map(({ id }) => notifyUser({
+    userId: id,
+    title: notificationTitle,
+    body: notificationBody,
+    type: enabled ? "success" : "warning",
+    link: notificationLink,
+  })));
+
+  req.log?.info?.({ adminId: req.admin!.id, feature: key, enabled, notifiedUsers: customers.length }, "Admin changed service availability");
+  res.json({ success: true, feature: { ...feature, enabled: status[feature.key] }, notifiedUsers: customers.length });
 });
 
 router.get("/admin/admins", requireAdmin, async (_req: AdminRequest, res): Promise<void> => {
