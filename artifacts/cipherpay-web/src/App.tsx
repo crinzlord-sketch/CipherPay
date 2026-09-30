@@ -1227,22 +1227,33 @@ function Send() {
   }, [mode, banks.length]);
 
   const bankQuery = bankSearch.trim().toLowerCase();
+  const normalizeBankSearch = (value: unknown) => String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
   const filteredBanks = banks
-    .filter((bank) => {
+    .map((bank) => {
       const name = String(bank.name ?? '').toLowerCase();
       const code = String(bank.code ?? '').toLowerCase();
       const slug = String(bank.slug ?? '').toLowerCase();
-      return !bankQuery || name.includes(bankQuery) || code.includes(bankQuery) || slug.includes(bankQuery);
+      const normalizedName = normalizeBankSearch(name);
+      const normalizedCode = normalizeBankSearch(code);
+      const normalizedSlug = normalizeBankSearch(slug);
+      const q = normalizeBankSearch(bankQuery);
+      let rank = 99;
+      if (!q) rank = 0;
+      else if (normalizedName === q) rank = 0;              // exact bank name
+      else if (normalizedName.startsWith(q)) rank = 1;     // name starts with query
+      else if (normalizedSlug === q) rank = 2;             // exact slug
+      else if (normalizedSlug.startsWith(q)) rank = 3;    // slug starts with query
+      else if (normalizedCode === q) rank = 4;             // exact bank code
+      else if (normalizedCode.startsWith(q)) rank = 5;    // code starts with query
+      else if (normalizedName.includes(q)) rank = 10;     // name contains query
+      else if (normalizedSlug.includes(q)) rank = 11;     // slug contains query
+      else if (normalizedCode.includes(q)) rank = 12;     // code contains query
+      return { bank, rank };
     })
-    .sort((a, b) => {
-      const an = String(a.name ?? '').toLowerCase();
-      const bn = String(b.name ?? '').toLowerCase();
-      const ac = String(a.code ?? '').toLowerCase();
-      const bc = String(b.code ?? '').toLowerCase();
-      const as = an === bankQuery ? 0 : an.startsWith(bankQuery) ? 1 : ac === bankQuery ? 2 : an.includes(bankQuery) ? 3 : 4;
-      const bs = bn === bankQuery ? 0 : bn.startsWith(bankQuery) ? 1 : bc === bankQuery ? 2 : bn.includes(bankQuery) ? 3 : 4;
-      return as - bs || an.localeCompare(bn);
-    });
+    .filter(({ rank }) => rank < 99)
+    .sort((a, b) => a.rank - b.rank || String(a.bank.name ?? '').localeCompare(String(b.bank.name ?? '')))
+    .map(({ bank }) => bank);
 
   const resolveBankAccount = async (bankCode = bankForm.bankCode, accountNumber = bankForm.accountNumber) => {
     const digits = String(accountNumber ?? '').replace(/\D/g, '').slice(0, 10);
