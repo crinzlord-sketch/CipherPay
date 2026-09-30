@@ -9,7 +9,7 @@ import { useAnimatedDialog } from '../components/animated-dialog';
 import { apiUrl, formatWhen } from './page-api';
 import './admin.css';
 
-type Tab = 'overview' | 'users' | 'admins' | 'support' | 'money' | 'verification' | 'activity';
+type Tab = 'overview' | 'users' | 'admins' | 'support' | 'money' | 'verification' | 'activity' | 'services';
 type AdminOptions = { method?: string; body?: unknown; headers?: Record<string, string> };
 
 async function adminRequest<T>(path: string, token: string, options: AdminOptions = {}): Promise<T> {
@@ -59,6 +59,8 @@ export default function AdminConsole() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [adminAlertCounts, setAdminAlertCounts] = useState({ verification: 0, support: 0 });
+  const [serviceFeatures, setServiceFeatures] = useState<any[]>([]);
+  const [serviceUpdating, setServiceUpdating] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
@@ -99,7 +101,7 @@ export default function AdminConsole() {
     setLoading(true);
     setError('');
     try {
-      const [meResult, statsResult, usersResult, transactionsResult, supportResult, kycResult, depositsResult, withdrawalsResult, smsResult, socialResult, adminsResult, alertsResult] = await Promise.all([
+      const [meResult, statsResult, usersResult, transactionsResult, supportResult, kycResult, depositsResult, withdrawalsResult, smsResult, socialResult, adminsResult, alertsResult, serviceFeaturesResult] = await Promise.all([
         adminRequest<any>('/api/admin/me', token),
         adminRequest<any>('/api/admin/stats', token),
         adminRequest<any>('/api/admin/users?limit=100', token),
@@ -112,6 +114,7 @@ export default function AdminConsole() {
         adminRequest<any>('/api/admin/social-orders', token),
         adminRequest<any>('/api/admin/admins', token),
         adminRequest<any>('/api/admin/alerts', token),
+        adminRequest<any>('/api/admin/service-features', token),
       ]);
       setCurrentAdminId(meResult.id);
       setStats(statsResult);
@@ -125,6 +128,7 @@ export default function AdminConsole() {
       setSocialOrders(socialResult.data ?? []);
       setAdmins(adminsResult.data ?? []);
       setAdminAlertCounts({ verification: Number(alertsResult.verification ?? 0), support: Number(alertsResult.support ?? 0) });
+      setServiceFeatures(serviceFeaturesResult.data ?? []);
     } catch (caught) {
       if (caught instanceof Error && /token|admin|unauthorized|expired/i.test(caught.message)) {
         sessionStorage.removeItem('cipherpay_admin_token');
@@ -172,6 +176,25 @@ export default function AdminConsole() {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'The action could not be completed.');
       return null;
+    }
+  };
+
+  const toggleServiceFeature = async (feature: any) => {
+    if (!token || serviceUpdating) return;
+    setServiceUpdating(feature.key);
+    setError('');
+    setNotice('');
+    try {
+      const result = await adminRequest<any>(`/api/admin/service-features/${encodeURIComponent(feature.key)}`, token, {
+        method: 'PUT',
+        body: { enabled: !feature.enabled },
+      });
+      setServiceFeatures((current) => current.map((item) => item.key === feature.key ? result.feature : item));
+      setNotice(result.feature.enabled ? `${result.feature.label} is back online.` : `${result.feature.label} is now in maintenance mode.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'The service availability could not be updated.');
+    } finally {
+      setServiceUpdating(null);
     }
   };
 
@@ -473,7 +496,7 @@ export default function AdminConsole() {
     {notice && <div className="cp-notice cp-notice-success admin-notice"><CheckCircle2 size={16} />{notice}<button type="button" onClick={() => setNotice('')} aria-label="Dismiss notice"><X size={15} /></button></div>}
     <nav className="admin-tabs" aria-label="Admin areas">{([
        ['overview', 'Overview', Zap], ['users', 'Users', Users], ['support', 'Support inbox', LifeBuoy],
-      ['money', 'Money operations', CircleDollarSign], ['verification', 'Verification', ClipboardCheck], ['activity', 'Activity & tools', Database], ['admins', 'Add admin', ShieldCheck],
+      ['money', 'Money operations', CircleDollarSign], ['verification', 'Verification', ClipboardCheck], ['activity', 'Activity & tools', Database], ['services', 'Service controls', Zap], ['admins', 'Add admin', ShieldCheck],
     ] as const).map(([key, label, Icon]) => {
       const unread = key === 'verification'
         ? adminAlertCounts.verification
@@ -499,6 +522,30 @@ export default function AdminConsole() {
     </section>}
 
        {tab === 'admins' && <section className="admin-section"><div className="admin-grid-two"><section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">Team access</span><h2>Current admins</h2><p>{admins.length} account{admins.length === 1 ? '' : 's'} can access the admin console.</p></div><ShieldCheck size={20} /></div><div className="admin-list">{admins.map((admin) => <div className="admin-list-row" key={admin.id}><div><b>{[admin.firstName, admin.lastName].filter(Boolean).join(' ') || 'CipherPay Admin'}</b><small>{admin.email}{admin.isMaster ? ' · Master admin' : admin.id === currentAdminId ? ' · You' : ''}</small></div><div className="admin-list-actions"><span className={statusClass(admin.isSuspended ? 'suspended' : 'active')}>{admin.isSuspended ? 'Suspended' : 'Active'}</span>{admin.isMaster ? <span className="admin-protected-label">Protected</span> : admin.id === currentAdminId ? <span className="admin-protected-label">Current session</span> : <AdminButton variant="danger" onClick={() => void removeAdmin(admin)}><Trash2 size={13} /> Remove</AdminButton>}</div></div>)}{!admins.length && <div className="admin-empty"><Users size={22} />No admin accounts found.</div>}</div></section><section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">Team access</span><h2>Create another admin</h2><p>New admins can sign in with their own email and password and review the same operations console.</p></div><UserCheck size={20} /></div><form className="cp-form admin-form" onSubmit={createAdmin}><div className="admin-form-row"><label className="cp-field"><span>Admin email</span><input type="email" value={newAdmin.email} onChange={(event) => setNewAdmin({ ...newAdmin, email: event.target.value })} required placeholder="operator@example.com" /></label><label className="cp-field"><span>Password</span><input type="password" value={newAdmin.password} onChange={(event) => setNewAdmin({ ...newAdmin, password: event.target.value })} required minLength={8} placeholder="At least 8 characters" /></label></div><AdminButton variant="primary" disabled={creatingAdmin}>{creatingAdmin ? 'Creating…' : 'Create admin'} <UserCheck size={15} /></AdminButton></form></section></div></section>}
+     {tab === 'services' && <section className="admin-section">
+       <section className="cp-card cp-card-pad">
+         <div className="admin-card-title">
+           <div><span className="cp-kicker">SERVICE AVAILABILITY</span><h2>Control what’s live.</h2><p>Temporarily pause a service for everyone without taking the rest of CipherPay offline. Changes take effect immediately.</p></div>
+           <Zap size={20} />
+         </div>
+         <div className="admin-service-grid">
+           {serviceFeatures.map((feature) => <div className={`admin-service-card ${feature.enabled ? 'is-enabled' : 'is-disabled'}`} key={feature.key}>
+             <div className="admin-service-copy">
+               <div className="admin-service-icon"><Zap size={16} /></div>
+               <div><b>{feature.label}</b><p>{feature.description}</p></div>
+             </div>
+             <div className="admin-service-control">
+               <span className={`admin-service-status ${feature.enabled ? 'online' : 'maintenance'}`}>{feature.enabled ? 'Available' : 'Maintenance'}</span>
+               <AdminButton variant={feature.enabled ? 'soft' : 'primary'} disabled={serviceUpdating === feature.key} onClick={() => void toggleServiceFeature(feature)}>
+                 {serviceUpdating === feature.key ? 'Updating…' : feature.enabled ? 'Disable service' : 'Enable service'}
+               </AdminButton>
+             </div>
+           </div>)}
+           {!serviceFeatures.length && <div className="admin-empty"><Zap size={22} />Service controls are loading.</div>}
+         </div>
+       </section>
+     </section>}
+
      {tab === 'users' && <section className="admin-section"><section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">Account control</span><h2>Every registered user</h2><p>Suspend, verify, message, adjust wallets, clear PINs, reset activity, or remove accounts.</p></div><Users size={20} /></div><form className="admin-search" onSubmit={searchUsers}><Search size={17} /><input value={userQuery} onChange={(event) => setUserQuery(event.target.value)} placeholder="Search name, email, or phone" /><button type="submit">Search</button></form><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>User</th><th>Status</th><th>Wallet</th><th>Joined</th><th>Actions</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td><div className="admin-user-cell"><span className="admin-avatar">{String(user.firstName?.[0] ?? '')}{String(user.lastName?.[0] ?? '')}</span><span><b>{user.firstName} {user.lastName}</b><small>{user.email}<br />{user.phone}</small></span></div></td><td><span className={statusClass(user.isSuspended ? 'suspended' : user.isVerified ? 'verified' : 'unverified')}>{user.isSuspended ? 'Suspended' : user.isVerified ? 'Verified' : 'Unverified'}</span><small className="admin-muted">KYC L{user.kycLevel ?? 0}</small></td><td><b>{naira(user.balance)}</b></td><td><small>{formatWhen(user.createdAt)}</small></td><td><div className="admin-action-grid"><AdminButton onClick={() => void userAction(user, 'adjust')}>Adjust wallet</AdminButton><AdminButton onClick={() => void userAction(user, 'set-balance')}>Set balance</AdminButton><AdminButton onClick={() => void userAction(user, 'debit-to-admin')}>Debit → admin</AdminButton><AdminButton onClick={() => void userAction(user, 'kyc')}>Set KYC</AdminButton><AdminButton onClick={() => void userAction(user, 'notify')}><MessageCircle size={13} /> Notify</AdminButton><AdminButton onClick={() => void userAction(user, 'email')}><Mail size={13} /> Email</AdminButton><AdminButton onClick={() => void userAction(user, 'suspend')} variant={user.isSuspended ? 'primary' : 'soft'}>{user.isSuspended ? <><UserCheck size={13} /> Restore</> : <><Ban size={13} /> Suspend</>}</AdminButton><AdminButton onClick={() => void userAction(user, 'verify')}><Check size={13} /> {user.isVerified ? 'Unverify' : 'Verify'}</AdminButton><AdminButton onClick={() => void userAction(user, 'pin')}><ShieldCheck size={13} /> Clear PIN</AdminButton><AdminButton onClick={() => void userAction(user, 'activity')} variant="danger"><RefreshCw size={13} /> Reset activity</AdminButton>{user.isAdmin ? <span className="admin-protected-label">Admin · protected</span> : <AdminButton onClick={() => void userAction(user, 'delete')} variant="danger"><Trash2 size={13} /> Delete</AdminButton>}</div></td></tr>)}</tbody></table>{!users.length && <div className="admin-empty"><Users size={22} />No users match this search.</div>}</div></section></section>}
 
     {tab === 'money' && <section className="admin-section">
