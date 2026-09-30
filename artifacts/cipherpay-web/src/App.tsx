@@ -127,7 +127,6 @@ function Shell({ children }: { children: ReactNode }) {
   const [notificationReturnPath, setNotificationReturnPath] = useState<string>('/');
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [serviceFeatures, setServiceFeatures] = useState<Record<string, boolean> | null>(null);
-  const [serviceFeaturesCheckedFor, setServiceFeaturesCheckedFor] = useState<string | null>(null);
   const { confirm } = useAnimatedDialog();
   const me = useGetMe({ query: { enabled: !!useToken(), queryKey: ['/api/auth/me'] } });
   const user = me.data as any;
@@ -181,34 +180,27 @@ function Shell({ children }: { children: ReactNode }) {
     let active = true;
 
     const loadServiceFeatures = async () => {
+      if   useEffect(() => {
+    let active = true;
+    const loadServiceFeatures = async () => {
       if (!useToken() || location.startsWith('/admin')) {
-        if (active) {
-          setServiceFeatures(null);
-          setServiceFeaturesCheckedFor(null);
-        }
+        if (active) setServiceFeatures(null);
         return;
       }
 
-      // Check once when the user enters/navigates to a page. Do not poll while
-      // the user is using the page; continuous checks were causing the UI to
-      // refresh underneath active forms and interactions.
-      if (active) setServiceFeaturesCheckedFor(null);
+      // Check service availability once when the user enters a route.
+      // Never poll while the user is actively using the page.
       try {
         const response = await fetch(apiUrl('/api/service-features'), {
           cache: 'no-store',
           headers: { 'Cache-Control': 'no-cache' },
         });
         const payload = await response.json();
-        if (active && response.ok) {
-          setServiceFeatures(payload.data ?? null);
-          setServiceFeaturesCheckedFor(location);
-        }
+        if (active && response.ok) setServiceFeatures(payload.data ?? null);
       } catch {
-        // Keep the page usable during a temporary network failure.
-        if (active) setServiceFeaturesCheckedFor(location);
+        // Keep the current page usable during a temporary network failure.
       }
     };
-
     void loadServiceFeatures();
     return () => {
       active = false;
@@ -282,8 +274,7 @@ function Shell({ children }: { children: ReactNode }) {
       }} aria-label={location === '/notifications' ? 'Close notifications' : unreadNotifications > 0 ? `Open notifications, ${unreadNotifications} unread` : 'Open notifications'} aria-pressed={location === '/notifications'} data-testid="button-notifications"><Bell size={19} />{unreadNotifications > 0 && <i />}</button>{user && <span className="topbar-name">{user.firstName}</span>}<button className="logout-link" onClick={() => void logout()} data-testid="button-logout"><LogOut size={16} /> <span>Log out</span></button></header>
       <div className="content">{(() => {
         const featureKey = serviceFeatureForPath(location);
-        const statusReady = !featureKey || serviceFeaturesCheckedFor === location;
-        const maintenance = statusReady && featureKey && serviceFeatures && serviceFeatures[featureKey] === false;
+        const maintenance = featureKey && serviceFeatures && serviceFeatures[featureKey] === false;
         const labels: Record<string, string> = {
           transfers: 'Transfers',
           wallet_funding: 'Wallet funding',
@@ -295,7 +286,6 @@ function Shell({ children }: { children: ReactNode }) {
           email_pro: 'Email Pro',
           crypto: 'Crypto',
         };
-        if (!statusReady) return <div className="service-status-loading" aria-live="polite"><RefreshCw size={18} className="spin" /><span>Checking service availability…</span></div>;
         return maintenance ? <ServiceMaintenance serviceLabel={labels[featureKey] ?? 'This service'} /> : children;
       })()}</div>
     </main>
