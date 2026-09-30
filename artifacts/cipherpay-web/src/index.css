@@ -6553,3 +6553,29 @@ html.dark .spending-month-row>div{background:rgba(255,255,255,.08)!important}
   0%, 100% { transform: translateY(0); opacity: .3; }
   50% { transform: translateY(-4px); opacity: 1; }
 }
+
+
+.transfer-pin-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--cp-line);
+  border-radius: 14px;
+  background: hsl(var(--primary) / .045);
+}
+.transfer-pin-card > div { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.transfer-pin-card > div > svg { flex: 0 0 auto; color: hsl(var(--primary)); margin-top: 2px; }
+.transfer-pin-card b { display: block; font-size: .8rem; }
+.transfer-pin-card small { display: block; margin-top: 3px; color: var(--cp-muted); font-size: .68rem; line-height: 1.4; }
+.transfer-pin-card input {
+  width: 118px; flex: 0 0 118px; height: 44px; border: 1px solid var(--cp-line);
+  border-radius: 11px; background: hsl(var(--background)); color: var(--cp-ink);
+  text-align: center; letter-spacing: .28em; font-weight: 800; font-size: 1rem;
+}
+@media (max-width: 560px) {
+  .transfer-pin-card { align-items: stretch; flex-direction: column; }
+  .transfer-pin-card input { width: 100%; flex-basis: 44px; }
+}
