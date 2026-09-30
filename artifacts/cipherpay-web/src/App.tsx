@@ -684,7 +684,15 @@ function VerifyEmail() {
     verify.mutate(
       { data: { target: email, code } },
       {
-        onSuccess: () => setLocation('/dashboard'),
+        onSuccess: (result: any) => {
+          if (!result?.token) {
+            setError('Verification succeeded, but no sign-in session was returned. Please sign in again.');
+            return;
+          }
+          localStorage.setItem('cipherpay_token', result.token);
+          if (result.adminToken) sessionStorage.setItem('cipherpay_admin_token', result.adminToken);
+          setLocation('/dashboard');
+        },
         onError: (reason: any) => setError(reason?.message ?? 'The verification code could not be confirmed.'),
       },
     );
@@ -843,7 +851,6 @@ function Register() {
         setFaceReaction((value) => value + 1);
         authDraft.email = '';
         authDraft.password = '';
-        localStorage.setItem('cipherpay_token', result.token);
         if (result.requiresEmailVerification) {
           setLocation(`/verify-email?email=${encodeURIComponent(form.email.trim().toLowerCase())}`);
          } else {
