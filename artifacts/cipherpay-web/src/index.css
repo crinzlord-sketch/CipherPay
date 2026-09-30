@@ -6590,3 +6590,71 @@ html.dark .spending-month-row>div{background:rgba(255,255,255,.08)!important}
   .transfer-pin-card { align-items: stretch; flex-direction: column; }
   .transfer-pin-card input { width: 100%; flex-basis: 44px; }
 }
+
+.transfer-pin-modal-backdrop {
+  position: fixed;
+  z-index: 10000;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(25, 14, 38, 0.38);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.transfer-pin-modal {
+  position: relative;
+  width: min(100%, 380px);
+  padding: 24px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 22px;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  box-shadow: 0 24px 80px rgba(27, 14, 42, 0.3);
+}
+.transfer-pin-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: 0;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+}
+.transfer-pin-modal-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  margin-bottom: 16px;
+  background: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+}
+.transfer-pin-modal h2 {
+  margin: 7px 0 7px;
+}
+.transfer-pin-modal p {
+  margin: 0 0 18px;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.5;
+}
+.transfer-pin-modal-input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+  padding: 14px 16px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 1.1rem;
+  letter-spacing: 0.28em;
+  text-align: center;
+  outline: none;
+}
+.transfer-pin-modal-input:focus {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.12);
+}
