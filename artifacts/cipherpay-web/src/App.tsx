@@ -266,7 +266,7 @@ function LandingPage() {
   const goToAuth = (mode: 'login' | 'register') => {
     if (authNavigating) return;
     setAuthNavigating(mode);
-    window.requestAnimationFrame(() => { window.setTimeout(() => setLocation(mode === 'login' ? '/login' : '/register'), 560); });
+    window.requestAnimationFrame(() => { window.setTimeout(() => { window.history.pushState({}, '', mode === 'login' ? '/login' : '/register'); window.dispatchEvent(new PopStateEvent('popstate')); }, 560); });
   };
   const openSupport = () => { setMobileNavOpen(false); setSupportSent(false); setSupportError(''); setSupportOpen(true); };
   const submitSupport = async (event: React.FormEvent) => {
@@ -488,6 +488,7 @@ function Login() {
 
   const acceptSession = (token: string, adminToken?: string) => {
     localStorage.setItem('cipherpay_token', token);
+    queryClient.clear();
     if (adminToken) sessionStorage.setItem('cipherpay_admin_token', adminToken);
     // Use a real browser navigation after authentication so the protected
     // shell cannot race the token write or leave the landing route mounted.
