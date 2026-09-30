@@ -214,10 +214,8 @@ function Shell({ children }: { children: ReactNode }) {
     };
 
     void loadServiceFeatures();
-    const interval = window.setInterval(() => void loadServiceFeatures(), 2_000);
     return () => {
       active = false;
-      window.clearInterval(interval);
     };
   }, [location]);
 
@@ -1299,6 +1297,7 @@ function Send() {
   const [error, setError] = useState('');
   const [recipient, setRecipient] = useState<any>(null);
   const [recipientChecking, setRecipientChecking] = useState(false);
+  const [transferPin, setTransferPin] = useState('');
   const recipientTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -1387,9 +1386,14 @@ function Send() {
     setResult(null);
     setResultStatus('pending');
 
+    if (!/^\d{6}$/.test(transferPin)) {
+      setError('Enter your 6-digit transfer PIN before sending.');
+      return;
+    }
+
     if (mode === 'cipherpay') {
       mutation.mutate(
-        { data: { ...form, amount: parseGroupedDigits(form.amount) } as any },
+        { data: { ...form, amount: parseGroupedDigits(form.amount), pin: transferPin } as any },
         {
           onSuccess: (value: any) => { setResult(value); setResultStatus('success'); },
           onError: (reason: any) => setError(reason?.message ?? 'The transfer could not be completed.'),
@@ -1422,6 +1426,7 @@ function Send() {
           accountNumber: bankForm.accountNumber,
           accountName: bankForm.accountName,
           narration: bankForm.narration || undefined,
+          pin: transferPin,
         },
       });
       setResult(payload);
