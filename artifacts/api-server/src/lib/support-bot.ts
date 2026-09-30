@@ -170,8 +170,7 @@ export function getBotReply(message: string): BotReply {
     };
   }
   return {
-    body:
-      "I'm not sure I understood that 🤔 Could you rephrase, or tap **'Talk to a live agent'** below and someone from our team will join the chat shortly.\n\nYou can also email **team.2025@gmail.com** anytime.",
+    body: "Tell me a little more about what happened and I’ll help you work through it. Tell me what you were trying to do, what you saw on screen, or any transaction reference. If you prefer a person, tap 'Talk to a live agent'.",
     confident: false,
   };
 }
