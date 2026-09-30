@@ -33,6 +33,7 @@ if (Number.isNaN(port) || port <= 0) throw new Error(`Invalid PORT value: "${raw
 const start = async () => {
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS gender text`);
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS user_code text`);
+  await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS chat_public_key text`);
   await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS users_user_code_unique ON users(user_code)`);
   await db.execute(sql`UPDATE users SET user_code = 'CP-' || upper(substr(md5(random()::text || id::text), 1, 10)) WHERE user_code IS NULL`);
   await db.execute(sql`CREATE TABLE IF NOT EXISTS direct_chats (
