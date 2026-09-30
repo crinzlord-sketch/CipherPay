@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { eq, and, desc } from "drizzle-orm";
-import { db, usersTable, otpTable } from "@workspace/db";
+import { db, usersTable, otpTable, transactionsTable } from "@workspace/db";
 import { RegisterBody, LoginBody, SendOtpBody, VerifyOtpBody, UpdateProfileBody, ChangePasswordBody } from "@workspace/api-zod";
 import { signToken, generateOtp, generateReferralCode } from "../lib/auth";
 import { signAdminToken } from "../lib/admin-auth";
@@ -108,7 +108,17 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   }
 
   const { email, password, firstName, lastName, phone, referralCode } = parsed.data;
+  const normalizedReferralCode = referralCode?.trim().toUpperCase() || undefined;
   const requestedGender = req.body?.gender === "male" || req.body?.gender === "female" ? req.body.gender : null;
+
+  if (normalizedReferralCode) {
+    const [referrer] = await db.select({ id: usersTable.id }).from(usersTable)
+      .where(eq(usersTable.referralCode, normalizedReferralCode)).limit(1);
+    if (!referrer) {
+      res.status(400).json({ error: "That referral code is not valid." });
+      return;
+    }
+  }
 
   const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase()));
   if (existing) {
@@ -131,7 +141,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     accountNumber,
     referralCode: myReferralCode,
     userCode: myUserCode,
-    referredBy: referralCode ?? null,
+    referredBy: normalizedReferralCode ?? null,
     isVerified: false,
     kycLevel: 0,
   }).returning();
@@ -153,24 +163,6 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   void ensureUserPayoutWallet(user.id).catch((e: any) => {
     req.log?.warn?.({ userId: user.id, err: e?.message }, "initial Flutterwave payout wallet provisioning failed");
   });
-
-  // Credit referral bonuses if a valid referral code was provided.
-  const REFERRAL_BONUS_REFERRER = 200;
-  const REFERRAL_BONUS_REFEREE = 150;
-  if (referralCode) {
-    void (async () => {
-      try {
-        const [referrer] = await db.select().from(usersTable).where(eq(usersTable.referralCode, referralCode));
-        if (referrer) {
-          await creditWallet(referrer.id, REFERRAL_BONUS_REFERRER, `Referral bonus — ${firstName} joined CipherPay`, "referral", { referredUserId: user.id });
-          await creditWallet(user.id, REFERRAL_BONUS_REFEREE, "Welcome bonus — you joined via a referral", "referral", { referrerId: referrer.id });
-          await notifyUser({ userId: referrer.id, title: "Referral bonus 🎉", body: `You earned ₦${REFERRAL_BONUS_REFERRER.toLocaleString()} for inviting ${firstName} to CipherPay!`, type: "success" });
-        }
-      } catch (e: any) {
-        req.log.warn({ err: e?.message, referralCode }, "referral bonus credit failed — non-fatal");
-      }
-    })();
-  }
 
   // Auto-send an email OTP so the user can verify their inbox before they finish
   // the signup flow. We still issue the JWT (the mobile app needs it to call
@@ -532,6 +524,46 @@ router.post("/auth/verify-otp", async (req, res): Promise<void> => {
         .set({ isVerified: true })
         .where(eq(usersTable.id, user.id))
         .returning();
+
+      // Referral rewards are released only after the new user proves control of
+      // their email. This prevents unverified signups from farming wallet credit.
+      const REFERRAL_BONUS_REFERRER = 500;
+      const REFERRAL_BONUS_REFEREE = 200;
+      const referredBy = (verifiedUser ?? user).referredBy;
+      if (referredBy) {
+        try {
+          const [referrer] = await db.select().from(usersTable)
+            .where(eq(usersTable.referralCode, referredBy)).limit(1);
+          if (referrer && referrer.id !== user.id) {
+            const existingRewards = await db.select({ metadata: transactionsTable.metadata })
+              .from(transactionsTable)
+              .where(and(
+                eq(transactionsTable.userId, referrer.id),
+                eq(transactionsTable.type, "referral"),
+              ))
+              .orderBy(desc(transactionsTable.createdAt))
+              .limit(50);
+            const alreadyRewarded = existingRewards.some((tx) =>
+              tx.metadata?.includes(`"referredUserId":${user.id}`) ?? false,
+            );
+            // The OTP is single-use, so this normally executes once. Keep the
+            // metadata guard as a second line of protection against duplicate credits.
+            if (!alreadyRewarded) {
+              await creditWallet(referrer.id, REFERRAL_BONUS_REFERRER, `Referral bonus — ${user.firstName} joined CipherPay`, "referral", { referredUserId: user.id });
+              await creditWallet(user.id, REFERRAL_BONUS_REFEREE, "Welcome bonus — you joined via a referral", "referral", { referrerId: referrer.id });
+              await notifyUser({
+                userId: referrer.id,
+                title: "Referral bonus 🎉",
+                body: `You earned ₦${REFERRAL_BONUS_REFERRER.toLocaleString()} for inviting ${user.firstName} to CipherPay!`,
+                type: "success",
+              });
+            }
+          }
+        } catch (e: any) {
+          req.log.warn({ err: e?.message, userId: user.id }, "referral reward credit failed — non-fatal");
+        }
+      }
+
       const dev = deviceInfo(req);
       const sid = await createSession(user.id, dev.name, dev.platform, dev.ip);
       const token = signToken(user.id, sid);
