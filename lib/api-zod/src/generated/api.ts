@@ -251,7 +251,8 @@ export const WalletTransferHeader = zod.object({
 export const WalletTransferBody = zod.object({
   "recipientEmail": zod.string(),
   "amount": zod.number(),
-  "note": zod.string().nullish()
+  "note": zod.string().nullish(),
+  "pin": zod.string().regex(/^\d{6}$/)
 })
 
 export const WalletTransferResponse = zod.object({
@@ -286,7 +287,8 @@ export const WithdrawFundsBody = zod.object({
   "bankCode": zod.string(),
   "accountNumber": zod.string(),
   "accountName": zod.string(),
-  "narration": zod.string().nullish()
+  "narration": zod.string().nullish(),
+  "pin": zod.string().regex(/^\d{6}$/)
 })
 
 export const WithdrawFundsResponse = zod.object({
