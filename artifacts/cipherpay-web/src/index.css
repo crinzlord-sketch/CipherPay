@@ -2225,8 +2225,9 @@ a {
   justify-content: center;
   padding: 8px;
   overflow: hidden;
-  background: transparent;
-  backdrop-filter: none;
+  background: rgba(25, 14, 38, 0.42);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   animation: animated-dialog-fade-in 180ms ease-out;
 }
 
