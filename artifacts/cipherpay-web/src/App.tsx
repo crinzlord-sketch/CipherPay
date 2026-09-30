@@ -1032,6 +1032,12 @@ function TransactionReceipt({ transaction, onClose }: { transaction: any; onClos
   const [resolvedBankName, setResolvedBankName] = useState('');
 
   useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, []);
+
+  useEffect(() => {
     if (!isExternal) return;
     const storedName = String(meta.bankName ?? '').trim();
     const bankCode = String(meta.bankCode ?? '').trim();
@@ -1055,10 +1061,14 @@ function TransactionReceipt({ transaction, onClose }: { transaction: any; onClos
       ? String(meta.bankName)
       : 'Bank transfer'
   );
+  const recipientName = String(meta.accountName ?? '').trim();
+  const receiptTitle = isExternal
+    ? `Withdrawal to ${recipientName || 'bank account'}`
+    : (transaction.description || 'Transaction details');
 
   const details = isExternal
     ? [
-        ['Recipient', meta.accountName || 'Bank account'],
+        ['Recipient', recipientName || 'Bank account'],
         ['Bank', bankDisplayName],
         ['Account number', meta.accountNumber || 'Not available'],
         ['Reference', transaction.reference || 'Not available'],
@@ -1072,17 +1082,21 @@ function TransactionReceipt({ transaction, onClose }: { transaction: any; onClos
         ['Fee', transaction.fee == null ? '—' : money.format(transaction.fee)],
       ];
 
-  return <div className="animated-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section className="animated-dialog transaction-receipt" role="dialog" aria-modal="true" aria-labelledby="transaction-receipt-title" onMouseDown={(event) => event.stopPropagation()}>
-      <button type="button" className="animated-dialog-close" onClick={onClose} aria-label="Close transaction receipt"><X size={17} /></button>
-      <span className={`receipt-status-icon ${positive ? 'positive' : ''}`}><Check size={21} /></span>
-      <span className="receipt-kicker">CIPHERPAY / RECEIPT</span>
-      <h2 id="transaction-receipt-title">{transaction.description || 'Transaction details'}</h2>
-      <strong className={`receipt-amount ${positive ? 'positive' : ''}`}>{positive ? '+' : '−'}{money.format(Math.abs(transaction.amount ?? 0))}</strong>
-      <span className={`receipt-status receipt-status-${status}`}>{status}</span>
-      <div className="receipt-details">{details.map(([label, value]) => <div key={label}><span>{label}</span><b>{value}</b></div>)}</div>
-    </section>
-  </div>;
+  const receipt = (
+    <div className="animated-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="animated-dialog transaction-receipt" role="dialog" aria-modal="true" aria-labelledby="transaction-receipt-title" onMouseDown={(event) => event.stopPropagation()}>
+        <button type="button" className="animated-dialog-close" onClick={onClose} aria-label="Close transaction receipt"><X size={17} /></button>
+        <span className={`receipt-status-icon ${positive ? 'positive' : ''}`}><Check size={21} /></span>
+        <span className="receipt-kicker">CIPHERPAY / RECEIPT</span>
+        <h2 id="transaction-receipt-title">{receiptTitle}</h2>
+        <strong className={`receipt-amount ${positive ? 'positive' : ''}`}>{positive ? '+' : '−'}{money.format(Math.abs(transaction.amount ?? 0))}</strong>
+        <span className={`receipt-status receipt-status-${status}`}>{status}</span>
+        <div className="receipt-details">{details.map(([label, value]) => <div key={label}><span>{label}</span><b>{value}</b></div>)}</div>
+      </section>
+    </div>
+  );
+
+  return createPortal(receipt, document.body);
 }
 
 function EmptyState({ icon, title, text, action }: { icon: ReactNode; title: string; text: string; action?: ReactNode }) { return <div className="empty-state"><span className="empty-icon">{icon}</span><b>{title}</b><p>{text}</p>{action}</div>; }
