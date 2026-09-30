@@ -59,4 +59,20 @@ router.get("/users/lookup", async (req, res): Promise<void> => {
   });
 });
 
+
+router.get("/users/find/:code", async (req, res): Promise<void> => {
+  const rawId = req.headers["x-user-id"];
+  const currentId = parseInt(Array.isArray(rawId) ? rawId[0] : (rawId ?? ""), 10);
+  if (isNaN(currentId)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const code = String(req.params.code ?? "").trim().toUpperCase();
+  if (!/^CP-[A-F0-9]{10}$/.test(code)) { res.status(400).json({ error: "Enter a valid CipherPay user code." }); return; }
+  const [user] = await db.select({
+    id: usersTable.id, firstName: usersTable.firstName, lastName: usersTable.lastName,
+    email: usersTable.email, avatarUrl: usersTable.avatarUrl, gender: usersTable.gender,
+    userCode: usersTable.userCode,
+  }).from(usersTable).where(eq(usersTable.userCode, code));
+  if (!user || user.id === currentId) { res.status(404).json({ error: "No user was found for that code." }); return; }
+  res.json({ user });
+});
+
 export default router;
