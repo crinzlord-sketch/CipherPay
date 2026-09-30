@@ -482,7 +482,7 @@ function Login() {
   const acceptSession = (token: string, adminToken?: string) => {
     localStorage.setItem('cipherpay_token', token);
     if (adminToken) sessionStorage.setItem('cipherpay_admin_token', adminToken);
-    setLocation('/');
+    setLocation('/dashboard');
   };
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -642,7 +642,7 @@ function VerifyEmail() {
     verify.mutate(
       { data: { target: email, code } },
       {
-        onSuccess: () => setLocation('/'),
+        onSuccess: () => setLocation('/dashboard'),
         onError: (reason: any) => setError(reason?.message ?? 'The verification code could not be confirmed.'),
       },
     );
@@ -1568,6 +1568,7 @@ function App() {
             <Route path="/forgot-password"><ForgotPassword /></Route>
             <Route path="/verify-email"><VerifyEmail /></Route>
             <Route path="/reset-password"><ResetPassword /></Route>
+            <Route path="/dashboard"><ProtectedArea><Dashboard /></ProtectedArea></Route>
             <Route path="/"><HomeRoute /></Route>
             <Route path="/fund"><ProtectedArea><Fund /></ProtectedArea></Route>
             <Route path="/send"><ProtectedArea><Send /></ProtectedArea></Route>
