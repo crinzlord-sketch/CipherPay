@@ -13,6 +13,7 @@ import adsRouter from "./ads";
 import temporaryEmailRouter from "./temporary-email";
 import emailRouter from "./email";
 import chatRouter from "./chat";
+import referralsRouter from "./referrals";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(adsRouter);
 router.use(temporaryEmailRouter);
 router.use(emailRouter);
 router.use(chatRouter);
+router.use(referralsRouter);
 
 export default router;
