@@ -19,7 +19,31 @@ import {
 } from "../lib/email-pro";
 
 const router: IRouter = Router();
-async function requireEmailPro(req: any, res: any): Promise<number | null> { const userId = getUserId(req); if (!userId) { res.status(401).json({ error: "Unauthorized" }); return null; } if (!(await hasActiveEmailPro(userId))) { res.status(402).json({ error: "Email Pro is locked. Unlock it for ₦3,000, then ₦3,000 monthly.", code: "EMAIL_PRO_LOCKED" }); return null; } return userId; }
+const FREE_EMAILS = 5;
+async function getFreeEmailUsage(userId: number): Promise<number> {
+  const rows = await db.select({ acceptedCount: emailCampaignsTable.acceptedCount })
+    .from(emailCampaignsTable)
+    .where(eq(emailCampaignsTable.userId, userId));
+  return rows.reduce((total, row) => total + Number(row.acceptedCount ?? 0), 0);
+}
+async function requireEmailAccess(req: any, res: any): Promise<number | null> {
+  const userId = getUserId(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return null; }
+  if (await hasActiveEmailPro(userId)) return userId;
+  const used = await getFreeEmailUsage(userId);
+  if (used < FREE_EMAILS) return userId;
+  res.status(402).json({
+    error: "Your 5 free emails have been used. Unlock Email Pro for ₦3,000 to continue sending.",
+    code: "EMAIL_PRO_LOCKED",
+    freeEmails: FREE_EMAILS,
+    usedEmails: used,
+  });
+  return null;
+}
+async function getEmailAccess(userId: number) {
+  const used = await getFreeEmailUsage(userId);
+  return { unlocked: await hasActiveEmailPro(userId), freeEmails: FREE_EMAILS, usedEmails: used, remainingFreeEmails: Math.max(0, FREE_EMAILS - used) };
+}
 const MAX_RECIPIENTS = 150;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PROVIDERS = new Set(["gmail", "outlook", "custom"]);
@@ -85,7 +109,22 @@ function containsHeaderBreak(value: string): boolean {
   return /[\r\n]/.test(value);
 }
 
-router.get("/email/pro", async (req, res): Promise<void> => { const userId = getUserId(req); if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; } const subscription = await getEmailProSubscription(userId); res.json({ unlocked: subscription?.status === "active" && subscription.nextBillingAt > new Date(), status: subscription?.status ?? "locked", nextBillingAt: subscription?.nextBillingAt?.toISOString() ?? null, unlockFee: 3000, monthlyFee: 3000 }); });
+router.get("/email/pro", async (req, res): Promise<void> => {
+  const userId = getUserId(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const subscription = await getEmailProSubscription(userId);
+  const access = await getEmailAccess(userId);
+  res.json({
+    unlocked: access.unlocked,
+    freeEmails: access.freeEmails,
+    usedEmails: access.usedEmails,
+    remainingFreeEmails: access.remainingFreeEmails,
+    status: subscription?.status ?? "free",
+    nextBillingAt: subscription?.nextBillingAt?.toISOString() ?? null,
+    unlockFee: 3000,
+    monthlyFee: 3000,
+  });
+});
 router.post("/email/pro/unlock", async (req, res): Promise<void> => { const userId = getUserId(req); if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; } try { const result = await unlockEmailPro(userId); res.json({ success: true, unlocked: true, nextBillingAt: result.nextBillingAt.toISOString() }); } catch (e: any) { res.status(400).json({ error: e?.message ?? "Could not unlock Email Pro." }); } });
 router.get("/email/accounts", async (req, res): Promise<void> => {
   const userId = getUserId(req);  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -96,7 +135,7 @@ router.get("/email/accounts", async (req, res): Promise<void> => {
 });
 
 router.post("/email/accounts", async (req, res): Promise<void> => {
-  const proUserId = await requireEmailPro(req, res);
+  const proUserId = await requireEmailAccess(req, res);
   if (!proUserId) return;
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -160,7 +199,7 @@ router.post("/email/accounts", async (req, res): Promise<void> => {
 });
 
 router.post("/email/accounts/:id/test", async (req, res): Promise<void> => {
-  const proUserId = await requireEmailPro(req, res);
+  const proUserId = await requireEmailAccess(req, res);
   if (!proUserId) return;
   const userId = getUserId(req);
   const accountId = parseInt(String(req.params.id), 10);
@@ -185,7 +224,7 @@ router.post("/email/accounts/:id/test", async (req, res): Promise<void> => {
 });
 
 router.delete("/email/accounts/:id", async (req, res): Promise<void> => {
-  const proUserId = await requireEmailPro(req, res);
+  const proUserId = await requireEmailAccess(req, res);
   if (!proUserId) return;
   const userId = getUserId(req);
   const accountId = parseInt(String(req.params.id), 10);
@@ -199,7 +238,7 @@ router.delete("/email/accounts/:id", async (req, res): Promise<void> => {
 });
 
 router.post("/email/send", async (req, res): Promise<void> => {
-  const proUserId = await requireEmailPro(req, res);
+  const proUserId = await requireEmailAccess(req, res);
   if (!proUserId) return;
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -217,6 +256,14 @@ router.post("/email/send", async (req, res): Promise<void> => {
   if (recipients.length === 0) { res.status(400).json({ error: "Add at least one recipient." }); return; }
   if (recipients.length > MAX_RECIPIENTS) { res.status(400).json({ error: `You can send to up to ${MAX_RECIPIENTS} recipients at once.` }); return; }
   if (recipients.some((recipient) => !EMAIL_RE.test(recipient))) { res.status(400).json({ error: "Every recipient must be a valid email address." }); return; }
+  if (!(await hasActiveEmailPro(userId))) {
+    const used = await getFreeEmailUsage(userId);
+    const remaining = Math.max(0, FREE_EMAILS - used);
+    if (recipients.length > remaining) {
+      res.status(402).json({ error: remaining > 0 ? `You have ${remaining} free email${remaining === 1 ? "" : "s"} remaining. Reduce the recipient list or unlock Email Pro for ₦3,000.` : "Your 5 free emails have been used. Unlock Email Pro for ₦3,000 to continue sending.", code: "EMAIL_PRO_LOCKED", freeEmails: FREE_EMAILS, usedEmails: used, remainingFreeEmails: remaining });
+      return;
+    }
+  }
   if (requestedReplyTo && !EMAIL_RE.test(requestedReplyTo)) { res.status(400).json({ error: "Reply-To must be a valid email address." }); return; }
 
   const [account] = await db.select().from(emailAccountsTable).where(and(
