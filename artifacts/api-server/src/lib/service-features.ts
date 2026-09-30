@@ -9,7 +9,7 @@ export const SERVICE_FEATURES = [
   { key: "bills", label: "Bills", description: "Pay electricity and other supported bills." },
   { key: "sms", label: "SMS verification", description: "Purchase SMS verification numbers and activations." },
   { key: "temporary_email", label: "Temporary email", description: "Create and use temporary inboxes." },
-  { key: "services", label: "Services", description: "Paid digital and social services." },
+  { key: "social_boost", label: "Social Boost", description: "Paid social media growth and engagement services." },
   { key: "email_pro", label: "Email Pro", description: "Paid email sending and Email Pro access." },
   { key: "crypto", label: "Crypto", description: "Crypto wallet, stablecoin and related transactions." },
 ] as const;
