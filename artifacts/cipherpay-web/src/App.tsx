@@ -246,23 +246,6 @@ function LandingPage() {
     } catch (error: any) { setSupportError(error?.message ?? 'We could not send your message. Please try again.'); }
     finally { setSupportSending(false); }
   };
-  const [supportOpen, setSupportOpen] = useState(false);
-  const [supportSending, setSupportSending] = useState(false);
-  const [supportSent, setSupportSent] = useState(false);
-  const [supportForm, setSupportForm] = useState({ email: '', subject: '', category: 'general', message: '' });
-  const scrollToSection = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  const sendGuestSupport = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (supportSending) return;
-    setSupportSending(true);
-    try {
-      await apiRequest('/api/support/contact', { method: 'POST', body: supportForm });
-      setSupportSent(true);
-      setSupportForm({ email: '', subject: '', category: 'general', message: '' });
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Could not send your message.');
-    } finally { setSupportSending(false); }
-  };
   const features = [
     { icon: WalletCards, title: 'One wallet. More control.', text: 'Fund your CipherPay wallet and keep everyday activity in one clear place.' },
     { icon: Receipt, title: 'Bills without the friction.', text: 'Handle airtime, data and bill payments through focused, simple flows.' },
