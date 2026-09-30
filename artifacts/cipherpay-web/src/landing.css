@@ -1426,3 +1426,86 @@ html.dark .cp-support-close{
   color:#fff!important;
   border-color:rgba(255,255,255,.10)!important;
 }
+
+
+/* LANDING 3D BOOST — make the restored depth elements unmistakable */
+.cp-hero .cp-orbit-stage{overflow:visible!important;perspective:1400px!important}
+.cp-hero .cp-3d-scene{opacity:1!important;filter:drop-shadow(0 30px 45px rgba(75,45,150,.18))!important}
+.cp-hero .cp-3d-card{
+  overflow:hidden!important;
+  background-clip:padding-box!important;
+}
+.cp-hero .cp-3d-card::after{
+  content:""!important;
+  position:absolute!important;
+  inset:-30% 20% auto -20%!important;
+  height:70%!important;
+  background:linear-gradient(120deg,rgba(255,255,255,.78),rgba(255,255,255,0) 62%)!important;
+  transform:rotate(-12deg) translateZ(18px)!important;
+  pointer-events:none!important;
+  border-radius:50%!important;
+  filter:blur(1px)!important;
+}
+.cp-hero .cp-3d-card-front::before{
+  content:"CIPHERPAY"!important;
+  position:absolute!important;
+  right:20px!important;
+  top:20px!important;
+  font-size:8px!important;
+  letter-spacing:.28em!important;
+  font-weight:800!important;
+  color:rgba(35,30,55,.42)!important;
+  transform:translateZ(28px)!important;
+}
+.cp-hero .cp-3d-card-front{
+  box-shadow:0 38px 80px rgba(48,35,90,.20),inset 0 1px 0 rgba(255,255,255,.98),inset 0 -1px 0 rgba(100,80,150,.12)!important;
+}
+.cp-hero .cp-3d-card-back{
+  box-shadow:0 32px 70px rgba(78,54,145,.15),inset 0 1px rgba(255,255,255,.72)!important;
+}
+.cp-hero .cp-3d-coin{
+  border:1px solid rgba(255,255,255,.58)!important;
+  background:
+    radial-gradient(circle at 32% 25%,rgba(255,255,255,.82),transparent 16%),
+    linear-gradient(145deg,#ffb58f,#735cff 70%)!important;
+}
+.cp-hero .cp-3d-ring-a{box-shadow:0 0 35px rgba(115,92,255,.12)!important}
+.cp-hero .cp-3d-ring-b{box-shadow:0 0 42px rgba(255,134,83,.10)!important}
+
+/* Extra floating glass depth behind the hero sculpture */
+.cp-hero .cp-orbit-stage::after{
+  content:""!important;
+  position:absolute!important;
+  width:300px!important;
+  height:90px!important;
+  left:50%!important;
+  bottom:22px!important;
+  transform:translateX(-50%) rotate(-8deg)!important;
+  border-radius:50%!important;
+  background:radial-gradient(ellipse,rgba(94,68,170,.18),rgba(94,68,170,0) 68%)!important;
+  filter:blur(18px)!important;
+  pointer-events:none!important;
+  z-index:1!important;
+}
+
+/* Give the feature cube real glass/reflection depth */
+.cp-3d-feature-cube span{
+  box-shadow:inset 0 1px rgba(255,255,255,.72),0 15px 35px rgba(70,50,130,.08)!important;
+  overflow:hidden!important;
+}
+.cp-3d-feature-cube span::after{
+  content:""!important;
+  position:absolute!important;
+  inset:-40% 45% 20% -25%!important;
+  background:linear-gradient(120deg,rgba(255,255,255,.55),transparent 62%)!important;
+  transform:rotate(-18deg)!important;
+  pointer-events:none!important;
+}
+
+/* CTA prism gets a subtle glass reflection instead of looking flat */
+.cp-3d-cta-prism{
+  filter:drop-shadow(0 25px 35px rgba(90,65,160,.12))!important;
+}
+.cp-3d-cta-prism span{
+  box-shadow:inset 0 1px rgba(255,255,255,.65)!important;
+}
