@@ -57,7 +57,7 @@ export default function ChatPage() {
       } else setDecrypted((r.messages??[]).map((m:any)=>({...m,decrypted:{error:true}})));
     }catch(e){setError(e instanceof Error?e.message:'Could not open chat.');}
   };
-  useEffect(()=>{void loadChats(); void (async()=>{try{const me=await apiRequest<any>('/api/auth/me');if(me?.user?.id)setCurrentUserId(Number(me.user.id));}catch{}; try{const key=await ensureChatKey();try{const key=await ensureChatKey(); await apiRequest('/api/auth/chat-key',{method:'POST',body:{publicKey:JSON.stringify(key)}});}catch(e){setError(e instanceof Error?e.message:'Secure chat encryption could not be initialized.');}})();},[]);
+  useEffect(()=>{void loadChats(); void (async()=>{try{const me=await apiRequest<any>('/api/auth/me');if(me?.user?.id)setCurrentUserId(Number(me.user.id));}catch{} try{const key=await ensureChatKey(); await apiRequest('/api/auth/chat-key',{method:'POST',body:{publicKey:JSON.stringify(key)}});}catch(e){setError(e instanceof Error?e.message:'Secure chat encryption could not be initialized.');}})();},[]);
   useEffect(()=>{if(params?.id) void loadChat(params.id); else {setChat(null);setOther(null);setMessages([]);}},[params?.id]);
   useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'});},[decrypted.length]);
 
@@ -75,7 +75,7 @@ export default function ChatPage() {
       }catch{}
     },2500);
     return()=>window.clearInterval(t);
-  },[params?.id]);
+  },[params?.id,currentUserId]);
 
   const validateCode=async()=>{
     setError('');setFound(null);const value=code.trim().toUpperCase();
