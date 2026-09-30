@@ -83,7 +83,7 @@ router.get("/chat/:id", async (req, res): Promise<void> => {
   const chat = await chatFor(Number(req.params.id), me);
   if (!chat) { res.status(404).json({ error: "Chat not found." }); return; }
   const otherId = chat.userOneId === me ? chat.userTwoId : chat.userOneId;
-  const [other] = await db.select({ id: usersTable.id, firstName: usersTable.firstName, lastName: usersTable.lastName, email: usersTable.email, avatarUrl: usersTable.avatarUrl, gender: usersTable.gender, userCode: usersTable.userCode }).from(usersTable).where(eq(usersTable.id, otherId));
+  const [other] = await db.select({ id: usersTable.id, firstName: usersTable.firstName, lastName: usersTable.lastName, email: usersTable.email, avatarUrl: usersTable.avatarUrl, gender: usersTable.gender, userCode: usersTable.userCode, chatPublicKey: usersTable.chatPublicKey }).from(usersTable).where(eq(usersTable.id, otherId));
   const messages = await db.select().from(directMessagesTable).where(eq(directMessagesTable.chatId, chat.id)).orderBy(asc(directMessagesTable.id));
   res.json({ chat, other, messages, blocked: await blocked(me, otherId), background: chat.userOneId === me ? chat.backgroundOne : chat.backgroundTwo });
 });
@@ -94,12 +94,14 @@ router.post("/chat/:id/message", async (req, res): Promise<void> => {
   if (!chat) { res.status(404).json({ error: "Chat not found." }); return; }
   const other = chat.userOneId === me ? chat.userTwoId : chat.userOneId;
   if (await blocked(me, other)) { res.status(403).json({ error: "You cannot send messages in this chat." }); return; }
-  const body = String(req.body?.body ?? "").trim().slice(0, 4000);
-  let imageUrl = String(req.body?.imageUrl ?? "").trim() || null;
-  const gifUrl = String(req.body?.gifUrl ?? "").trim() || null;
-  if (imageUrl?.startsWith("data:image/")) { try { imageUrl = await saveChatImage(me, imageUrl); } catch(e:any) { res.status(400).json({ error: e?.message ?? "Could not save image." }); return; } }
-  if (!body && !imageUrl && !gifUrl) { res.status(400).json({ error: "Message cannot be empty." }); return; }
-  const [message] = await db.insert(directMessagesTable).values({ chatId: chat.id, senderId: me, body: body || null, imageUrl, gifUrl }).returning();
+  // Chat content is encrypted in the browser before it reaches this API.
+  // The server intentionally treats the body as opaque ciphertext and never
+  // receives plaintext text/images. Legacy plaintext rows remain readable by
+  // clients, but all new messages must use the E2EE envelope.
+  const body = typeof req.body?.body === "string" ? req.body.body.trim() : "";
+  if (!body || !body.startsWith("E2EE1.")) { res.status(400).json({ error: "End-to-end encryption is required for chat messages." }); return; }
+  if (body.length > 16 * 1024 * 1024) { res.status(400).json({ error: "Encrypted message is too large." }); return; }
+  const [message] = await db.insert(directMessagesTable).values({ chatId: chat.id, senderId: me, body, imageUrl: null, gifUrl: null }).returning();
   await db.update(directChatsTable).set({ updatedAt: new Date(), lastMessageAt: new Date(), ...(chat.userOneId === me ? { deletedTwo: false } : { deletedOne: false }) }).where(eq(directChatsTable.id, chat.id));
   res.json({ message });
 });
