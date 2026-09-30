@@ -494,6 +494,21 @@ export async function createPayoutWallet(params: { accountName: string; email: s
   };
 }
 
+export async function fetchPayoutWallet(accountReference: string): Promise<{ accountReference: string; accountName: string; email: string; status: string; raw: any }> {
+  const { status, body } = await flwGet<any>(`/payout-subaccounts/${encodeURIComponent(accountReference)}`);
+  const data = Array.isArray(body?.data) ? (body.data[0] ?? {}) : (body?.data ?? {});
+  if (status < 200 || status >= 300 || body?.status !== "success" || !data?.account_reference) {
+    throw new Error(body?.message || "Flutterwave payout wallet lookup failed");
+  }
+  return {
+    accountReference: String(data.account_reference),
+    accountName: String(data.account_name ?? ""),
+    email: String(data.email ?? ""),
+    status: String(data.status ?? ""),
+    raw: body,
+  };
+}
+
 export async function fetchPayoutWalletTransactions(accountReference: string): Promise<any[]> {
   const now = new Date();
   const from = new Date(now.getTime() - 48 * 60 * 60 * 1000);
