@@ -287,16 +287,19 @@ function LandingPage() {
   ];
   return <div className={`cp-landing ${authNavigating ? 'cp-auth-exit' : ''}`}>
     <div className="cp-landing-grid" aria-hidden="true" />
-    <nav className="cp-landing-nav" aria-label="Landing navigation">
-      <div className="cp-landing-nav-inner">
-        <Logo />
-        <div className="cp-landing-links"><button type="button" onClick={() => scrollToSection('cinema')}>Experience</button><button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={openSupport}>Support</button></div>
-        <div className="cp-landing-nav-actions"><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={15}/></button><button type="button" className="cp-mobile-menu-toggle" aria-label="Open landing menu" aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen(v => !v)}><Menu size={19}/></button></div>
-        <div className={`cp-mobile-menu ${mobileNavOpen ? 'open' : ''}`}>
-          <button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('experience')}>Experience</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={openSupport}>Support</button><button type="button" onClick={() => { setMobileNavOpen(false); goToAuth('login'); }}>Log in</button><button type="button" onClick={() => { setMobileNavOpen(false); goToAuth('register'); }}>Get started</button>
+    {typeof document !== 'undefined' && createPortal(
+      <nav className="cp-landing-nav" aria-label="Landing navigation">
+        <div className="cp-landing-nav-inner">
+          <Logo />
+          <div className="cp-landing-links"><button type="button" onClick={() => scrollToSection('experience')}>Experience</button><button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={openSupport}>Support</button></div>
+          <div className="cp-landing-nav-actions"><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={15}/></button><button type="button" className="cp-mobile-menu-toggle" aria-label="Open landing menu" aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen(v => !v)}><Menu size={19}/></button></div>
+          <div className={`cp-mobile-menu ${mobileNavOpen ? 'open' : ''}`}>
+            <button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('experience')}>Experience</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={openSupport}>Support</button><button type="button" onClick={() => { setMobileNavOpen(false); goToAuth('login'); }}>Log in</button><button type="button" onClick={() => { setMobileNavOpen(false); goToAuth('register'); }}>Get started</button>
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>,
+      document.body
+    )}
     <section className="cp-hero">
       <div className="cp-hero-copy">
         <span className="cp-kicker"><i/> EVERYTHING, IN ONE PLACE</span>
@@ -323,19 +326,6 @@ function LandingPage() {
           <i/><i/><i/><i/><i/><i/>
         </div>
         </div>
-        <div className="cp-hero-mockup-cloud" aria-hidden="true">
-          <div className="cp-mockup m1"><div className="mock-screen"><b>Wallet</b><strong>₦24,680</strong><span>Available balance</span><i>↗ Send</i><i>＋ Fund</i></div></div>
-          <div className="cp-mockup m2"><div className="mock-screen"><b>Pay bills</b><strong>Electricity</strong><span>₦12,500 • Successful</span><i>Receipt</i></div></div>
-          <div className="cp-mockup m3"><div className="mock-screen"><b>Messages</b><strong>You're all set.</strong><span>Just now</span><i>Reply</i></div></div>
-          <div className="cp-mockup m4"><div className="mock-screen"><b>Verify</b><strong>Code confirmed</strong><span>Secure service access</span><i>✓ Verified</i></div></div>
-          <div className="cp-mockup m5"><div className="mock-screen"><b>Activity</b><strong>+₦20,000</strong><span>Wallet funded</span><i>View details</i></div></div>
-          <div className="cp-mockup m6"><div className="mock-screen"><b>Data</b><strong>20 GB</strong><span>Renew anytime</span><i>Buy data</i></div></div>
-          <div className="cp-mockup m7"><div className="mock-screen"><b>Cipher ID</b><strong>CP • 0482</strong><span>Your personal code</span><i>Copy</i></div></div>
-          <div className="cp-mockup m8"><div className="mock-screen"><b>Security</b><strong>Protected</strong><span>Account shield active</span><i>Manage</i></div></div>
-          <div className="cp-mockup m9"><div className="mock-screen"><b>Services</b><strong>Everything</strong><span>In one place</span><i>Explore</i></div></div>
-          <div className="cp-mockup m10"><div className="mock-screen"><b>Transfer</b><strong>₦4,500</strong><span>To CipherPay user</span><i>Completed</i></div></div>
-          <span className="cp-mockup-orbit o1"/><span className="cp-mockup-orbit o2"/><span className="cp-mockup-orbit o3"/>
-        </div>
         <div className="cp-wallet-card">
           <div className="cp-card-top"><span className="cp-card-label">CIPHERPAY / WALLET</span><span className="cp-card-chip"/></div>
           <div className="cp-card-balance"><small>AVAILABLE BALANCE</small>₦24,680.00</div>
@@ -345,12 +335,22 @@ function LandingPage() {
         <div className="cp-float-pill two"><Globe2 size={15}/> <strong>Digital services</strong></div>
       </div>
     </section>
+    <div className="cp-scatter cp-scatter-hero" aria-hidden="true">
+      <div className="cp-mockup scatter-a"><div className="mock-screen"><b>Wallet</b><strong>₦24,680</strong><span>Available balance</span><i>↗ Send</i></div></div>
+      <div className="cp-mockup scatter-b"><div className="mock-screen"><b>Transfer</b><strong>₦4,500</strong><span>Completed just now</span><i>View receipt</i></div></div>
+      <div className="cp-mockup scatter-c"><div className="mock-screen"><b>Verify</b><strong>Code confirmed</strong><span>Secure access</span><i>✓ Verified</i></div></div>
+    </div>
     <section className="cp-section cp-reveal-section" id="features" data-cp-reveal>
       <div className="cp-section-head"><div><span className="cp-kicker">THE CIPHERPAY SYSTEM</span><h2>Everything you need.<br/>Nothing you don't.</h2></div><p>Designed to feel calm even when your day isn't. Every tool has a clear purpose, every flow gets out of your way.</p></div>
       <div className="cp-feature-grid">{features.map(({icon:Icon,title,text}, index)=><article className="cp-feature" data-cp-reveal style={{'--cp-delay': `${index * 70}ms`} as CSSProperties} key={title}><span className="cp-feature-icon"><Icon size={20}/></span><h3>{title}</h3><p>{text}</p></article>)}</div>
       <div className="cp-3d-feature-stage" aria-hidden="true">
         <div className="cp-3d-feature-cube"><span/><span/><span/><span/><span/><span/></div>
         <div className="cp-3d-cube-shadow"/>
+      </div>
+      <div className="cp-scatter cp-scatter-features" aria-hidden="true">
+        <div className="cp-mockup scatter-d"><div className="mock-screen"><b>Pay bills</b><strong>Electricity</strong><span>₦12,500 • Successful</span><i>Receipt</i></div></div>
+        <div className="cp-mockup scatter-e"><div className="mock-screen"><b>Data</b><strong>20 GB</strong><span>Renew anytime</span><i>Buy data</i></div></div>
+        <div className="cp-mockup scatter-f"><div className="mock-screen"><b>Activity</b><strong>+₦20,000</strong><span>Wallet funded</span><i>Details</i></div></div>
       </div>
     </section>
     <section className="cp-section cp-reveal-section" id="experience" data-cp-reveal>
@@ -360,9 +360,15 @@ function LandingPage() {
         <div className="cp-mini-list"><div className="cp-mini-row"><ShieldCheck size={16}/><span>Protected account</span><span>Ready</span></div><div className="cp-mini-row"><RefreshCw size={16}/><span>Live service flow</span><span>Active</span></div></div></article>
         <article className="cp-show-card large cp-clean-security" id="security"><div className="cp-security-intro"><span className="cp-kicker">ONE ACCOUNT / MANY TOOLS</span><span className="cp-security-badge"><ShieldCheck size={14}/> Built around control</span></div><h3>Everything you use.<br/><span>One place to manage it.</span></h3><p>Fund your wallet, move money, pay bills, verify services and stay connected without bouncing between different apps.</p><div className="cp-security-grid"><div className="cp-security-item"><WalletCards size={18}/><div><b>Wallet & transfers</b><small>Fund, send and track activity.</small></div><span>01</span></div><div className="cp-security-item"><Receipt size={18}/><div><b>Bills & airtime</b><small>Everyday payments, kept simple.</small></div><span>02</span></div><div className="cp-security-item"><MessageSquare size={18}/><div><b>Find & chat</b><small>Connect with people on CipherPay.</small></div><span>03</span></div><div className="cp-security-item"><Globe2 size={18}/><div><b>Digital services</b><small>Useful tools from one account.</small></div><span>04</span></div></div></article>
       </div>
+      <div className="cp-scatter cp-scatter-experience" aria-hidden="true">
+        <div className="cp-mockup scatter-g"><div className="mock-screen"><b>Messages</b><strong>You're all set.</strong><span>Just now</span><i>Reply</i></div></div>
+        <div className="cp-mockup scatter-h"><div className="mock-screen"><b>Cipher ID</b><strong>CP • 0482</strong><span>Your personal code</span><i>Copy</i></div></div>
+        <div className="cp-mockup scatter-i"><div className="mock-screen"><b>Security</b><strong>Protected</strong><span>Account shield active</span><i>Manage</i></div></div>
+      </div>
     </section>
     <section className="cp-section cp-reveal-section" data-cp-reveal><div className="cp-cta">
       <div className="cp-3d-cta-prism" aria-hidden="true"><span/><span/><span/><span/></div>
+      <div className="cp-scatter cp-scatter-cta" aria-hidden="true"><div className="cp-mockup scatter-j"><div className="mock-screen"><b>Services</b><strong>Everything</strong><span>In one place</span><i>Explore</i></div></div></div>
       <span className="cp-kicker">CIPHERPAY</span><h2>Make everyday feel simpler.</h2><p>One place for the things you do often, with an interface that gets out of your way.</p><div className="cp-hero-actions"><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={17}/></button><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button></div></div></section>
     <footer className="cp-footer"><span>© 2026 CipherPay</span><span>Payments · Digital services · Communication</span></footer>
     {authNavigating && <div className="cp-auth-transition" aria-hidden="true"><div className="cp-auth-transition-mark"><span className="brand-mark"><span /></span><b>Cipher<span className="brand-orange">Pay</span></b></div><div className="cp-auth-transition-line" /><span>{authNavigating === 'login' ? 'Opening your account' : 'Setting things up'}</span></div>}
