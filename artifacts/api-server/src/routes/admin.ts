@@ -427,25 +427,76 @@ router.get("/admin/users/:id/details", requireAdmin, async (req: AdminRequest, r
 
   const uniqueIps = [...new Set(sessions.map((s) => s.ipAddress).filter(Boolean))];
   const geoCache = new Map<string, any>();
-  async function geolocate(ip: string) {
-    if (geoCache.has(ip)) return geoCache.get(ip);
-    if (!ip || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(ip)) return null;
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3500);
-      const response = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, { signal: controller.signal });
-      clearTimeout(timeout);
-      if (!response.ok) return null;
-      const body: any = await response.json().catch(() => null);
-      const result = body ? {
-        city: body.city ?? null, region: body.region ?? null, country: body.country_name ?? body.country ?? null,
-        countryCode: body.country_code ?? null, timezone: body.timezone ?? null, latitude: body.latitude ?? null, longitude: body.longitude ?? null,
-      } : null;
-      geoCache.set(ip, result);
-      return result;
-    } catch { return null; }
+
+  function isPrivateIp(ip: string): boolean {
+    return /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1$|fc00:|fe80:)/i.test(ip);
   }
 
+  async function geolocate(ip: string) {
+    if (geoCache.has(ip)) return geoCache.get(ip);
+    if (!ip || isPrivateIp(ip)) return null;
+
+    const providers = [
+      async () => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3500);
+        try {
+          const response = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, { signal: controller.signal });
+          if (!response.ok) return null;
+          const body: any = await response.json().catch(() => null);
+          if (!body || body.error) return null;
+          return {
+            city: body.city ?? null,
+            region: body.region ?? body.region_code ?? null,
+            country: body.country_name ?? body.country ?? null,
+            countryCode: body.country_code ?? null,
+            timezone: body.timezone ?? null,
+            latitude: body.latitude ?? null,
+            longitude: body.longitude ?? null,
+          };
+        } finally {
+          clearTimeout(timeout);
+        }
+      },
+      async () => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3500);
+        try {
+          const response = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`, { signal: controller.signal });
+          if (!response.ok) return null;
+          const body: any = await response.json().catch(() => null);
+          if (!body?.success) return null;
+          return {
+            city: body.city ?? null,
+            region: body.region ?? null,
+            country: body.country ?? null,
+            countryCode: body.country_code ?? null,
+            timezone: body.timezone?.id ?? null,
+            latitude: body.latitude ?? null,
+            longitude: body.longitude ?? null,
+          };
+        } finally {
+          clearTimeout(timeout);
+        }
+      },
+    ];
+
+    for (const provider of providers) {
+      try {
+        const result = await provider();
+        if (result) {
+          result.name = [result.city, result.region, result.country].filter(Boolean).join(", ") || null;
+          geoCache.set(ip, result);
+          return result;
+        }
+      } catch {
+        // Try the next geolocation provider.
+      }
+    }
+
+    geoCache.set(ip, null);
+    return null;
+  }
   const sessionDetails = await Promise.all(sessions.map(async (session) => ({
     id: session.id, deviceName: session.deviceName, platform: session.platform,
     ipAddress: session.ipAddress, revoked: session.revoked,
