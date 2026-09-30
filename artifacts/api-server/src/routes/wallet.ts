@@ -456,9 +456,9 @@ router.post("/wallet/withdraw", async (req, res): Promise<void> => {
 
   // Fire the automatic payout. The transfer reference is the tx reference so
   // the webhook (transfer.completed) can match and finalize this row.
-  // If the user has a funded Flutterwave subaccount (business_name = their
-  // CipherPay name), pass debit_subaccount so the recipient sees their name
-  // as the sender. Fall back to the main account if Flutterwave rejects it.
+  // Withdraw strictly from the user's Flutterwave payout subaccount. We never
+  // fall back to the primary merchant wallet, because doing so would make the
+  // merchant account the source of the bank transfer.
   const senderName = user.firstName && user.lastName
     ? `${user.firstName} ${user.lastName}`
     : user.firstName ?? "CipherPay User";
