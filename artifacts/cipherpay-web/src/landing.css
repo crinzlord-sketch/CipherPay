@@ -819,3 +819,344 @@
   .cp-clean-security h3{font-size:39px!important}
   .cp-security-grid{grid-template-columns:1fr!important}
 }
+
+
+/* =========================================================
+   CIPHERPAY APP-WIDE GLASS SYSTEM
+   Visual-only pass: preserves existing layout, routes and features.
+   ========================================================= */
+:root{
+  --cp-app-bg:#f5f3f8;
+  --cp-glass:rgba(255,255,255,.68);
+  --cp-glass-strong:rgba(255,255,255,.82);
+  --cp-glass-soft:rgba(255,255,255,.48);
+  --cp-line:rgba(67,48,92,.10);
+  --cp-line-strong:rgba(115,92,255,.22);
+  --cp-ink:#211d28;
+  --cp-muted:#77727f;
+  --cp-purple:#735cff;
+  --cp-orange:#f18455;
+  --cp-shadow:0 22px 70px rgba(54,38,78,.09);
+  --cp-shadow-sm:0 10px 34px rgba(54,38,78,.08);
+}
+html,body,#root{background:var(--cp-app-bg)}
+body{
+  background:
+    radial-gradient(circle at 8% 0%,rgba(115,92,255,.10),transparent 25rem),
+    radial-gradient(circle at 92% 12%,rgba(241,132,85,.08),transparent 24rem),
+    var(--cp-app-bg)!important;
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:-1;
+  opacity:.38;
+  background-image:linear-gradient(rgba(72,53,94,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(72,53,94,.025) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:linear-gradient(to bottom,black,transparent 80%);
+}
+
+/* Main shell becomes a quiet glass canvas */
+.app-shell{
+  min-height:100vh!important;
+  background:transparent!important;
+}
+.sidebar{
+  background:rgba(31,24,43,.88)!important;
+  backdrop-filter:blur(28px) saturate(130%)!important;
+  -webkit-backdrop-filter:blur(28px) saturate(130%)!important;
+  border-right:1px solid rgba(255,255,255,.09)!important;
+  box-shadow:18px 0 60px rgba(32,22,48,.12)!important;
+}
+.sidebar::after{
+  content:"";
+  position:absolute;
+  width:220px;height:220px;
+  left:-130px;top:18%;
+  border-radius:50%;
+  background:rgba(115,92,255,.18);
+  filter:blur(55px);
+  pointer-events:none;
+}
+.main-area{background:transparent!important}
+.topbar{
+  background:rgba(250,248,252,.62)!important;
+  backdrop-filter:blur(22px) saturate(130%)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(130%)!important;
+  border-bottom:1px solid var(--cp-line)!important;
+  box-shadow:0 8px 35px rgba(50,35,68,.045)!important;
+  position:sticky!important;
+  top:0;
+  z-index:40;
+}
+.content{
+  position:relative;
+  animation:cpAppPageIn .48s cubic-bezier(.22,.8,.2,1) both;
+}
+.page-title{
+  animation:cpAppPageIn .55s cubic-bezier(.22,.8,.2,1) both;
+}
+.page-title h1,.page-title h2{
+  letter-spacing:-.045em!important;
+}
+.eyebrow,.section-kicker,.section-head .eyebrow{
+  letter-spacing:.13em!important;
+}
+
+/* Universal glass cards — layout untouched */
+.panel,
+.info-page-panel,
+.sms-order-panel,
+.sms-inbox-panel,
+.sms-history-panel,
+.transactions-page-panel,
+.more-menu,
+.user-menu{
+  background:var(--cp-glass)!important;
+  border:1px solid var(--cp-line)!important;
+  box-shadow:var(--cp-shadow)!important;
+  backdrop-filter:blur(24px) saturate(135%)!important;
+  -webkit-backdrop-filter:blur(24px) saturate(135%)!important;
+}
+.panel{
+  position:relative;
+  overflow:hidden;
+  transition:transform .3s cubic-bezier(.22,.8,.2,1),box-shadow .3s ease,border-color .3s ease,background .3s ease;
+}
+.panel::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.34),transparent 42%);
+  opacity:.8;
+}
+.panel:hover{
+  border-color:rgba(115,92,255,.16)!important;
+  box-shadow:0 28px 85px rgba(54,38,78,.11)!important;
+}
+
+/* Inputs and selects get the same tactile glass language */
+input,textarea,select{
+  transition:border-color .22s ease,box-shadow .22s ease,background .22s ease,transform .22s ease!important;
+}
+input:focus,textarea:focus,select:focus{
+  border-color:rgba(115,92,255,.55)!important;
+  box-shadow:0 0 0 4px rgba(115,92,255,.09),0 8px 24px rgba(70,48,100,.06)!important;
+  outline:none!important;
+}
+input:not(:disabled):hover,textarea:not(:disabled):hover,select:not(:disabled):hover{
+  border-color:rgba(115,92,255,.25)!important;
+}
+
+/* Buttons: subtle lift + pressed state, without changing sizing */
+.btn,.icon-btn,.logout-link,.user-row,.nav-item,.more-action-tile{
+  transition:transform .2s cubic-bezier(.22,.8,.2,1),box-shadow .2s ease,background .2s ease,border-color .2s ease,color .2s ease!important;
+}
+.btn:hover:not(:disabled),.icon-btn:hover:not(:disabled),.logout-link:hover:not(:disabled){
+  transform:translateY(-2px);
+}
+.btn:active:not(:disabled),.icon-btn:active:not(:disabled),.logout-link:active:not(:disabled){
+  transform:translateY(0) scale(.975);
+}
+.btn-primary,.btn-primary:not(:disabled){
+  box-shadow:0 10px 28px rgba(115,92,255,.20);
+}
+.btn-primary:hover:not(:disabled){
+  box-shadow:0 15px 34px rgba(115,92,255,.28);
+}
+.btn-secondary{
+  backdrop-filter:blur(14px);
+}
+
+/* Sidebar navigation: active item feels selected, not flat */
+.nav-item{
+  position:relative;
+  overflow:hidden;
+}
+.nav-item::before{
+  content:"";
+  position:absolute;
+  inset:4px;
+  border-radius:inherit;
+  background:linear-gradient(90deg,rgba(115,92,255,.18),rgba(241,132,85,.06));
+  opacity:0;
+  transform:translateX(-8px);
+  transition:opacity .25s ease,transform .25s ease;
+}
+.nav-item:hover::before,.nav-item.active::before{opacity:1;transform:none}
+.nav-item>*{position:relative;z-index:1}
+.nav-item.active{
+  box-shadow:inset 0 0 0 1px rgba(184,168,255,.10),0 8px 25px rgba(15,9,25,.10);
+}
+
+/* User and notification controls */
+.user-row:hover,.notification-button:hover{
+  background:rgba(255,255,255,.07)!important;
+}
+.user-menu{
+  animation:cpMenuGlassIn .2s ease both;
+}
+
+/* Reusable popovers/dialogs and overlays */
+[role="dialog"],.dialog,.modal,.popover{
+  backdrop-filter:blur(24px) saturate(135%);
+}
+.scrim{
+  background:rgba(28,20,38,.28)!important;
+  backdrop-filter:blur(5px);
+}
+
+/* Common empty/error/success states */
+.error-box{
+  border:1px solid rgba(220,76,76,.16)!important;
+  background:rgba(255,240,240,.72)!important;
+  border-radius:14px!important;
+  backdrop-filter:blur(14px);
+  animation:cpSoftIn .3s ease both;
+}
+.empty-state,.empty-card{
+  backdrop-filter:blur(16px);
+}
+
+/* Auth pages use the landing visual language while preserving their split layout */
+.auth-page{
+  min-height:100vh!important;
+  background:#f5f3f8!important;
+}
+.auth-visual{
+  position:relative!important;
+  overflow:hidden!important;
+  background:
+    radial-gradient(circle at 18% 20%,rgba(115,92,255,.34),transparent 30%),
+    radial-gradient(circle at 82% 75%,rgba(241,132,85,.25),transparent 28%),
+    linear-gradient(145deg,#21182c,#34234a 55%,#17131d)!important;
+}
+.auth-visual::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:linear-gradient(to bottom,black,transparent 85%);
+  opacity:.65;
+  animation:cpGridDrift 16s linear infinite;
+}
+.auth-visual::after{
+  content:"";
+  position:absolute;
+  width:360px;height:360px;
+  right:-130px;top:14%;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,.09);
+  box-shadow:0 0 0 35px rgba(255,255,255,.025),0 0 0 75px rgba(255,255,255,.018);
+  animation:cpAuthOrb 9s ease-in-out infinite;
+}
+.auth-form-wrap{
+  background:rgba(249,247,251,.78)!important;
+  backdrop-filter:blur(22px)!important;
+  -webkit-backdrop-filter:blur(22px)!important;
+}
+.auth-form-inner{
+  animation:cpAuthFormIn .65s cubic-bezier(.22,.8,.2,1) both;
+}
+.auth-form-inner input{
+  background:rgba(255,255,255,.66)!important;
+  border-color:rgba(67,48,92,.12)!important;
+  border-radius:14px!important;
+}
+.auth-form-inner .btn{
+  border-radius:14px!important;
+}
+.auth-benefits span{
+  transition:transform .25s ease,background .25s ease;
+}
+.auth-benefits span:hover{
+  transform:translateX(5px);
+  background:rgba(255,255,255,.055);
+}
+
+/* Cards/rows across functional pages */
+.sms-number-row,.sms-code-card,.sms-picker-input,.sms-picker-menu,
+.sms-history-row,.vas-side-card,.vas-trust-card,
+.bills-picker,.bills-provider-panel,.bills-workspace-hero,
+.bills-checkout-card,.bills-summary-card,.bills-trust-panel,
+.transactions-page-panel{
+  backdrop-filter:blur(22px) saturate(125%);
+}
+.sms-number-row,.sms-code-card,.sms-picker-input,.sms-picker-menu{
+  border-color:var(--cp-line)!important;
+  box-shadow:var(--cp-shadow-sm);
+}
+.sms-picker-option:hover,.sms-picker-option.selected,.sms-history-row:hover,.sms-history-row.selected{
+  background:rgba(115,92,255,.08)!important;
+}
+.sms-code-card{
+  background:linear-gradient(135deg,rgba(255,255,255,.64),rgba(239,235,250,.62))!important;
+}
+
+/* Selection/toggle motion — supports existing switches without changing structure */
+input[type="checkbox"],input[type="radio"],button[role="switch"],[role="switch"],.toggle,.switch{
+  accent-color:var(--cp-purple);
+}
+button[aria-pressed],button[data-state="on"],button[data-state="off"],[role="switch"]{
+  transition:transform .22s ease,background .25s ease,box-shadow .25s ease,border-color .25s ease!important;
+}
+button[aria-pressed="true"],button[data-state="on"],[role="switch"][aria-checked="true"]{
+  box-shadow:0 8px 24px rgba(115,92,255,.18)!important;
+}
+button[aria-pressed]:active,[role="switch"]:active{
+  transform:scale(.96);
+}
+button[aria-pressed]::after,[role="switch"]::after{
+  transition:transform .25s cubic-bezier(.22,.8,.2,1),opacity .25s ease;
+}
+
+/* Tables/list rows get a soft reveal and hover sheen */
+table tbody tr{
+  transition:background .2s ease,transform .2s ease;
+}
+table tbody tr:hover{
+  background:rgba(115,92,255,.045)!important;
+}
+.list-item,.transaction-row{
+  transition:transform .24s ease,background .24s ease,border-color .24s ease;
+}
+.list-item:hover,.transaction-row:hover{
+  transform:translateX(3px);
+}
+
+/* Page-level motion, deliberately restrained */
+@keyframes cpAppPageIn{
+  from{opacity:0;transform:translateY(12px) scale(.992)}
+  to{opacity:1;transform:none}
+}
+@keyframes cpSoftIn{
+  from{opacity:0;transform:translateY(7px)}
+  to{opacity:1;transform:none}
+}
+@keyframes cpMenuGlassIn{
+  from{opacity:0;transform:translateY(-7px) scale(.98)}
+  to{opacity:1;transform:none}
+}
+@keyframes cpAuthFormIn{
+  from{opacity:0;transform:translateX(24px)}
+  to{opacity:1;transform:none}
+}
+@keyframes cpGridDrift{
+  to{transform:translate3d(44px,44px,0)}
+}
+@keyframes cpAuthOrb{
+  50%{transform:translate(-12px,18px) rotate(18deg) scale(1.04)}
+}
+@media(max-width:900px){
+  .sidebar{box-shadow:20px 0 60px rgba(20,12,30,.22)!important}
+  .topbar{backdrop-filter:blur(18px)!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .content,.page-title,.auth-form-inner,.user-menu{animation:none!important}
+  .auth-visual::before,.auth-visual::after{animation:none!important}
+  .btn,.icon-btn,.logout-link,.nav-item,.panel{transition:none!important}
+}
