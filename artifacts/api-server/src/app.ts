@@ -11,6 +11,88 @@ import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { LOGOS_DIR } from "./lib/logos";
 
+
+function cipherPayPngChunk(type: string, data: Buffer): Buffer {
+  const typeBuffer = Buffer.from(type, "ascii");
+  const body = Buffer.concat([typeBuffer, data]);
+  let crc = 0xffffffff;
+  for (const byte of body) {
+    crc ^= byte;
+    for (let i = 0; i < 8; i++) crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+  }
+  crc = (crc ^ 0xffffffff) >>> 0;
+  const out = Buffer.alloc(12 + data.length);
+  out.writeUInt32BE(data.length, 0);
+  typeBuffer.copy(out, 4);
+  data.copy(out, 8);
+  out.writeUInt32BE(crc, 8 + data.length);
+  return out;
+}
+
+function createCipherPayPreviewPng(): Buffer {
+  const width = 1200;
+  const height = 630;
+  const pixels = Buffer.alloc(width * height * 4);
+  const setPixel = (x: number, y: number, r: number, g: number, b: number, a = 255) => {
+    if (x < 0 || x >= width || y < 0 || y >= height) return;
+    const i = (y * width + x) * 4;
+    pixels[i] = r; pixels[i + 1] = g; pixels[i + 2] = b; pixels[i + 3] = a;
+  };
+  const bg = [12, 10, 18];
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) setPixel(x, y, bg[0], bg[1], bg[2]);
+
+  const left = 470, top = 165, size = 300, radius = 82;
+  const orange = (x: number, y: number) => {
+    const cx = x < left + radius ? left + radius : x > left + size - radius ? left + size - radius : x;
+    const cy = y < top + radius ? top + radius : y > top + size - radius ? top + size - radius : y;
+    return Math.hypot(x - cx, y - cy) <= radius;
+  };
+  for (let y = top; y < top + size; y++) for (let x = left; x < left + size; x++) {
+    if (!orange(x + 0.5, y + 0.5)) continue;
+    const t = Math.max(0, Math.min(1, ((x - left) + (y - top)) / (size * 1.55)));
+    setPixel(x, y, Math.round(255 - 14 * t), Math.round(157 - 51 * t), Math.round(82 - 25 * t));
+  }
+
+  const drawRoundLine = (x1: number, y1: number, x2: number, y2: number, radiusPx: number) => {
+    const minX = Math.floor(Math.min(x1, x2) - radiusPx - 1);
+    const maxX = Math.ceil(Math.max(x1, x2) + radiusPx + 1);
+    const minY = Math.floor(Math.min(y1, y2) - radiusPx - 1);
+    const maxY = Math.ceil(Math.max(y1, y2) + radiusPx + 1);
+    const dx = x2 - x1, dy = y2 - y1, len2 = dx * dx + dy * dy;
+    for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
+      const px = x + 0.5, py = y + 0.5;
+      const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / len2));
+      const qx = x1 + t * dx, qy = y1 + t * dy;
+      if (Math.hypot(px - qx, py - qy) <= radiusPx) setPixel(x, y, 255, 255, 255);
+    }
+  };
+  const angle = -Math.PI / 4;
+  const line = (cx: number, cy: number, length: number) => {
+    const dx = Math.cos(angle) * length / 2;
+    const dy = Math.sin(angle) * length / 2;
+    drawRoundLine(cx - dx, cy - dy, cx + dx, cy + dy, 9);
+  };
+  line(505, 236, 84);
+  line(600, 315, 112);
+  line(695, 394, 84);
+
+  const raw = Buffer.alloc((height * (width * 4 + 1)));
+  for (let y = 0; y < height; y++) {
+    raw[y * (width * 4 + 1)] = 0;
+    pixels.copy(raw, y * (width * 4 + 1) + 1, y * width * 4, (y + 1) * width * 4);
+  }
+  const signature = Buffer.from([137,80,78,71,13,10,26,10]);
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8; ihdr[9] = 6;
+  return Buffer.concat([
+    signature,
+    cipherPayPngChunk("IHDR", ihdr),
+    cipherPayPngChunk("IDAT", deflateSync(raw, { level: 9 })),
+    cipherPayPngChunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
 const app: Express = express();
 
 app.use(
@@ -37,6 +119,15 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
+
+// WhatsApp and other link-preview crawlers need a raster image rather than the
+// SVG favicon. This endpoint renders the exact CipherPay mark as a PNG.
+app.get("/api/brand/cipherpay-preview.png", (_req: Request, res: Response): void => {
+  res.setHeader("Content-Type", "image/png");
+  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  res.send(createCipherPayPreviewPng());
+});
+
 // Flutterwave webhook (charge.completed / transfer.completed). Authenticity is a
 // `verif-hash` header compare (not a body HMAC), so a parsed JSON body is fine.
 app.post("/api/webhooks/flutterwave", flutterwaveWebhookHandler);
@@ -62,6 +153,7 @@ app.get("/api/checkout/callback", (req: Request, res: Response): void => {
 // "u<userId>-..." filename prefix) OR an admin JWT, via ?token=<jwt>.
 import path from "path";
 import fs from "fs";
+import { deflateSync } from "node:zlib";
 // Avatar files are publicly served by filename (no token required). The URL is
 // stored on the user row and shown anywhere the user appears, so we treat it
 // like any other public asset. Filename format is `u<id>-<ts>.<ext>`.
