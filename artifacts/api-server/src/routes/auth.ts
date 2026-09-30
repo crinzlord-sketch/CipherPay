@@ -527,7 +527,7 @@ router.post("/auth/verify-otp", async (req, res): Promise<void> => {
 
       // Referral rewards are released only after the new user proves control of
       // their email. This prevents unverified signups from farming wallet credit.
-      const REFERRAL_BONUS_REFERRER = 500;
+      const REFERRAL_BONUS_REFERRER = 200;
       const REFERRAL_BONUS_REFEREE = 200;
       const referredBy = (verifiedUser ?? user).referredBy;
       if (referredBy) {
