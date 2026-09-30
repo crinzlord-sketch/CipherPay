@@ -839,9 +839,21 @@ router.post("/auth/pin/set", async (req, res): Promise<void> => {
   const rawId = req.headers["x-user-id"];
   const userId = parseInt(Array.isArray(rawId) ? rawId[0] : (rawId ?? ""), 10);
   if (isNaN(userId)) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const body = (req.body ?? {}) as { pin?: string; currentPin?: string; password?: string };
+  const body = (req.body ?? {}) as { pin?: string; confirmPin?: string; currentPin?: string; password?: string };
   const err = pinIssue(body.pin);
   if (err) { res.status(400).json({ error: err }); return; }
+
+  // First-time PIN setup is a dedicated enrollment flow: the user creates and
+  // confirms the 6-digit PIN, then it becomes immediately usable for transfers.
+  // Existing PIN changes still require the current PIN.
+  if (!body.currentPin && !body.password && !body.confirmPin) {
+    res.status(400).json({ error: "Confirm your new PIN to continue." });
+    return;
+  }
+  if (!userPinMatches(body.pin, body.confirmPin)) {
+    res.status(400).json({ error: "PINs do not match." });
+    return;
+  }
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
   if (!user) { res.status(404).json({ error: "User not found" }); return; }
@@ -854,8 +866,9 @@ router.post("/auth/pin/set", async (req, res): Promise<void> => {
     if (!body.currentPin || !(await bcrypt.compare(body.currentPin, user.pinHash))) {
       res.status(400).json({ error: "Current PIN is incorrect" }); return;
     }
-  } else {
-    if (!body.password || !(await bcrypt.compare(body.password, user.passwordHash))) {
+  } else if (body.password) {
+    // Keep password-based enrollment available for trusted clients.
+    if (!(await bcrypt.compare(body.password, user.passwordHash))) {
       res.status(400).json({ error: "Password is incorrect" }); return;
     }
   }
