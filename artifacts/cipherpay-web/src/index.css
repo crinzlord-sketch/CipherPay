@@ -5940,3 +5940,126 @@ html[data-route-transition="auth-switch"]::after {
 @media(max-width:900px){.auth-3d-shard-one{right:7%;top:10%;width:80px;height:80px}.auth-3d-shard-two{left:5%;bottom:13%;width:58px;height:58px}.auth-3d-orb{right:5%;bottom:8%;width:70px;height:70px;font-size:9px}.auth-visual{display:none!important}.auth-page{background:linear-gradient(135deg,#eee7ff,#f9f7ff)!important}}
 @media(max-width:600px){.cp-landing-nav{top:9px!important}.cp-3d-feature-stage{height:170px;margin:35px auto 0}.cp-3d-cube{transform:scale(.78) rotateX(-24deg) rotateY(34deg) rotateZ(-8deg)}.cp-3d-security-orb{width:84px;height:84px;right:22px;top:35px}.cp-3d-cta-prism{right:-20px;top:20%;transform:scale(.72)}}
 @media(prefers-reduced-motion:reduce){.cp-3d-cube,.cp-3d-cube-shadow,.cp-3d-security-orb,.cp-3d-cta-prism span,.cp-3d-cta-prism::before,.auth-3d-shard,.auth-3d-orb{animation:none!important}}
+
+/* 2026-09-30 final UX repair: fixed landing chrome, portal support, readable auth hero */
+.cp-landing-nav{
+  position:fixed!important;
+  top:18px!important;
+  left:0!important;
+  right:0!important;
+  width:100%!important;
+  z-index:99999!important;
+  pointer-events:none!important;
+}
+.cp-landing-nav-inner{
+  pointer-events:auto!important;
+  position:relative!important;
+  width:min(1180px,calc(100% - 28px))!important;
+  margin:0 auto!important;
+  transform:none!important;
+  animation:none!important;
+}
+.cp-mobile-menu-toggle{display:none!important}
+.cp-mobile-menu{z-index:100000!important}
+.cp-support-overlay{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100dvh!important;
+  min-height:100vh!important;
+  z-index:2147483000!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:24px!important;
+  overflow:auto!important;
+  box-sizing:border-box!important;
+  background:rgba(12,12,18,.42)!important;
+  backdrop-filter:blur(18px)!important;
+}
+.cp-support-modal{
+  position:relative!important;
+  z-index:2147483001!important;
+  margin:auto!important;
+  width:min(560px,100%)!important;
+  max-height:min(760px,calc(100dvh - 48px))!important;
+  overflow:auto!important;
+}
+.auth-quote{
+  position:absolute!important;
+  left:8%!important;
+  bottom:17%!important;
+  width:min(520px,72%)!important;
+  padding:30px 32px!important;
+  border:1px solid rgba(255,255,255,.72)!important;
+  border-radius:28px!important;
+  background:rgba(255,255,255,.68)!important;
+  box-shadow:0 28px 70px rgba(55,38,92,.15),inset 0 1px rgba(255,255,255,.95)!important;
+  backdrop-filter:blur(22px)!important;
+}
+.auth-quote::before{
+  content:"EVERYDAY, SIMPLIFIED";
+  display:inline-flex;
+  margin-bottom:14px;
+  padding:7px 10px;
+  border-radius:999px;
+  background:rgba(115,92,255,.09);
+  color:#6855d9;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.13em;
+}
+.auth-quote .auth-overline{display:none!important}
+.auth-quote .quote-mark{
+  position:absolute!important;
+  right:26px!important;
+  top:8px!important;
+  color:rgba(115,92,255,.12)!important;
+  font-size:90px!important;
+  line-height:1!important;
+}
+.auth-quote h2{
+  margin:0!important;
+  color:#241d31!important;
+  font-size:clamp(38px,4vw,58px)!important;
+  line-height:.96!important;
+  letter-spacing:-.06em!important;
+}
+.auth-quote h2 em{
+  font-style:normal!important;
+}
+.auth-quote p{
+  max-width:420px!important;
+  margin:16px 0 22px!important;
+  color:#5f586b!important;
+  font-size:14px!important;
+  line-height:1.65!important;
+}
+.auth-benefits{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:8px!important;
+  color:#40374c!important;
+}
+.auth-benefits span{
+  padding:9px 11px!important;
+  border:1px solid rgba(73,54,110,.10)!important;
+  border-radius:12px!important;
+  background:rgba(255,255,255,.58)!important;
+  font-size:10px!important;
+  font-weight:750!important;
+}
+.auth-benefits b{color:#735cff!important;margin-right:5px!important}
+.auth-3d-shard,.auth-3d-orb{z-index:3!important}
+@media(max-width:900px){
+  .cp-landing-nav{top:10px!important}
+  .cp-landing-nav-inner{width:calc(100% - 18px)!important}
+  .cp-mobile-menu-toggle{display:grid!important}
+  .cp-mobile-menu{display:grid!important}
+  .cp-mobile-menu:not(.open){display:grid!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important;transform:translateY(-8px) scale(.98)!important}
+  .cp-mobile-menu.open{display:grid!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;transform:none!important}
+}
+@media(max-width:600px){
+  .cp-landing-nav-inner{width:calc(100% - 18px)!important}
+  .cp-support-overlay{padding:12px!important}
+  .cp-support-modal{max-height:calc(100dvh - 24px)!important;padding:26px 20px!important;border-radius:22px!important}
+}
