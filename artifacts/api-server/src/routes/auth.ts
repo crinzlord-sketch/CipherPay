@@ -13,6 +13,7 @@ import { sendOtpEmail, isEmailConfigured, sendWelcomeEmail } from "../lib/email"
 import { notifyUser } from "../lib/notifications";
 import path from "path";
 import fs from "fs/promises";
+import crypto from "crypto";
 
 const AVATAR_DIR = path.resolve(process.cwd(), "uploads", "avatar");
 const AVATAR_PUBLIC_BASE = "/api/uploads/avatar";
@@ -74,6 +75,10 @@ function getUserIdFromHeaders(req: any): number | null {
   return isNaN(id) ? null : id;
 }
 
+function generateUserCode(): string {
+  return `CP-${crypto.randomBytes(5).toString("hex").toUpperCase()}`;
+}
+
 function formatUser(user: typeof usersTable.$inferSelect, balance?: number) {
   return {
     id: user.id,
@@ -88,6 +93,7 @@ function formatUser(user: typeof usersTable.$inferSelect, balance?: number) {
     isVerified: user.isVerified,
     kycLevel: user.kycLevel,
     referralCode: user.referralCode,
+    userCode: user.userCode ?? null,
     isAdmin: user.isAdmin,
     createdAt: user.createdAt.toISOString(),
   };
@@ -111,6 +117,8 @@ router.post("/auth/register", async (req, res): Promise<void> => {
 
   const passwordHash = await bcrypt.hash(password, 10);
   const myReferralCode = generateReferralCode();
+  let myUserCode = generateUserCode();
+  while ((await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.userCode, myUserCode))).length) myUserCode = generateUserCode();
   const accountNumber = await generateUniqueAccountNumber();
 
   const [user] = await db.insert(usersTable).values({
@@ -121,6 +129,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     phone,
     accountNumber,
     referralCode: myReferralCode,
+    userCode: myUserCode,
     referredBy: referralCode ?? null,
     isVerified: false,
     kycLevel: 0,
