@@ -6460,3 +6460,96 @@ html.dark .spending-month-row>div{background:rgba(255,255,255,.08)!important}
     padding: 7px;
   }
 }
+
+
+.service-maintenance {
+  min-height: min(68vh, 680px);
+  display: grid;
+  place-items: center;
+  align-content: center;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: clamp(28px, 6vw, 70px) 20px;
+  text-align: center;
+}
+
+.service-maintenance-mark {
+  position: relative;
+  display: flex;
+  width: 76px;
+  height: 76px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 24px;
+  border: 1px solid hsl(var(--primary) / .2);
+  border-radius: 24px;
+  background: linear-gradient(145deg, hsl(var(--card)), hsl(var(--accent)));
+  box-shadow: 0 24px 60px hsl(var(--primary) / .12);
+}
+
+.service-maintenance-mark span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  animation: service-maintenance-pulse 1.4s ease-in-out infinite;
+}
+
+.service-maintenance-mark span:nth-child(2) { animation-delay: .15s; opacity: .65; }
+.service-maintenance-mark span:nth-child(3) { animation-delay: .3s; opacity: .35; }
+
+.service-maintenance h1 {
+  max-width: 640px;
+  margin: 8px 0 12px;
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  line-height: 1.02;
+  letter-spacing: -.055em;
+}
+
+.service-maintenance > p {
+  max-width: 600px;
+  margin: 0;
+  color: hsl(var(--muted-foreground));
+  font-size: .96rem;
+  line-height: 1.75;
+}
+
+.service-maintenance-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 540px;
+  margin-top: 24px;
+  padding: 13px 16px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  background: hsl(var(--card) / .72);
+  text-align: left;
+}
+
+.service-maintenance-note > span {
+  margin-top: 3px;
+  color: hsl(var(--primary));
+  font-size: .65rem;
+}
+
+.service-maintenance-note div {
+  display: grid;
+  gap: 3px;
+}
+
+.service-maintenance-note b {
+  font-size: .78rem;
+}
+
+.service-maintenance-note small {
+  color: hsl(var(--muted-foreground));
+  font-size: .73rem;
+  line-height: 1.5;
+}
+
+@keyframes service-maintenance-pulse {
+  0%, 100% { transform: translateY(0); opacity: .3; }
+  50% { transform: translateY(-4px); opacity: 1; }
+}
