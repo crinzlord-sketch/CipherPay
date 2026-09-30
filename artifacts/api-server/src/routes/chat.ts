@@ -31,9 +31,9 @@ async function saveChatImage(me: number, dataUrl: string) {
   if (!buf.length || buf.length > 8 * 1024 * 1024) throw new Error("Image is too large (max 8MB).");
   await fs.mkdir(CHAT_UPLOAD_DIR, { recursive: true });
   const ext = (m[1] ?? "jpg").toLowerCase().replace("jpeg", "jpg");
-  const filename = \`c\${me}-\${Date.now()}.\${ext}\`;
+  const filename = `c${me}-${Date.now()}.${ext}`;
   await fs.writeFile(path.join(CHAT_UPLOAD_DIR, filename), buf);
-  return \`\${CHAT_PUBLIC_BASE}/\${filename}\`;
+  return `${CHAT_PUBLIC_BASE}/${filename}`;
 }
 
 router.get("/chat/gifs", async (req, res): Promise<void> => {
@@ -42,7 +42,7 @@ router.get("/chat/gifs", async (req, res): Promise<void> => {
   if (!key) { res.json({ enabled: false, gifs: [] }); return; }
   const q = String(req.query.q ?? "trending").trim().slice(0, 80);
   try {
-    const response = await fetch(\`https://api.giphy.com/v1/gifs/search?api_key=\${encodeURIComponent(key)}&q=\${encodeURIComponent(q)}&limit=18&rating=pg-13\`);
+    const response = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${encodeURIComponent(key)}&q=${encodeURIComponent(q)}&limit=18&rating=pg-13`);
     const data: any = await response.json();
     res.json({ enabled: true, gifs: (data.data ?? []).map((g: any) => ({ id: g.id, title: g.title, url: g.images?.fixed_width?.url ?? g.images?.original?.url })).filter((g: any) => g.url) });
   } catch { res.status(502).json({ error: "GIF search is temporarily unavailable." }); }
@@ -53,7 +53,7 @@ router.get("/chat/list", async (req, res): Promise<void> => {
   const chats = await db.select().from(directChatsTable).where(or(eq(directChatsTable.userOneId, me), eq(directChatsTable.userTwoId, me))).orderBy(desc(directChatsTable.lastMessageAt));
   const visible = chats.filter(c => c.userOneId === me ? !c.deletedOne : !c.deletedTwo);
   const otherIds = visible.map(c => c.userOneId === me ? c.userTwoId : c.userOneId);
-  const people = otherIds.length ? await db.select({ id: usersTable.id, firstName: usersTable.firstName, lastName: usersTable.lastName, email: usersTable.email, avatarUrl: usersTable.avatarUrl, gender: usersTable.gender, userCode: usersTable.userCode }).from(usersTable).where(sql\`\${usersTable.id} in \${otherIds}\`) : [];
+  const people = otherIds.length ? await db.select({ id: usersTable.id, firstName: usersTable.firstName, lastName: usersTable.lastName, email: usersTable.email, avatarUrl: usersTable.avatarUrl, gender: usersTable.gender, userCode: usersTable.userCode }).from(usersTable).where(sql`${usersTable.id} in ${otherIds}`) : [];
   const byId = new Map(people.map(p => [p.id, p]));
   const rows = await Promise.all(visible.map(async c => {
     const otherId = c.userOneId === me ? c.userTwoId : c.userOneId;
