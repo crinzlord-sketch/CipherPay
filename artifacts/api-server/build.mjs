@@ -12,16 +12,10 @@ globalThis.require = createRequire(import.meta.url);
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 
 async function buildAll() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is required to sync the database schema");
-  }
-
-  console.log("Syncing database schema...");
-  execFileSync("pnpm", ["--filter", "@workspace/db", "push"], {
-    stdio: "inherit",
-    env: process.env,
-  });
-  console.log("Database schema synced.");
+  // Database schema changes are applied by the API startup bootstrap. Keeping
+  // schema mutation out of the Render build prevents deploys from hanging while
+  // drizzle-kit introspects a live production database.
+  console.log("Building API bundle; production schema bootstrap runs at startup.");
 
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
