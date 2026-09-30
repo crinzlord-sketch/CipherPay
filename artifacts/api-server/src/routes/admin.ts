@@ -388,6 +388,104 @@ router.get("/admin/users", requireAdmin, async (req, res): Promise<void> => {
   });
 });
 
+router.get("/admin/users/:id/details", requireAdmin, async (req: AdminRequest, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid user id." }); return; }
+
+  const [user] = await db.select({
+    id: usersTable.id, email: usersTable.email, firstName: usersTable.firstName, lastName: usersTable.lastName,
+    phone: usersTable.phone, avatarUrl: usersTable.avatarUrl, gender: usersTable.gender,
+    accountNumber: usersTable.accountNumber, userCode: usersTable.userCode, referralCode: usersTable.referralCode,
+    referredBy: usersTable.referredBy, isVerified: usersTable.isVerified, kycLevel: usersTable.kycLevel,
+    isAdmin: usersTable.isAdmin, isSuspended: usersTable.isSuspended, suspendReason: usersTable.suspendReason,
+    createdAt: usersTable.createdAt, updatedAt: usersTable.updatedAt,
+    balance: walletsTable.balance, ledgerBalance: walletsTable.ledgerBalance, currency: walletsTable.currency,
+    flwSubaccountBalance: walletsTable.flwSubaccountBalance,
+  }).from(usersTable).leftJoin(walletsTable, eq(walletsTable.userId, usersTable.id)).where(eq(usersTable.id, id));
+
+  if (!user) { res.status(404).json({ error: "User not found." }); return; }
+
+  const [sessions, txs, kyc, notificationCount, supportCount, socialCount, smsCount] = await Promise.all([
+    db.select().from(sessionsTable).where(eq(sessionsTable.userId, id)).orderBy(desc(sessionsTable.lastActiveAt)).limit(50),
+    db.select().from(transactionsTable).where(eq(transactionsTable.userId, id)).orderBy(desc(transactionsTable.createdAt)).limit(200),
+    db.select().from(kycTable).where(eq(kycTable.userId, id)).limit(1),
+    db.select({ c: count() }).from(notificationsTable).where(eq(notificationsTable.userId, id)),
+    db.select({ c: count() }).from(supportChatsTable).where(eq(supportChatsTable.userId, id)),
+    db.select({ c: count() }).from(socialOrdersTable).where(eq(socialOrdersTable.userId, id)),
+    db.select({ c: count() }).from(smsActivationsTable).where(eq(smsActivationsTable.userId, id)),
+  ]);
+
+  const lastSession = sessions[0] ?? null;
+  const successfulTx = txs.filter((tx) => tx.status === "success");
+  const totals = successfulTx.reduce((acc, tx) => {
+    const amount = Number(tx.amount ?? 0);
+    if (tx.type === "fund" || tx.type === "transfer_in") acc.in += amount;
+    if (tx.type === "withdraw" || tx.type === "transfer_out" || tx.type === "airtime" || tx.type === "data" || tx.type === "bill" || tx.type === "social" || tx.type === "sms") acc.out += amount;
+    acc.fees += Number(tx.fee ?? 0);
+    return acc;
+  }, { in: 0, out: 0, fees: 0 });
+
+  const uniqueIps = [...new Set(sessions.map((s) => s.ipAddress).filter(Boolean))];
+  const geoCache = new Map<string, any>();
+  async function geolocate(ip: string) {
+    if (geoCache.has(ip)) return geoCache.get(ip);
+    if (!ip || /^(127\\.|10\\.|192\\.168\\.|172\\.(1[6-9]|2\\d|3[0-1])\\.)/.test(ip)) return null;
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3500);
+      const response = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (!response.ok) return null;
+      const body: any = await response.json().catch(() => null);
+      const result = body ? {
+        city: body.city ?? null, region: body.region ?? null, country: body.country_name ?? body.country ?? null,
+        countryCode: body.country_code ?? null, timezone: body.timezone ?? null, latitude: body.latitude ?? null, longitude: body.longitude ?? null,
+      } : null;
+      geoCache.set(ip, result);
+      return result;
+    } catch { return null; }
+  }
+
+  const sessionDetails = await Promise.all(sessions.map(async (session) => ({
+    id: session.id, deviceName: session.deviceName, platform: session.platform,
+    ipAddress: session.ipAddress, revoked: session.revoked,
+    lastActiveAt: session.lastActiveAt.toISOString(), createdAt: session.createdAt.toISOString(),
+    location: session.ipAddress ? await geolocate(session.ipAddress) : null,
+  })));
+
+  res.json({
+    data: {
+      user: { ...user, balance: Number(user.balance ?? 0), ledgerBalance: Number(user.ledgerBalance ?? 0), flwSubaccountBalance: Number(user.flwSubaccountBalance ?? 0), createdAt: user.createdAt.toISOString(), updatedAt: user.updatedAt.toISOString() },
+      wallet: { balance: Number(user.balance ?? 0), ledgerBalance: Number(user.ledgerBalance ?? 0), currency: user.currency, flwSubaccountBalance: Number(user.flwSubaccountBalance ?? 0) },
+      security: {
+        lastLoggedInAt: lastSession?.lastActiveAt?.toISOString() ?? null,
+        lastIpAddress: lastSession?.ipAddress ?? null,
+        activeSessions: sessions.filter((s) => !s.revoked).length,
+        totalSessions: sessions.length,
+        lastDevice: lastSession ? { deviceName: lastSession.deviceName, platform: lastSession.platform } : null,
+      },
+      sessions: sessionDetails,
+      transactions: txs.map((tx) => ({ ...tx, amount: Number(tx.amount ?? 0), fee: Number(tx.fee ?? 0), balanceBefore: tx.balanceBefore == null ? null : Number(tx.balanceBefore), balanceAfter: tx.balanceAfter == null ? null : Number(tx.balanceAfter), createdAt: tx.createdAt.toISOString() })),
+      kyc: kyc[0] ? { ...kyc[0], createdAt: kyc[0].createdAt.toISOString(), submittedAt: kyc[0].submittedAt?.toISOString() ?? null, verifiedAt: kyc[0].verifiedAt?.toISOString() ?? null } : null,
+      activity: {
+        notifications: Number(notificationCount[0]?.c ?? 0),
+        supportChats: Number(supportCount[0]?.c ?? 0),
+        socialOrders: Number(socialCount[0]?.c ?? 0),
+        smsActivations: Number(smsCount[0]?.c ?? 0),
+        transactionCount: txs.length,
+        successfulTransactions: successfulTx.length,
+        flaggedTransactions: txs.filter((tx) => tx.isFlagged).length,
+        totalIncoming: totals.in,
+        totalOutgoing: totals.out,
+        totalFees: totals.fees,
+      },
+      knownIps: uniqueIps,
+      generatedAt: new Date().toISOString(),
+      timezone: "Africa/Lagos",
+    },
+  });
+});
+
 router.post("/admin/users/:id/suspend", requireAdmin, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   const { suspended, reason } = req.body ?? {};
