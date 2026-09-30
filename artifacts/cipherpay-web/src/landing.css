@@ -144,3 +144,8 @@
 @keyframes cpAuthIn{from{opacity:0;transform:scale(1.025)}to{opacity:1;transform:scale(1)}}
 @keyframes cpAuthLine{0%,100%{transform:scaleX(.55);opacity:.45}50%{transform:scaleX(1);opacity:1}}
 @media (prefers-reduced-motion:reduce){.cp-auth-transition,.cp-auth-transition-line{animation:none}}
+
+
+.cp-landing{transition:opacity .36s ease,transform .36s ease;will-change:opacity,transform}
+.cp-landing.cp-auth-exit{opacity:0;transform:translateY(-10px) scale(.992);pointer-events:none}
+@media (prefers-reduced-motion:reduce){.cp-landing{transition:none}.cp-landing.cp-auth-exit{opacity:0;transform:none}}
