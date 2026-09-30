@@ -7,7 +7,7 @@ import { CipherAvatar } from '../components/CipherAvatar';
 import { decryptChatPayload, encryptChatPayload, ensureChatKey } from '../lib/chat-crypto';
 
 const EMOJIS = ['😀','😂','😍','🥹','😎','😭','😅','🤝','❤️','🔥','🎉','👏','🙏','💯','🤣','😘','🥰','😮','😢','😡','👍','👎','💙','✨','🚀','🫶','😈','🤔','🙌','💀'];
-const BGS = ['#ffffff','#f6f7fb','#f4f1ff','#eef6ff','#f4f8f5','#fff8ef'];
+const BGS = ['#000000','#ffffff','#f6f7fb','#f4f1ff','#eef6ff','#f4f8f5','#fff8ef'];
 
 type Person = { id:number; firstName:string; lastName:string; email:string; avatarUrl?:string|null; gender?:string|null; userCode?:string|null; chatPublicKey?:string|null };
 type Message = { id:number; senderId:number; body?:string|null; imageUrl?:string|null; gifUrl?:string|null; createdAt:string };
@@ -31,6 +31,8 @@ export default function ChatPage() {
   const swipeStartX=useRef<number|null>(null);
   const [text,setText]=useState('');
   const [error,setError]=useState('');
+  const [findError,setFindError]=useState('');
+  const [blockedState,setBlockedState]=useState(false);
   const [searching,setSearching]=useState(false);
   const [sending,setSending]=useState(false);
   const [showEmoji,setShowEmoji]=useState(false);
@@ -47,7 +49,7 @@ export default function ChatPage() {
   const loadChat=async(id:string)=>{
     try{
       const r=await apiRequest<any>(`/api/chat/${id}`);
-      setChat(r.chat); setOther(r.other); setMessages(r.messages??[]); setBg(r.background||BGS[0]);
+      setChat(r.chat); setOther(r.other); setMessages(r.messages??[]); setBg(r.background||BGS[0]); setBlockedState(Boolean(r.blocked));
       if(r.other?.chatPublicKey){
         const decoded=await Promise.all((r.messages??[]).map(async (m:any)=>{
           try { return { ...m, decrypted: await decryptChatPayload(Number(id), JSON.parse((m.senderId === currentUserId ? r.other.chatPublicKey : m.senderPublicKey) || 'null'), String(m.body??'')) }; }
@@ -78,9 +80,9 @@ export default function ChatPage() {
   },[params?.id,currentUserId]);
 
   const validateCode=async()=>{
-    setError('');setFound(null);const value=code.trim().toUpperCase();
-    if(!/^CP-[A-F0-9]{10}$/.test(value)){setError('Enter the complete code, for example CP-1A2B3C4D5E.');return;}
-    setSearching(true);try{const r=await apiRequest<any>(`/api/users/find/${encodeURIComponent(value)}`);setFound(r.user);}catch(e){setError(e instanceof Error?e.message:'User not found.');}finally{setSearching(false);}
+    setFindError('');setError('');setFound(null);const value=code.trim().toUpperCase();
+    if(!/^CP-[A-F0-9]{10}$/.test(value)){setFindError('Enter the complete code, for example CP-1A2B3C4D5E.');return;}
+    setSearching(true);try{const r=await apiRequest<any>(`/api/users/find/${encodeURIComponent(value)}`);setFound(r.user);}catch(e){setFindError(e instanceof Error?e.message:'User not found.');}finally{setSearching(false);}
   };
   const openFound=async()=>{if(!found)return;try{const r=await apiRequest<any>('/api/chat/open',{method:'POST',body:{userId:found.id}});setCode('');setFound(null);setLocation(`/chat/${r.chatId}`);await loadChats();}catch(e){setError(e instanceof Error?e.message:'Could not open chat.');}};
   const sendMessage=async(extra:any={})=>{
@@ -111,7 +113,7 @@ export default function ChatPage() {
       <section className="cp-card cp-card-pad cp-chat-find-card">
         <div className="cp-chat-icon"><Search size={22}/></div><span className="cp-kicker">FIND A USER</span><h2>Enter their CipherPay code.</h2><p>Ask the person for their unique code, paste it below, validate it, then start chatting.</p>
         <div className="cp-chat-code-input"><input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>{if(e.key==='Enter')void validateCode();}} placeholder="CP-XXXXXXXXXX" maxLength={13}/><Button type="button" onClick={()=>void validateCode()} disabled={searching}>{searching?'Checking…':'Validate'}</Button></div>
-        {error&&<Notice tone="error">{error}</Notice>}
+        {findError&&<Notice tone="error">{findError}</Notice>}
         {found&&<div className="cp-found-user"><CipherAvatar src={found.avatarUrl} seed={found.id||found.email} gender={found.gender} size={58} alt=""/><div><strong>{found.firstName} {found.lastName}</strong><small>{found.email}</small><small>{found.userCode}</small></div><Button type="button" onClick={()=>void openFound()}><MessageCircle size={15}/> Chat</Button></div>}
       </section>
       <section className="cp-card cp-card-pad cp-chat-code-card"><span className="cp-kicker">YOUR CODE</span><h2>Share your code.</h2><p>Your unique code lets other CipherPay users find you without exposing extra personal details.</p><div className="cp-your-code">{/* populated from profile in a lightweight call */}<YourCode/></div></section>
@@ -123,7 +125,7 @@ export default function ChatPage() {
   return <div className="cp-page cp-chat-page">
     <style>{`.cp-chat-image{max-width:min(100%,360px)!important;max-height:360px!important;object-fit:contain;cursor:pointer}.cp-chat-gif{width:min(210px,100%)!important;max-width:210px!important;max-height:190px!important;object-fit:contain;border-radius:10px!important}.cp-chat-reply-preview{display:grid;gap:3px;width:100%;padding:7px 9px;border:0;border-left:3px solid #7c5cff;border-radius:7px;background:rgba(20,20,30,.07);color:inherit;text-align:left;cursor:pointer}.cp-chat-reply-preview span{font-size:9px;font-weight:800;opacity:.62}.cp-chat-reply-preview b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:600;opacity:.72}.cp-chat-reply-action{justify-self:start;padding:0;border:0;background:transparent;color:#7c5cff;font-size:9px;font-weight:700;cursor:pointer;opacity:.72}.cp-chat-reply-bar{position:absolute;left:10px;right:10px;bottom:70px;display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:#151722;color:#fff;z-index:8;box-shadow:0 10px 30px rgba(0,0,0,.28)}.cp-chat-reply-bar>div{display:grid;gap:2px;min-width:0;flex:1}.cp-chat-reply-bar span{font-size:9px;opacity:.6}.cp-chat-reply-bar b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}.cp-chat-reply-bar button{width:28px;height:28px;border:0;border-radius:8px;background:rgba(255,255,255,.08);color:#fff;display:grid;place-items:center;cursor:pointer}.cp-chat-bg-picker{background:#151722!important;border-color:rgba(255,255,255,.12)!important;box-shadow:0 14px 35px rgba(0,0,0,.32)}.cp-chat-bg-picker button{box-shadow:0 0 0 1px rgba(255,255,255,.14) inset}`}</style>
     <div className="cp-chat-shell">
-      <header className="cp-chat-header"><button className="cp-chat-back" onClick={()=>setLocation('/chat')}><ArrowLeft size={18}/></button><CipherAvatar src={other.avatarUrl} seed={other.id||other.email} gender={other.gender} size={44} alt=""/><div className="cp-chat-person"><strong>{other.firstName} {other.lastName}</strong><span>{other.userCode}</span></div><div className="cp-chat-head-actions"><button onClick={()=>setShowBg(v=>!v)} title="Chat background"><Palette size={18}/></button><button onClick={()=>setShowMenu(v=>!v)} title="More"><MoreVertical size={18}/></button></div>{showMenu&&<div className="cp-chat-menu"><button onClick={()=>{setShowMenu(false);void apiRequest('/api/chat/'+chat.id+'/block',{method:'POST'}).then(()=>setError('User blocked.'));}}><Ban size={15}/> Block user</button><button onClick={()=>{setShowMenu(false);void apiRequest('/api/chat/'+chat.id,{method:'DELETE'}).then(()=>setLocation('/chat'));}}><Trash2 size={15}/> Delete chat</button></div>}</header>
+      <header className="cp-chat-header"><button className="cp-chat-back" onClick={()=>setLocation('/chat')}><ArrowLeft size={18}/></button><CipherAvatar src={other.avatarUrl} seed={other.id||other.email} gender={other.gender} size={44} alt=""/><div className="cp-chat-person"><strong>{other.firstName} {other.lastName}</strong><span>{other.userCode}</span></div><div className="cp-chat-head-actions"><button onClick={()=>setShowBg(v=>!v)} title="Chat background"><Palette size={18}/></button><button onClick={()=>setShowMenu(v=>!v)} title="More"><MoreVertical size={18}/></button></div>{showMenu&&<div className="cp-chat-menu"><button onClick={async()=>{setShowMenu(false);try{if(blockedState){await apiRequest('/api/chat/'+chat.id+'/unblock',{method:'POST'});setBlockedState(false);setError('');}else{await apiRequest('/api/chat/'+chat.id+'/block',{method:'POST'});setBlockedState(true);setError('');}}catch(e){setError(e instanceof Error?e.message:'Could not update block status.');}}}><Ban size={15}/> {blockedState?'Unblock user':'Block user'}</button><button onClick={()=>{setShowMenu(false);void apiRequest('/api/chat/'+chat.id,{method:'DELETE'}).then(()=>setLocation('/chat'));}}><Trash2 size={15}/> Delete chat</button></div>}</header>
       {showBg&&<div className="cp-chat-bg-picker">{BGS.map((v,i)=><button key={i} style={{background:v}} onClick={()=>void chooseBg(v)} aria-label={'Background '+(i+1)}/>)}</div>}
       <main className="cp-chat-messages" style={{background:bg, backgroundImage:'none'}}>{decrypted.map((m:any)=>{
         const d=m.decrypted||{};
@@ -143,7 +145,7 @@ export default function ChatPage() {
       {replyTo&&<div className="cp-chat-reply-bar"><div><span>Replying to {replyTo.senderId===currentUserId?'yourself':other.firstName}</span><b>{replyTo.decrypted?.text || (replyTo.decrypted?.image ? 'Image' : replyTo.decrypted?.gif ? 'GIF' : 'Message')}</b></div><button onClick={()=>setReplyTo(null)}><X size={16}/></button></div>}
       {showEmoji&&<div className="cp-chat-emoji">{EMOJIS.map(e=><button key={e} onClick={()=>setText(v=>v+e)}>{e}</button>)}</div>}
       {showGif&&<div className="cp-chat-gif-panel"><div className="cp-chat-gif-search"><input value={gifSearch} onChange={e=>setGifSearch(e.target.value)} placeholder="Search GIFs"/><button onClick={()=>void loadGifs(gifSearch||'trending')}><Search size={15}/></button></div><div className="cp-gif-grid">{gifs.map(g=><button key={g.id} onClick={()=>void sendMessage({gif:g.url})}><img src={g.url} alt={g.title||'GIF'}/></button>)}</div></div>}
-      <footer className="cp-chat-composer"><button onClick={()=>{setShowEmoji(v=>!v);setShowGif(false)}} title="Emoji"><Smile size={20}/></button><button onClick={()=>fileRef.current?.click()} title="Image"><ImageIcon size={20}/></button><button onClick={()=>{const next=!showGif;setShowGif(next);setShowEmoji(false);if(next&&!gifs.length)void loadGifs();}} title="GIF"><span className="cp-gif-label">GIF</span></button><input ref={fileRef} type="file" accept="image/*" hidden onChange={e=>void pickImage(e.target.files?.[0])}/><textarea value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void sendMessage();}}} placeholder={sending?'Sending…':'Write a message…'} rows={1}/><button className="cp-chat-send" onClick={()=>void sendMessage()} disabled={sending||!text.trim()}><Send size={18}/></button></footer>
+      <footer className="cp-chat-composer"><button onClick={()=>{setShowEmoji(v=>!v);setShowGif(false)}} title="Emoji"><Smile size={20}/></button><button onClick={()=>fileRef.current?.click()} title={blockedState?'Unblock this user to send images':'Image'}><ImageIcon size={20}/></button><button onClick={()=>{const next=!showGif;setShowGif(next);setShowEmoji(false);if(next&&!gifs.length)void loadGifs();}} title={blockedState?'Unblock this user to send GIFs':'GIF'}><span className="cp-gif-label">GIF</span></button><input ref={fileRef} type="file" accept="image/*" hidden onChange={e=>void pickImage(e.target.files?.[0])}/><textarea disabled={blockedState} value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void sendMessage();}}} placeholder={sending?'Sending…':'Write a message…'} rows={1}/><button className="cp-chat-send" onClick={()=>void sendMessage()} disabled={blockedState||sending||!text.trim()}><Send size={18}/></button></footer>
     </div>
   </div>;
 }
