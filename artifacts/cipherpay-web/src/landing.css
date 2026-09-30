@@ -1833,3 +1833,53 @@ html.dark .cp-support-close{
 @media(prefers-reduced-motion:reduce){
   .cp-scatter .cp-mockup{animation:none!important}
 }
+
+/* DIGITAL SIDEKICK — cinematic auth visual */
+.auth-visual{
+  position:relative!important;
+  overflow:hidden!important;
+  background:
+    radial-gradient(circle at 28% 38%,rgba(103,72,190,.16),transparent 24%),
+    radial-gradient(circle at 76% 70%,rgba(35,95,180,.10),transparent 22%),
+    linear-gradient(145deg,#030207 0%,#090711 48%,#05040a 100%)!important;
+  box-shadow:inset 0 0 140px rgba(0,0,0,.72)!important;
+}
+.auth-visual:before{
+  content:"";position:absolute;inset:-20%;pointer-events:none;
+  background:conic-gradient(from 120deg,transparent 0 28%,rgba(132,91,255,.10) 34%,transparent 43% 68%,rgba(61,132,255,.07) 74%,transparent 82%);
+  filter:blur(34px);animation:sidekickAura 16s linear infinite;
+}
+.auth-visual:after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.035) 48%,transparent 52%);
+  transform:translateX(-80%);animation:sidekickSweep 8s ease-in-out infinite;
+}
+.auth-visual-grid{opacity:.11!important;background-size:48px 48px!important;mask-image:radial-gradient(circle at center,#000,transparent 72%)!important}
+.auth-quote{z-index:8!important;text-shadow:0 4px 28px rgba(0,0,0,.65)!important}
+.auth-quote h2{letter-spacing:-.045em!important}
+.auth-quote em{text-shadow:0 0 38px rgba(128,91,255,.28)!important}
+.auth-sidekick-mockups{position:absolute;inset:0;z-index:6;pointer-events:none;perspective:1400px}
+.auth-sidekick-device{
+ position:absolute;width:138px;height:250px;padding:6px;border-radius:26px;
+ background:linear-gradient(145deg,rgba(255,255,255,.18),rgba(255,255,255,.035) 42%,rgba(112,77,190,.16));
+ border:1px solid rgba(255,255,255,.13);box-shadow:0 35px 80px rgba(0,0,0,.62),0 0 45px rgba(103,72,190,.10),inset 0 0 0 1px rgba(255,255,255,.035);
+ transform-style:preserve-3d;backdrop-filter:blur(10px);animation:sidekickFloat 8s ease-in-out infinite;
+}
+.auth-sidekick-device:before{content:"";position:absolute;top:7px;left:50%;translate:-50% 0;width:38px;height:5px;border-radius:10px;background:rgba(0,0,0,.72);z-index:4}
+.auth-sidekick-screen{height:100%;border-radius:21px;background:linear-gradient(160deg,#11101a,#07070d 68%,#151022);padding:30px 12px 12px;overflow:hidden;box-shadow:inset 0 0 35px rgba(0,0,0,.55)}
+.auth-sidekick-screen b{display:block;font-size:9px;color:#bdb7cf;letter-spacing:.08em;text-transform:uppercase}
+.auth-sidekick-screen strong{display:block;margin-top:24px;font-size:22px;letter-spacing:-.05em;color:#fff}
+.auth-sidekick-screen span{display:block;margin-top:4px;font-size:7px;color:#777185}
+.auth-sidekick-screen i{display:block;margin-top:20px;padding:8px;border-radius:9px;background:rgba(132,91,255,.16);border:1px solid rgba(160,125,255,.12);font-size:7px;color:#d9d0f3;font-style:normal}
+.sidekick-one{left:7%;top:18%;transform:rotateY(27deg) rotateZ(-8deg) translateZ(-50px);animation-delay:-2s}
+.sidekick-two{right:7%;bottom:17%;transform:rotateY(-29deg) rotateZ(8deg) translateZ(-80px);animation-delay:-5s}
+.sidekick-orb{position:absolute;width:68px;height:68px;border-radius:50%;right:25%;top:19%;background:radial-gradient(circle at 32% 28%,#c8b8ff 0 5%,#62439c 18%,#161020 58%,#05040a 72%);box-shadow:0 0 55px rgba(117,77,210,.34),inset -12px -12px 22px rgba(0,0,0,.6);animation:sidekickOrb 6s ease-in-out infinite}
+.sidekick-ring{position:absolute;width:260px;height:260px;left:18%;top:9%;border:1px solid rgba(140,104,230,.16);border-radius:50%;transform:rotateX(68deg) rotateZ(-18deg);box-shadow:0 0 45px rgba(104,72,190,.08);animation:sidekickRing 13s linear infinite}
+@keyframes sidekickFloat{0%,100%{translate:0 0}50%{translate:0 -16px}}
+@keyframes sidekickOrb{0%,100%{translate:0 0;scale:1}50%{translate:8px -14px;scale:1.08}}
+@keyframes sidekickRing{to{rotate:360deg}}
+@keyframes sidekickAura{to{rotate:360deg}}
+@keyframes sidekickSweep{0%,35%{transform:translateX(-80%)}65%,100%{transform:translateX(80%)}}
+@media(max-width:900px){.auth-sidekick-device{width:105px;height:190px}.sidekick-one{left:3%;top:12%}.sidekick-two{right:3%;bottom:10%}.sidekick-orb{right:16%;top:12%;width:48px;height:48px}.sidekick-ring{width:190px;height:190px}}
+@media(max-width:700px){.auth-sidekick-device{opacity:.45}.sidekick-one{left:-8%;top:15%}.sidekick-two{right:-8%;bottom:12%}.sidekick-orb,.sidekick-ring{opacity:.5}.auth-quote{position:relative;z-index:10}}
+@media(prefers-reduced-motion:reduce){.auth-sidekick-device,.sidekick-orb,.sidekick-ring,.auth-visual:before,.auth-visual:after{animation:none!important}}
