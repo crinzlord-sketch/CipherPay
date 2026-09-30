@@ -33,7 +33,7 @@ import {
 } from '@workspace/api-client-react';
 import { setAuthTokenGetter, setBaseUrl } from '@workspace/api-client-react';
 import {
-  Activity, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Banknote,
+  Activity, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Banknote, BarChart3, CalendarDays,
   Bell, Bolt, Check, CircleHelp, Copy, CreditCard, FileText,
   Fingerprint, Globe2, Home, Landmark, LockKeyhole, LogOut, Menu, MessageSquare,
   Layers3, MoreHorizontal, Network as NetworkIcon, Plus, Receipt, RefreshCw, Send as SendIcon,
@@ -918,7 +918,7 @@ function Dashboard() {
       </section>
        <section className="dashboard-lower">
          <div className="panel transactions-panel"><div className="section-head"><div><h2>Recent activity</h2><span>Your latest wallet movements</span></div><Link href="/transactions" className="text-link" data-testid="link-view-transactions">View all <ArrowRight size={15} /></Link></div>{summary.isFetching && <div className="skeleton-line" />}{transactions.length ? transactions.slice(0, 5).map((tx: any) => <TransactionRow key={tx.id} tx={tx} onClick={setSelectedTransaction} />) : <EmptyState icon={<Activity size={22} />} title="Your activity will show here" text="Fund your wallet or make a payment to get started." action={<Link href="/fund" className="text-link" data-testid="link-empty-fund">Fund wallet</Link>} />}</div>
-         <div className="panel insight-panel"><div className="section-head"><div><h2>Money snapshot</h2><span>This month</span></div></div><div className="pulse-number">{s ? money.format(s.monthlySpend) : '₦0.00'}</div><span className="muted">Spent this month</span><div className="mini-bars"><i style={{ height: '36%' }} /><i style={{ height: '57%' }} /><i style={{ height: '44%' }} /><i style={{ height: '78%' }} /><i style={{ height: '61%' }} /><i style={{ height: '88%' }} /><i className="today" style={{ height: '67%' }} /></div><div className="pulse-meta"><span>Funded <b>{s ? money.format(s.totalFunded) : '₦0'}</b></span><span>Transfers <b>{s?.totalTransfers ?? 0}</b></span><span>Withdrawals <b>{s ? money.format(s.totalWithdrawn) : '₦0'}</b></span></div></div>
+         <div className="panel insight-panel"><div className="section-head"><div><h2>Money snapshot</h2><span>This month</span></div><Link href="/spending" className="text-link money-snapshot-view-all" data-testid="link-view-money-snapshot">View all <ArrowRight size={15} /></Link></div><div className="pulse-number">{s ? money.format(s.monthlySpend ?? 0) : "₦0.00"}</div><span className="muted">Spent this month</span><div className="snapshot-period-grid"><div><small>Today</small><b>{s ? money.format(s.todaySpend ?? 0) : "₦0.00"}</b></div><div><small>This week</small><b>{s ? money.format(s.weeklySpend ?? 0) : "₦0.00"}</b></div><div><small>This year</small><b>{s ? money.format(s.yearlySpend ?? 0) : "₦0.00"}</b></div></div><div className="mini-bars">{(s?.daily ?? []).map((day: any) => <i key={day.date} style={{ height: Math.max(10, Math.min(100, ((day.spent ?? 0) / Math.max(...(s?.daily ?? []).map((item: any) => item.spent ?? 0), 1)) * 100) + "%" }} title={day.label + ": " + money.format(day.spent ?? 0)} />)}</div><div className="pulse-meta"><span>Funded <b>{s ? money.format(s.totalFunded) : "₦0"}</b></span><span>Transfers <b>{s?.totalTransfers ?? 0}</b></span><span>Withdrawals <b>{s ? money.format(s.totalWithdrawn) : "₦0"}</b></span></div></div><div className="pulse-number">{s ? money.format(s.monthlySpend) : '₦0.00'}</div><span className="muted">Spent this month</span><div className="mini-bars"><i style={{ height: '36%' }} /><i style={{ height: '57%' }} /><i style={{ height: '44%' }} /><i style={{ height: '78%' }} /><i style={{ height: '61%' }} /><i style={{ height: '88%' }} /><i className="today" style={{ height: '67%' }} /></div><div className="pulse-meta"><span>Funded <b>{s ? money.format(s.totalFunded) : '₦0'}</b></span><span>Transfers <b>{s?.totalTransfers ?? 0}</b></span><span>Withdrawals <b>{s ? money.format(s.totalWithdrawn) : '₦0'}</b></span></div></div>
        </section>
        {selectedTransaction && <TransactionReceipt transaction={selectedTransaction} onClose={() => setSelectedTransaction(null)} />}
     </>
@@ -1572,6 +1572,30 @@ function ProtectedArea({ children }: { children: ReactNode }) {
   return token ? <Shell>{children}</Shell> : <LoadingPage title="Opening your account" />;
 }
 
+function SpendingInsightsPage() {
+  const stats = useGetWalletStats({ query: { enabled: !!useToken(), queryKey: ["/api/wallet/stats"] } });
+  const s: any = stats.data;
+  const maxDaily = Math.max(...(s?.daily ?? []).map((item: any) => Number(item.spent ?? 0)), 1);
+  const maxMonthly = Math.max(...(s?.monthly ?? []).map((item: any) => Number(item.spent ?? 0)), 1);
+  const categories = (s?.categoryBreakdown ?? []).slice(0, 6);
+  if (stats.isLoading) return <LoadingPage title="Loading spending insights" />;
+  return <>
+    <PageTitle eyebrow="MONEY / INSIGHTS" title="Your spending, clearly." detail="See what you spend today, this week, this month and across the year." action={<Link href="/" className="text-link"><ArrowLeft size={15}/> Back to overview</Link>} />
+    <section className="spending-hero-grid">
+      <div className="spending-total-card"><span className="section-kicker">THIS MONTH</span><strong>{money.format(s?.monthlySpend ?? 0)}</strong><span>Spent this month</span><div className="spending-total-meta"><span><small>Today</small><b>{money.format(s?.todaySpend ?? 0)}</b></span><span><small>This week</small><b>{money.format(s?.weeklySpend ?? 0)}</b></span><span><small>This year</small><b>{money.format(s?.yearlySpend ?? 0)}</b></span></div></div>
+      <div className="spending-stat-card"><span className="spending-icon"><CalendarDays size={18}/></span><small>All-time spending</small><strong>{money.format(s?.totalSpent ?? 0)}</strong><span>Across recorded wallet activity</span></div>
+      <div className="spending-stat-card"><span className="spending-icon"><ArrowUpRight size={18}/></span><small>Transfers sent</small><strong>{money.format(s?.totalTransfers ?? 0)}</strong><span>Money moved to others</span></div>
+    </section>
+    <section className="spending-dashboard-grid">
+      <section className="panel spending-chart-card"><div className="section-head"><div><h2>Last 7 days</h2><span>Daily spending</span></div><BarChart3 size={19}/></div><div className="spending-bars">{(s?.daily ?? []).map((day: any) => <div className="spending-bar-item" key={day.date}><div className="spending-bar-track"><i style={{height: Math.max(3, (Number(day.spent ?? 0) / maxDaily) * 100) + "%"}} /></div><b>{day.label}</b><small>{money.format(day.spent ?? 0)}</small></div>)}</div></section>
+      <section className="panel spending-chart-card"><div className="section-head"><div><h2>Last 12 months</h2><span>Monthly spending</span></div><BarChart3 size={19}/></div><div className="spending-month-list">{(s?.monthly ?? []).map((month: any) => <div className="spending-month-row" key={month.year + "-" + month.month}><span>{month.month} {month.year}</span><div><i style={{width: Math.max(2, (Number(month.spent ?? 0) / maxMonthly) * 100) + "%"}} /></div><b>{money.format(month.spent ?? 0)}</b></div>)}</div></section>
+    </section>
+    <section className="spending-bottom-grid">
+      <section className="panel spending-breakdown-card"><div className="section-head"><div><h2>Where your money goes</h2><span>Spending by service</span></div></div>{categories.length ? categories.map((item: any) => <div className="spending-category-row" key={item.category}><span>{String(item.category).replaceAll("_"," ")}</span><div><i style={{width: Math.max(4, Math.min(100, (Number(item.amount ?? 0) / Math.max(Number(s?.totalSpent ?? 0),1))*100)) + "%"}} /></div><b>{money.format(item.amount ?? 0)}</b></div>) : <EmptyState icon={<BarChart3 size={22}/>} title="No spending data yet" text="Your spending breakdown will appear after you make a payment."/>}</section>
+      <section className="panel spending-summary-card"><div className="section-head"><div><h2>Money in motion</h2><span>Recorded totals</span></div></div><div className="spending-summary-row"><span>Funded</span><b>{money.format(s?.totalFunded ?? 0)}</b></div><div className="spending-summary-row"><span>Spent</span><b>{money.format(s?.totalSpent ?? 0)}</b></div><div className="spending-summary-row"><span>Withdrawn</span><b>{money.format(s?.totalWithdrawn ?? 0)}</b></div><div className="spending-summary-row"><span>Transfers</span><b>{money.format(s?.totalTransfers ?? 0)}</b></div></section>
+    </section>
+  </>;
+}
 function TransactionsPage() {
   const [page, setPage] = useState(1);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
@@ -1639,6 +1663,7 @@ function App() {
             <Route path="/social-boost"><ProtectedArea><SocialBoostPage /></ProtectedArea></Route>
             <Route path="/email-pro"><ProtectedArea><EmailProPage /></ProtectedArea></Route>
             <Route path="/transactions"><ProtectedArea><TransactionsPage /></ProtectedArea></Route>
+          <Route path="/spending"><ProtectedArea><SpendingInsightsPage /></ProtectedArea></Route>
             <Route path="/chat/:id"><ProtectedArea><ChatPage /></ProtectedArea></Route>
             <Route path="/chat"><ProtectedArea><ChatPage /></ProtectedArea></Route>
             <Route path="/notifications"><ProtectedArea><NotificationsPage /></ProtectedArea></Route>
