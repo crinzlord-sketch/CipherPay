@@ -240,7 +240,7 @@ function Shell({ children }: { children: ReactNode }) {
     if (!confirmed) return;
     localStorage.removeItem('cipherpay_token');
     queryClient.clear();
-    setLocation('/login');
+    setLocation('/');
   };
   const linkList = (items: typeof nav) => items.map(({ href, label, icon: Icon }) => (
     <Link key={href} href={href} onClick={() => setMobileOpen(false)} className={`nav-item ${location === href ? 'active' : ''}`} data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`}>
