@@ -36,7 +36,7 @@ import {
   Bell, Bolt, Check, CircleHelp, Copy, CreditCard, FileText,
   Fingerprint, Globe2, Home, Landmark, LockKeyhole, LogOut, Menu, MessageSquare,
   Layers3, MoreHorizontal, Network as NetworkIcon, Plus, Receipt, RefreshCw, Send as SendIcon,
-  Settings, ShieldCheck, Smartphone, Target, Tv, UserRound, WalletCards, Wifi, X, Eye, EyeOff,
+  Settings, ShieldCheck, Smartphone, Target, Tv, UserRound, WalletCards, Wifi, X, Eye, EyeOff, Gift,
 } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
 import './landing.css';
@@ -63,6 +63,7 @@ const nav = [
   { href: '/temporary-email', label: 'Temporary email', icon: Globe2 },
   { href: '/services', label: 'Services', icon: Layers3 },
   { href: '/transactions', label: 'Transactions', icon: Activity },
+  { href: '/referrals', label: 'Refer & earn', icon: Gift },
 ];
 const utilityNav = [
   { href: '/notifications', label: 'Notifications', icon: Bell },
@@ -501,6 +502,10 @@ function Login() {
   const buddyRef = useRef<HTMLDivElement>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
+    const referral = new URLSearchParams(window.location.search).get('ref');
+    if (referral) setForm((current) => ({ ...current, referralCode: referral.trim().toUpperCase() }));
+  }, []);
+  useEffect(() => {
     if (otpResendCooldown <= 0) return;
     const timer = window.setInterval(() => setOtpResendCooldown((value) => Math.max(0, value - 1)), 1000);
     return () => window.clearInterval(timer);
@@ -805,7 +810,7 @@ function ResetPassword() {
 function Register() {
   const [, setLocation] = useLocation();
   const mutation = useRegister();
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: authDraft.email, phone: '', password: authDraft.password, confirmPassword: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: authDraft.email, phone: '', password: authDraft.password, confirmPassword: '', referralCode: '' });
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [activeField, setActiveField] = useState<'name' | 'email' | 'password' | 'idle'>('idle');
   const [gaze, setGaze] = useState<BuddyGaze>({ x: 0, y: 3 });
@@ -844,7 +849,8 @@ function Register() {
         phone: form.phone,
         password: form.password,
         gender,
-      },
+        referralCode: form.referralCode.trim().toUpperCase() || undefined,
+      } as any,
     }, {
       onSuccess: (result: any) => {
         setFaceMood('success');
@@ -860,7 +866,7 @@ function Register() {
        onError: (reason: any) => { setFaceMood('error'); setFaceReaction((value) => value + 1); setError(reason?.message ?? 'We could not create your account. Please review your details.'); },
     });
   };
-  return <AuthLayout title="Start with CipherPay." detail="A calmer way to manage your day-to-day."><form className="auth-form" onSubmit={submit}><AuthBuddy key={`register-buddy-${faceReaction}`} field={activeField} hasText={Boolean(form.firstName || form.lastName || form.email || form.password || form.confirmPassword)} gaze={gaze} typing={typing} mood={faceMood} buddyRef={buddyRef} /><div className="field-row"><Field label="First name" placeholder="Ada" value={form.firstName} onFocus={(event: any) => { setActiveField('name'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('firstName')} required data-testid="input-first-name" /><Field label="Last name" placeholder="Okafor" value={form.lastName} onFocus={(event: any) => { setActiveField('name'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('lastName')} required data-testid="input-last-name" /></div><Field label="Email address" type="email" autoComplete="username" placeholder="you@example.com" value={form.email} onFocus={(event: any) => { setActiveField('email'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('email')} required data-testid="input-email" /><Field label="Phone number" type="tel" placeholder="Your phone number" value={form.phone} onChange={update('phone')} required data-testid="input-phone" /><label className="field"><span>Avatar style</span><select value={gender} onChange={(event) => setGender(event.target.value as 'male' | 'female')} data-testid="select-avatar-gender"><option value="male">Male</option><option value="female">Female</option></select></label><label className="field"><span>Create password</span><div className="password-wrap"><input type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="At least 6 characters" value={form.password} onFocus={(event: any) => { setActiveField('password'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('password')} required minLength={6} data-testid="input-password" /><button type="button" className="password-toggle" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} data-testid="button-toggle-password">{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label><label className="field"><span>Confirm password</span><div className="password-wrap"><input type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="Repeat your password" value={form.confirmPassword} onFocus={(event: any) => { setActiveField('password'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('confirmPassword')} required minLength={6} data-testid="input-confirm-password" /><button type="button" className="password-toggle" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} data-testid="button-toggle-confirm-password">{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>{error && <div className="error-box">{error}</div>}<Button type="submit" className="full-btn" disabled={mutation.isPending} data-testid="button-register">{mutation.isPending ? 'Sending OTP…' : 'Create account'} <ArrowRight size={17} /></Button></form><p className="auth-switch">Already have an account? <Link href="/login" className="text-link" data-testid="link-login">Sign in</Link></p></AuthLayout>;
+  return <AuthLayout title="Start with CipherPay." detail="A calmer way to manage your day-to-day."><form className="auth-form" onSubmit={submit}><AuthBuddy key={`register-buddy-${faceReaction}`} field={activeField} hasText={Boolean(form.firstName || form.lastName || form.email || form.password || form.confirmPassword)} gaze={gaze} typing={typing} mood={faceMood} buddyRef={buddyRef} /><div className="field-row"><Field label="First name" placeholder="Ada" value={form.firstName} onFocus={(event: any) => { setActiveField('name'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('firstName')} required data-testid="input-first-name" /><Field label="Last name" placeholder="Okafor" value={form.lastName} onFocus={(event: any) => { setActiveField('name'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('lastName')} required data-testid="input-last-name" /></div><Field label="Email address" type="email" autoComplete="username" placeholder="you@example.com" value={form.email} onFocus={(event: any) => { setActiveField('email'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('email')} required data-testid="input-email" /><Field label="Phone number" type="tel" placeholder="Your phone number" value={form.phone} onChange={update('phone')} required data-testid="input-phone" /><label className="field"><span>Avatar style</span><select value={gender} onChange={(event) => setGender(event.target.value as 'male' | 'female')} data-testid="select-avatar-gender"><option value="male">Male</option><option value="female">Female</option></select></label><Field label="Referral code (optional)" placeholder="e.g. CB7K2P9Q" value={form.referralCode} onChange={update('referralCode')} autoCapitalize="characters" data-testid="input-referral-code" /><label className="field"><span>Create password</span><div className="password-wrap"><input type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="At least 6 characters" value={form.password} onFocus={(event: any) => { setActiveField('password'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('password')} required minLength={6} data-testid="input-password" /><button type="button" className="password-toggle" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} data-testid="button-toggle-password">{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label><label className="field"><span>Confirm password</span><div className="password-wrap"><input type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="Repeat your password" value={form.confirmPassword} onFocus={(event: any) => { setActiveField('password'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('confirmPassword')} required minLength={6} data-testid="input-confirm-password" /><button type="button" className="password-toggle" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} data-testid="button-toggle-confirm-password">{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>{error && <div className="error-box">{error}</div>}<Button type="submit" className="full-btn" disabled={mutation.isPending} data-testid="button-register">{mutation.isPending ? 'Sending OTP…' : 'Create account'} <ArrowRight size={17} /></Button></form><p className="auth-switch">Already have an account? <Link href="/login" className="text-link" data-testid="link-login">Sign in</Link></p></AuthLayout>;
 }
 
 function Dashboard() {
@@ -1640,6 +1646,7 @@ function App() {
             <Route path="/kyc/:verificationType"><KycDetailRoute /></Route>
             <Route path="/kyc"><ProtectedArea><KycPage /></ProtectedArea></Route>
             <Route path="/support"><ProtectedArea><SupportPage /></ProtectedArea></Route>
+            <Route path="/referrals"><ProtectedArea><ReferralPage /></ProtectedArea></Route>
             <Route path="/admin"><ProtectedArea><AdminOnly><AdminConsole /></AdminOnly></ProtectedArea></Route>
             <Route><ProtectedArea><InfoPage title="Page not found." detail="The page you requested does not exist." /></ProtectedArea></Route>
           </Switch>
