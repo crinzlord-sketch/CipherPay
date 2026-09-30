@@ -201,16 +201,13 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     otpDelivery = "logged";
   }
 
-  const dev = deviceInfo(req);
-  const sid = await createSession(user.id, dev.name, dev.platform, dev.ip);
-  const token = signToken(user.id, sid);
+  // No authenticated session is created until the verification OTP is accepted.
   void sendWelcomeEmail(user.email, user.firstName).catch((e: any) => {
     req.log?.warn?.({ userId: user.id, err: e?.message }, "welcome email failed");
   });
 
   res.status(201).json({
     user: formatUser(user, 0),
-    token,
     requiresEmailVerification: true,
     otpDelivery,
   });
