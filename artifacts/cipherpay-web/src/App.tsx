@@ -1025,14 +1025,26 @@ function TransactionRow({ tx, onClick }: { tx: any; onClick?: (tx: any) => void 
 function TransactionReceipt({ transaction, onClose }: { transaction: any; onClose: () => void }) {
   const positive = isIncomingTransaction(transaction);
   const status = String(transaction.status ?? 'unknown');
-  const details = [
-    ['Reference', transaction.reference || 'Not available'],
-    ['Type', String(transaction.type ?? 'transaction').replaceAll('_', ' ')],
-    ['Date', transaction.createdAt ? new Date(transaction.createdAt).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not available'],
-    ['Fee', transaction.fee == null ? '—' : money.format(transaction.fee)],
-    ['Balance before', transaction.balanceBefore == null ? '—' : money.format(transaction.balanceBefore)],
-    ['Balance after', transaction.balanceAfter == null ? '—' : money.format(transaction.balanceAfter)],
-  ];
+  let meta: any = {};
+  try { meta = typeof transaction.metadata === 'string' ? JSON.parse(transaction.metadata) : (transaction.metadata ?? {}); } catch { meta = {}; }
+  const isExternal = String(transaction.type ?? '') === 'withdraw';
+  const isInternal = String(transaction.type ?? '') === 'transfer_out' || String(transaction.type ?? '') === 'transfer_in';
+  const details = isExternal
+    ? [
+        ['Recipient', meta.accountName || 'Bank account'],
+        ['Bank', meta.bankName || meta.bankCode || 'Bank transfer'],
+        ['Account number', meta.accountNumber || 'Not available'],
+        ['Reference', transaction.reference || 'Not available'],
+        ['Date', transaction.createdAt ? new Date(transaction.createdAt).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not available' ],
+        ['Fee', transaction.fee == null ? '—' : money.format(transaction.fee)],
+      ]
+    : [
+        ...(isInternal && meta.recipientAccount ? [['Recipient account', String(meta.recipientAccount)]] : []),
+        ['Reference', transaction.reference || 'Not available'],
+        ['Type', String(transaction.type ?? 'transaction').replaceAll('_', ' ')],
+        ['Date', transaction.createdAt ? new Date(transaction.createdAt).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not available'],
+        ['Fee', transaction.fee == null ? '—' : money.format(transaction.fee)],
+      ];
   return <div className="animated-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="animated-dialog transaction-receipt" role="dialog" aria-modal="true" aria-labelledby="transaction-receipt-title" onMouseDown={(event) => event.stopPropagation()}>
       <button type="button" className="animated-dialog-close" onClick={onClose} aria-label="Close transaction receipt"><X size={17} /></button>
