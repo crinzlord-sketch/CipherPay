@@ -65,6 +65,15 @@ import fs from "fs";
 // Avatar files are publicly served by filename (no token required). The URL is
 // stored on the user row and shown anywhere the user appears, so we treat it
 // like any other public asset. Filename format is `u<id>-<ts>.<ext>`.
+app.get("/api/uploads/chat/:filename", (req: Request, res: Response): void => {
+  const filename = String(req.params.filename ?? "");
+  if (!/^c\d+-\d+\.(jpg|jpeg|png|webp|gif)$/i.test(filename)) { res.status(400).json({ error: "Invalid filename" }); return; }
+  const filePath = path.resolve(process.cwd(), "uploads", "chat", filename);
+  if (!fs.existsSync(filePath)) { res.status(404).json({ error: "Not found" }); return; }
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.sendFile(filePath);
+});
+
 app.get("/api/uploads/avatar/:filename", (req: Request, res: Response): void => {
   const filename = String(req.params.filename ?? "");
   if (!/^u\d+-\d+\.(jpg|jpeg|png|webp)$/i.test(filename)) {
