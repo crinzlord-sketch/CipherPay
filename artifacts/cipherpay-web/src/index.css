@@ -6162,3 +6162,206 @@ html.dark .temp-message-detail{
 html.dark table tbody tr:hover,
 html.dark .list-item:hover,
 html.dark .transaction-row:hover{background:rgba(115,92,255,.10)!important}
+
+
+/* MONEY SNAPSHOT / INSIGHTS */
+.snapshot-period-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0 13px}
+.snapshot-period-grid>div{padding:10px 11px;border:1px solid rgba(115,92,255,.10);border-radius:12px;background:rgba(115,92,255,.045)}
+.snapshot-period-grid small{display:block;color:hsl(var(--muted-foreground));font-size:10px;margin-bottom:4px}
+.snapshot-period-grid b{display:block;font-size:12px}
+.money-snapshot-view-all{white-space:nowrap}
+.spending-hero-grid{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(2,minmax(180px,.7fr));gap:14px;margin-bottom:14px}
+.spending-total-card,.spending-stat-card{border:1px solid hsl(var(--border));border-radius:22px;background:linear-gradient(145deg,hsl(var(--card)),hsl(var(--card)/.78));box-shadow:0 18px 55px rgba(35,22,55,.07);padding:22px}
+.spending-total-card{background:linear-gradient(145deg,rgba(115,92,255,.14),hsl(var(--card)) 55%,rgba(255,134,83,.08))}
+.spending-total-card .section-kicker,.spending-stat-card small{display:block;color:hsl(var(--muted-foreground));font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+.spending-total-card>strong{display:block;margin:8px 0 3px;font-size:clamp(34px,5vw,58px);letter-spacing:-.055em}
+.spending-total-card>span,.spending-stat-card>span{color:hsl(var(--muted-foreground));font-size:12px}
+.spending-total-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:20px}
+.spending-total-meta span{display:grid;gap:3px;padding-top:12px;border-top:1px solid hsl(var(--border))}
+.spending-total-meta small{color:hsl(var(--muted-foreground));font-size:10px}.spending-total-meta b{font-size:13px}
+.spending-stat-card{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:5px;min-height:190px}
+.spending-stat-card strong{font-size:25px;letter-spacing:-.04em}
+.spending-icon{display:grid;place-items:center;width:38px;height:38px;margin-bottom:auto;border-radius:12px;background:hsl(var(--primary)/.11);color:hsl(var(--primary))}
+.spending-dashboard-grid,.spending-bottom-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.spending-chart-card,.spending-breakdown-card,.spending-summary-card{padding:20px}
+.spending-bars{height:245px;display:flex;align-items:flex-end;gap:10px;padding-top:22px}
+.spending-bar-item{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px}
+.spending-bar-track{width:100%;height:100%;display:flex;align-items:flex-end;justify-content:center}
+.spending-bar-track i{display:block;width:min(38px,70%);min-height:3px;border-radius:9px 9px 4px 4px;background:linear-gradient(180deg,#735cff,#a18eff);box-shadow:0 10px 24px rgba(115,92,255,.16)}
+.spending-bar-item b{font-size:10px}.spending-bar-item small{font-size:9px;color:hsl(var(--muted-foreground));white-space:nowrap}
+.spending-month-list{display:grid;gap:13px;margin-top:14px}
+.spending-month-row{display:grid;grid-template-columns:62px minmax(0,1fr) auto;align-items:center;gap:10px;font-size:10px}
+.spending-month-row>div{height:7px;border-radius:99px;background:hsl(var(--muted));overflow:hidden}
+.spending-month-row i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#735cff,#ff8653)}
+.spending-month-row b{font-size:10px;min-width:82px;text-align:right}
+.spending-category-row{display:grid;grid-template-columns:110px minmax(0,1fr) auto;align-items:center;gap:10px;margin-top:15px;font-size:11px}
+.spending-category-row>span{text-transform:capitalize;color:hsl(var(--foreground))}
+.spending-category-row>div{height:7px;border-radius:99px;background:hsl(var(--muted));overflow:hidden}.spending-category-row i{display:block;height:100%;border-radius:inherit;background:hsl(var(--primary))}
+.spending-category-row b{font-size:11px;min-width:88px;text-align:right}
+.spending-summary-card{align-self:start}
+.spending-summary-row{display:flex;justify-content:space-between;gap:12px;padding:15px 0;border-bottom:1px solid hsl(var(--border));font-size:12px}.spending-summary-row:last-child{border-bottom:0}.spending-summary-row span{color:hsl(var(--muted-foreground))}
+@media(max-width:980px){.spending-hero-grid{grid-template-columns:1fr 1fr}.spending-total-card{grid-column:1/-1}.spending-dashboard-grid,.spending-bottom-grid{grid-template-columns:1fr}}
+@media(max-width:620px){.snapshot-period-grid{grid-template-columns:1fr 1fr}.snapshot-period-grid>div:last-child{display:none}.spending-hero-grid{grid-template-columns:1fr}.spending-total-card{grid-column:auto}.spending-total-meta{grid-template-columns:1fr 1fr}.spending-total-meta span:last-child{display:none}.spending-dashboard-grid,.spending-bottom-grid{grid-template-columns:1fr}.spending-chart-card,.spending-breakdown-card,.spending-summary-card{padding:16px}.spending-bars{height:210px;gap:5px}.spending-category-row{grid-template-columns:82px minmax(0,1fr) auto}.spending-category-row b{min-width:72px}.spending-month-row{grid-template-columns:52px minmax(0,1fr) auto}.spending-month-row b{min-width:70px}}
+ 
+/* GLOBAL DARK MODE — keep every app surface on the dark theme */
+html.dark,
+html.dark body,
+html.dark #root{background:#121018!important;color:#f6f2fb!important}
+html.dark .content,
+html.dark .cp-page,
+html.dark .page-title,
+html.dark .dashboard-grid,
+html.dark .dashboard-lower,
+html.dark .form-layout,
+html.dark .vas-layout,
+html.dark .sms-layout,
+html.dark .transactions-page,
+html.dark .spending-dashboard-grid,
+html.dark .spending-bottom-grid{color:#f6f2fb!important}
+html.dark .cp-card,
+html.dark .panel,
+html.dark .main-form,
+html.dark .side-note,
+html.dark .service-panel,
+html.dark .service-card,
+html.dark .info-page-panel,
+html.dark .transactions-page-panel,
+html.dark .transactions-panel,
+html.dark .insight-panel,
+html.dark .vas-side-card,
+html.dark .vas-trust-card,
+html.dark .sms-order-panel,
+html.dark .sms-inbox-panel,
+html.dark .sms-history-panel,
+html.dark .spending-total-card,
+html.dark .spending-stat-card,
+html.dark .spending-chart-card,
+html.dark .spending-breakdown-card,
+html.dark .spending-summary-card,
+html.dark .temp-privacy-panel,
+html.dark .social-boost-side,
+html.dark .temp-message-detail,
+html.dark .auth-form-inner{
+  background:linear-gradient(145deg,rgba(34,27,47,.96),rgba(23,18,31,.94))!important;
+  border-color:rgba(255,255,255,.10)!important;
+  color:#f6f2fb!important;
+  box-shadow:0 20px 65px rgba(0,0,0,.28)!important;
+}
+html.dark .spending-total-card{background:linear-gradient(145deg,rgba(88,69,170,.28),rgba(28,22,39,.96) 58%,rgba(125,62,40,.16))!important}
+html.dark .balance-card{box-shadow:0 24px 70px rgba(0,0,0,.38)!important}
+html.dark .section-head h2,
+html.dark .page-title h1,
+html.dark .page-title h2,
+html.dark .cp-card h1,
+html.dark .cp-card h2,
+html.dark .cp-card h3,
+html.dark .panel h1,
+html.dark .panel h2,
+html.dark .panel h3,
+html.dark .service-card h2,
+html.dark .service-card h3,
+html.dark .form-section-title h2,
+html.dark .spending-total-card strong,
+html.dark .spending-stat-card strong{color:#f8f4fc!important}
+html.dark .section-head span,
+html.dark .page-title p,
+html.dark .cp-card p,
+html.dark .panel p,
+html.dark .muted,
+html.dark .service-note,
+html.dark .spending-stat-card>span,
+html.dark .spending-total-card>span,
+html.dark .spending-month-row span,
+html.dark .spending-category-row>span,
+html.dark .spending-summary-row span,
+html.dark .cp-preference-row p{color:rgba(246,242,251,.58)!important}
+html.dark .action-tile,
+html.dark .quick-actions .action-tile,
+html.dark .cp-preference-row,
+html.dark .cp-segmented,
+html.dark .tab,
+html.dark .tabs,
+html.dark .amount-chip,
+html.dark .network-option,
+html.dark .plan-card,
+html.dark .bank-picker-trigger,
+html.dark .bank-picker-menu,
+html.dark .bank-picker-option,
+html.dark .more-menu,
+html.dark .user-menu,
+html.dark .notifications-panel,
+html.dark .recipient-preview,
+html.dark .resolved-account,
+html.dark .transfer-account-card,
+html.dark .transfer-instructions,
+html.dark .transfer-warning{
+  background:rgba(29,23,39,.94)!important;
+  border-color:rgba(255,255,255,.10)!important;
+  color:#f6f2fb!important;
+}
+html.dark .action-tile:hover,
+html.dark .tab:hover,
+html.dark .amount-chip:hover,
+html.dark .network-option:hover,
+html.dark .plan-card:hover,
+html.dark .bank-picker-option:hover{background:rgba(115,92,255,.16)!important}
+html.dark .action-tile small,
+html.dark .action-tile b,
+html.dark .field>span,
+html.dark .form-label,
+html.dark .field-heading small,
+html.dark .cp-field span,
+html.dark .cp-preference-row h3,
+html.dark .cp-card-head h2{color:#f6f2fb!important}
+html.dark input,
+html.dark textarea,
+html.dark select,
+html.dark .bank-picker-trigger,
+html.dark .sms-picker-input{
+  background:#191520!important;color:#f8f4fc!important;border-color:rgba(255,255,255,.14)!important
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder{color:rgba(246,242,251,.36)!important}
+html.dark .transaction-row,
+html.dark .transaction-row-button,
+html.dark .list-item,
+html.dark .notification-item,
+html.dark .sms-number-row,
+html.dark .sms-code-card,
+html.dark .temp-address-block{color:#f6f2fb!important;border-color:rgba(255,255,255,.08)!important}
+html.dark .transaction-row:hover,
+html.dark .transaction-row-button:hover,
+html.dark .list-item:hover,
+html.dark .notification-item:hover{background:rgba(115,92,255,.10)!important}
+html.dark .transaction-row small,
+html.dark .tx-copy small,
+html.dark .notification-item small,
+html.dark .empty-state p,
+html.dark .side-note p{color:rgba(246,242,251,.55)!important}
+html.dark table,
+html.dark th,
+html.dark td{border-color:rgba(255,255,255,.10)!important;color:#f6f2fb!important}
+html.dark .animated-dialog,
+html.dark .transaction-receipt,
+html.dark .transfer-result-pop,
+html.dark .purchase-success-pop,
+html.dark .animated-dialog-backdrop section,
+html.dark .cp-support-modal{background:#211a2c!important;color:#f6f2fb!important;border-color:rgba(255,255,255,.10)!important}
+html.dark .animated-dialog p,
+html.dark .transaction-receipt p,
+html.dark .transfer-result-pop p,
+html.dark .purchase-success-pop p{color:rgba(246,242,251,.62)!important}
+html.dark .scrim{background:rgba(0,0,0,.70)!important}
+html.dark .topbar{background:rgba(18,15,24,.90)!important}
+html.dark .sidebar{background:rgba(12,9,17,.98)!important}
+html.dark .sidebar .nav-item,
+html.dark .sidebar .nav-caption,
+html.dark .sidebar .user-copy,
+html.dark .topbar-name{color:#f6f2fb!important}
+html.dark .sidebar .nav-item:not(.active){color:rgba(246,242,251,.65)!important}
+html.dark .sidebar .nav-item:hover{background:rgba(255,255,255,.06)!important;color:#fff!important}
+html.dark .sidebar-bottom,
+html.dark .topbar{border-color:rgba(255,255,255,.08)!important}
+html.dark .spending-bar-track,
+html.dark .spending-category-row>div,
+html.dark .spending-month-row>div{background:rgba(255,255,255,.08)!important}
