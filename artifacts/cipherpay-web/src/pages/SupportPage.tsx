@@ -195,7 +195,6 @@ export function SupportPage() {
   };
 
   if (chatLoading) return <main className="cp-page"><LoadingState label="Opening your support desk" /></main>;
-  if (chatError && !chat) return <main className="cp-page"><ErrorState message={chatError} retry={() => void loadChat()} /></main>;
 
   return (
     <main className="cp-page cp-page-reveal">
