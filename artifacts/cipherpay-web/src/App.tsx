@@ -220,7 +220,7 @@ function AuthLayout({ children, title, detail }: { children: ReactNode; title: s
       <Logo />
       <div className="auth-visual-grid" aria-hidden="true" />
       <div className="auth-visual-ring auth-visual-ring-one" aria-hidden="true" />
-      <div className="auth-visual-ring auth-visual-ring-two" aria-hidden="true" />
+      <div className="auth-visual-ring auth-visual-ring-two" aria-hidden="true" /><div className="auth-3d-shard auth-3d-shard-one" aria-hidden="true"><span>CP</span></div><div className="auth-3d-shard auth-3d-shard-two" aria-hidden="true"><span>01</span></div><div className="auth-3d-orb" aria-hidden="true"><span>PAY</span></div>
       <div className="orb orb-one" /><div className="orb orb-two" />
       <div className="auth-quote"><span className="auth-overline">CIPHERPAY</span><span className="quote-mark">“</span><h2>Your digital<br /><em>sidekick.</em></h2><p>One calm place to fund, spend, send, and stay in control.</p><div className="auth-benefits"><span><b>01</b> Move with clarity</span><span><b>02</b> Stay protected</span><span><b>03</b> Keep momentum</span></div></div><div className="auth-footer"><span>Built for the way life moves.</span><span>© 2025 CipherPay</span></div>
     </div>
@@ -265,7 +265,7 @@ function LandingPage() {
   const goToAuth = (mode: 'login' | 'register') => {
     if (authNavigating) return;
     setAuthNavigating(mode);
-    window.setTimeout(() => setLocation(mode === 'login' ? '/login' : '/register'), 420);
+    window.requestAnimationFrame(() => { window.setTimeout(() => setLocation(mode === 'login' ? '/login' : '/register'), 560); });
   };
   const openSupport = () => { setMobileNavOpen(false); setSupportSent(false); setSupportError(''); setSupportOpen(true); };
   const submitSupport = async (event: React.FormEvent) => {
@@ -324,17 +324,17 @@ function LandingPage() {
     </section>
     <section className="cp-section cp-reveal-section" id="features" data-cp-reveal>
       <div className="cp-section-head"><div><span className="cp-kicker">THE CIPHERPAY SYSTEM</span><h2>Everything you need.<br/>Nothing you don't.</h2></div><p>Designed to feel calm even when your day isn't. Every tool has a clear purpose, every flow gets out of your way.</p></div>
-      <div className="cp-feature-grid">{features.map(({icon:Icon,title,text}, index)=><article className="cp-feature" data-cp-reveal style={{'--cp-delay': `${index * 70}ms`} as CSSProperties} key={title}><span className="cp-feature-icon"><Icon size={20}/></span><h3>{title}</h3><p>{text}</p></article>)}</div>
+      <div className="cp-feature-grid">{features.map(({icon:Icon,title,text}, index)=><article className="cp-feature" data-cp-reveal style={{'--cp-delay': `${index * 70}ms`} as CSSProperties} key={title}><span className="cp-feature-icon"><Icon size={20}/></span><h3>{title}</h3><p>{text}</p></article>)}</div><div className="cp-3d-feature-stage" aria-hidden="true"><div className="cp-3d-cube"><span>PAY</span><i>GO</i><b>CP</b></div><div className="cp-3d-cube-shadow"/></div>
     </section>
     <section className="cp-section cp-reveal-section" id="experience" data-cp-reveal>
       <div className="cp-showcase">
         <article className="cp-show-card"><span className="cp-kicker">A BETTER DEFAULT</span><h3>Small details. Big difference.</h3><p>Animated states, clear confirmations and focused screens make the platform feel responsive instead of mechanical.</p>
         <div className="cp-toggle-demo"><span>Stay in control</span><span className="cp-toggle"><i/></span></div>
         <div className="cp-mini-list"><div className="cp-mini-row"><ShieldCheck size={16}/><span>Protected account</span><span>Ready</span></div><div className="cp-mini-row"><RefreshCw size={16}/><span>Live service flow</span><span>Active</span></div></div></article>
-        <article className="cp-show-card large" id="security"><span className="cp-kicker">ONE ACCOUNT / MANY TOOLS</span><h3>Your digital sidekick, without the cringe.</h3><p>Move from funding to payments, verification, chat and digital services without losing the thread. CipherPay keeps the important pieces close and the clutter out of sight.</p><div className="cp-mini-list"><div className="cp-mini-row"><WalletCards size={16}/><span>Wallet & transfers</span><span>01</span></div><div className="cp-mini-row"><Receipt size={16}/><span>Bills & airtime</span><span>02</span></div><div className="cp-mini-row"><MessageSquare size={16}/><span>Find & chat</span><span>03</span></div><div className="cp-mini-row"><Globe2 size={16}/><span>Digital services</span><span>04</span></div></div></article>
+        <article className="cp-show-card large" id="security"><div className="cp-3d-security-orb" aria-hidden="true"><span/><i/><b>CP</b></div><span className="cp-kicker">ONE ACCOUNT / MANY TOOLS</span><h3>Your digital sidekick, without the cringe.</h3><p>Move from funding to payments, verification, chat and digital services without losing the thread. CipherPay keeps the important pieces close and the clutter out of sight.</p><div className="cp-mini-list"><div className="cp-mini-row"><WalletCards size={16}/><span>Wallet & transfers</span><span>01</span></div><div className="cp-mini-row"><Receipt size={16}/><span>Bills & airtime</span><span>02</span></div><div className="cp-mini-row"><MessageSquare size={16}/><span>Find & chat</span><span>03</span></div><div className="cp-mini-row"><Globe2 size={16}/><span>Digital services</span><span>04</span></div></div></article>
       </div>
     </section>
-    <section className="cp-section cp-reveal-section" data-cp-reveal><div className="cp-cta"><span className="cp-kicker">CIPHERPAY</span><h2>Make everyday feel simpler.</h2><p>One place for the things you do often, with an interface that gets out of your way.</p><div className="cp-hero-actions"><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={17}/></button><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button></div></div></section>
+    <section className="cp-section cp-reveal-section" data-cp-reveal><div className="cp-cta"><div className="cp-3d-cta-prism" aria-hidden="true"><span/><i/><b/></div><span className="cp-kicker">CIPHERPAY</span><h2>Make everyday feel simpler.</h2><p>One place for the things you do often, with an interface that gets out of your way.</p><div className="cp-hero-actions"><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={17}/></button><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button></div></div></section>
     <footer className="cp-footer"><span>© 2026 CipherPay</span><span>Payments · Digital services · Communication</span></footer>
     {authNavigating && <div className="cp-auth-transition" aria-hidden="true"><div className="cp-auth-transition-mark"><span className="brand-mark"><span /></span><b>Cipher<span className="brand-orange">Pay</span></b></div><div className="cp-auth-transition-line" /><span>{authNavigating === 'login' ? 'Opening your account' : 'Setting things up'}</span></div>}
     {supportOpen && <div className="cp-support-overlay" role="dialog" aria-modal="true" aria-labelledby="guest-support-title">
