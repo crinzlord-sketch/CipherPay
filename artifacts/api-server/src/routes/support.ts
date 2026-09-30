@@ -241,6 +241,7 @@ router.post("/support/chat/:id/request-agent", async (req, res): Promise<void> =
     res.status(409).json({ error: "Status changed — please refresh." }); return;
   }
   const [sysMsg] = await db.insert(supportMessagesTable).values({
+  const [u] = await db.select({ firstName: usersTable.firstName, lastName: usersTable.lastName, email: usersTable.email }).from(usersTable).where(eq(usersTable.id, userId));
     chatId: id, sender: "system",
     body: "You're in the queue for a live Support agent. Average wait time is a few minutes — feel free to keep typing and we'll see your messages when we join.",
   }).returning();
