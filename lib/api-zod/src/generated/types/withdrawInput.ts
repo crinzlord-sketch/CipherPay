@@ -13,4 +13,5 @@ export interface WithdrawInput {
   accountName: string;
   /** @nullable */
   narration?: string | null;
+  pin: string;
 }
