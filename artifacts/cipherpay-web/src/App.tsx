@@ -855,7 +855,15 @@ function ForgotPassword() {
         setSendingBank(false);
       }
     } catch (e: any) {
-      setPinModalError(e?.message ?? 'Could not authorize this transfer.');
+      const message = e?.message ?? 'Could not authorize this transfer.';
+      if (/no pin set on this account/i.test(message)) {
+        setHasTransferPin(false);
+        setPinModalPin('');
+        setPinModalConfirm('');
+        setPinModalError('Your transfer PIN was cleared. Create a new 6-digit PIN to continue.');
+      } else {
+        setPinModalError(message);
+      }
     } finally {
       setPinModalBusy(false);
     }
@@ -956,7 +964,12 @@ function ForgotPassword() {
               <button type="button" className="transfer-pin-modal-close" onClick={() => setPinModalOpen(false)} disabled={pinModalBusy} aria-label="Close transfer PIN prompt"><X size={19} /></button>
               <div className="transfer-pin-modal-icon"><ShieldCheck size={22} /></div>
               <span className="eyebrow">CIPHERPAY / SECURITY</span>
-              {hasTransferPin === false ? (
+              {hasTransferPin === null ? (
+                <>
+                  <h2 id="transfer-pin-modal-title">Checking your PIN</h2>
+                  <p>One moment while we check whether a transaction PIN is already set on your account.</p>
+                </>
+              ) : hasTransferPin === false ? (
                 <>
                   <h2 id="transfer-pin-modal-title">Create your transfer PIN</h2>
                   <p>You don't have a transaction PIN yet. Create a 6-digit PIN and confirm it to authorize this transfer.</p>
@@ -971,7 +984,7 @@ function ForgotPassword() {
                 </>
               )}
               {pinModalError && <div className="error-box" role="alert">{pinModalError}</div>}
-              <Button type="button" className="full-btn" disabled={pinModalBusy} onClick={() => void authorizeAndSend()}>
+              <Button type="button" className="full-btn" disabled={pinModalBusy || hasTransferPin === null} onClick={() => void authorizeAndSend()}>
                 {pinModalBusy ? 'Authorizing…' : hasTransferPin === false ? 'Create PIN & continue' : 'Confirm & continue'} <ArrowRight size={17} />
               </Button>
             </section>
