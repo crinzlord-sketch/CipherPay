@@ -101,6 +101,7 @@ function Shell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [location, setLocation] = useLocation();
+  const [notificationReturnPath, setNotificationReturnPath] = useState<string>('/');
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const { confirm } = useAnimatedDialog();
   const me = useGetMe({ query: { enabled: !!useToken(), queryKey: ['/api/auth/me'] } });
@@ -208,7 +209,14 @@ function Shell({ children }: { children: ReactNode }) {
     </aside>
     <button className={`scrim ${mobileOpen ? "open" : ""}`} onClick={() => setMobileOpen(false)} aria-label="Close navigation" data-testid="button-scrim" />
     <main className="main-area">
-       <header className="topbar"><button className={`icon-btn menu-toggle ${mobileOpen ? "is-open" : ""}`} onClick={() => setMobileOpen((open) => !open)} aria-expanded={mobileOpen} aria-label={mobileOpen ? "Close navigation" : "Open navigation"} data-testid="button-open-menu"><span className="cp-menu-icon"><Menu size={21} /><X size={21} /></span></button><div className="mobile-logo"><Logo /></div><div className="topbar-spacer" /><button type="button" className="icon-btn notification-button" onClick={() => setLocation(location === '/notifications' ? '/' : '/notifications')} aria-label={location === '/notifications' ? 'Close notifications' : unreadNotifications > 0 ? `Open notifications, ${unreadNotifications} unread` : 'Open notifications'} aria-pressed={location === '/notifications'} data-testid="button-notifications"><Bell size={19} />{unreadNotifications > 0 && <i />}</button>{user && <span className="topbar-name">{user.firstName}</span>}<button className="logout-link" onClick={() => void logout()} data-testid="button-logout"><LogOut size={16} /> <span>Log out</span></button></header>
+       <header className="topbar"><button className={`icon-btn menu-toggle ${mobileOpen ? "is-open" : ""}`} onClick={() => setMobileOpen((open) => !open)} aria-expanded={mobileOpen} aria-label={mobileOpen ? "Close navigation" : "Open navigation"} data-testid="button-open-menu"><span className="cp-menu-icon"><Menu size={21} /><X size={21} /></span></button><div className="mobile-logo"><Logo /></div><div className="topbar-spacer" /><button type="button" className="icon-btn notification-button" onClick={() => {
+        if (location === '/notifications') {
+          setLocation(notificationReturnPath || '/');
+        } else {
+          setNotificationReturnPath(location || '/');
+          setLocation('/notifications');
+        }
+      }} aria-label={location === '/notifications' ? 'Close notifications' : unreadNotifications > 0 ? `Open notifications, ${unreadNotifications} unread` : 'Open notifications'} aria-pressed={location === '/notifications'} data-testid="button-notifications"><Bell size={19} />{unreadNotifications > 0 && <i />}</button>{user && <span className="topbar-name">{user.firstName}</span>}<button className="logout-link" onClick={() => void logout()} data-testid="button-logout"><LogOut size={16} /> <span>Log out</span></button></header>
       <div className="content">{children}</div>
     </main>
   </div>;
