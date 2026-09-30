@@ -1286,6 +1286,10 @@ function Send() {
   const [recipient, setRecipient] = useState<any>(null);
   const [recipientChecking, setRecipientChecking] = useState(false);
   const [transferPin, setTransferPin] = useState('');
+  const [hasTransferPin, setHasTransferPin] = useState<boolean | null>(null);
+  const [pinSetup, setPinSetup] = useState('');
+  const [pinSetupConfirm, setPinSetupConfirm] = useState('');
+  const [settingPin, setSettingPin] = useState(false);
   const recipientTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -1353,6 +1357,46 @@ function Send() {
   };
 
   useEffect(() => {
+    let active = true;
+    apiRequest<any>('/api/auth/pin/status')
+      .then((payload) => {
+        if (active) setHasTransferPin(Boolean(payload?.hasPin));
+      })
+      .catch(() => {
+        if (active) setHasTransferPin(true);
+      });
+    return () => { active = false; };
+  }, []);
+
+  const createTransferPin = async () => {
+    setError('');
+    if (!/^\d{6}$/.test(pinSetup)) {
+      setError('Your transfer PIN must be exactly 6 digits.');
+      return;
+    }
+    if (pinSetup !== pinSetupConfirm) {
+      setError('The two PINs do not match.');
+      return;
+    }
+    setSettingPin(true);
+    try {
+      await apiRequest('/api/auth/pin/set', {
+        method: 'POST',
+        body: { pin: pinSetup, confirmPin: pinSetupConfirm },
+      });
+      setTransferPin(pinSetup);
+      setPinSetup('');
+      setPinSetupConfirm('');
+      setHasTransferPin(true);
+      setError('');
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not create your transfer PIN.');
+    } finally {
+      setSettingPin(false);
+    }
+  };
+
+  useEffect(() => {
     if (mode !== 'cipherpay') return;
     const email = form.recipientEmail.trim().toLowerCase();
     setRecipient(null);
@@ -1374,7 +1418,11 @@ function Send() {
     setResult(null);
     setResultStatus('pending');
 
-    if (!/^\d{6}$/.test(transferPin)) {
+    if (hasTransferPin === false) {
+      setError('Create your transfer PIN above before sending.');
+      return;
+    }
+    if (hasTransferPin !== true || !/^\d{6}$/.test(transferPin)) {
       setError('Enter your 6-digit transfer PIN before sending.');
       return;
     }
@@ -1525,10 +1573,23 @@ function Send() {
         </div>}
 
         {resolving && <div className="muted-line">Verifying account details…</div>}
-                  <div className="transfer-pin-card">
-            <div><ShieldCheck size={18} /><div><b>Confirm with your transfer PIN</b><small>Enter the 6-digit PIN you created in Security settings. It is required before any money is sent.</small></div></div>
-            <input type="password" inputMode="numeric" autoComplete="off" maxLength={6} pattern="[0-9]{6}" placeholder="••••••" value={transferPin} onChange={(event) => setTransferPin(event.target.value.replace(/\D/g, '').slice(0, 6))} aria-label="6-digit transfer PIN" required data-testid="input-transfer-pin" />
-          </div>
+                  {hasTransferPin === false ? (
+            <div className="transfer-pin-card transfer-pin-setup">
+              <div className="transfer-pin-heading"><ShieldCheck size={18} /><div><b>Create your transfer PIN</b><small>You don't have a transfer PIN yet. Create and confirm a 6-digit PIN now, then you can send money.</small></div></div>
+              <div className="field-row">
+                <Field label="Create 6-digit PIN" type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} placeholder="••••••" value={pinSetup} onChange={(event: any) => setPinSetup(event.target.value.replace(/\D/g, '').slice(0, 6))} data-testid="input-create-transfer-pin" />
+                <Field label="Confirm PIN" type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} placeholder="••••••" value={pinSetupConfirm} onChange={(event: any) => setPinSetupConfirm(event.target.value.replace(/\D/g, '').slice(0, 6))} data-testid="input-confirm-transfer-pin" />
+              </div>
+              <Button type="button" className="full-btn" disabled={settingPin} onClick={() => void createTransferPin()} data-testid="button-create-transfer-pin">
+                {settingPin ? 'Creating PIN…' : 'Create PIN and continue'} <ArrowRight size={17} />
+              </Button>
+            </div>
+          ) : (
+            <div className="transfer-pin-card">
+              <div><ShieldCheck size={18} /><div><b>Confirm with your transfer PIN</b><small>Enter the 6-digit PIN to authorize this transfer.</small></div></div>
+              <input type="password" inputMode="numeric" autoComplete="current-password" maxLength={6} pattern="[0-9]{6}" placeholder="••••••" value={transferPin} onChange={(event) => setTransferPin(event.target.value.replace(/\D/g, '').slice(0, 6))} aria-label="6-digit transfer PIN" required data-testid="input-transfer-pin" />
+            </div>
+          )}
 {error && <div className="error-box" role="alert">{error}</div>}
 
         {(mode === 'cipherpay' || bankForm.accountName) && <Button type="submit" className="full-btn" disabled={busy || resolving} data-testid="button-send-submit">
