@@ -1732,3 +1732,14 @@
   .referral-person{grid-template-columns:40px 1fr}
   .referral-status{grid-column:2;justify-self:start}
 }
+
+
+/* Chat scrolling stability */
+.cp-chat-shell{contain:layout paint;overscroll-behavior:contain}
+.cp-chat-messages{overscroll-behavior:contain;overflow-anchor:auto;scroll-behavior:auto!important;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+.cp-chat-message-row{touch-action:pan-y}
+.cp-chat-composer{transform:translateZ(0);padding-bottom:max(10px,env(safe-area-inset-bottom))}
+@media(max-width:760px){
+  .cp-chat-shell{height:calc(100dvh - 100px);max-height:calc(100dvh - 100px);min-height:0}
+  .cp-chat-messages{height:calc(100% - 132px);min-height:0}
+}
