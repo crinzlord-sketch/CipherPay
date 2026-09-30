@@ -244,8 +244,15 @@ router.post("/auth/login", async (req, res): Promise<void> => {
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
       markOtpIssued(user.email, "verification");
       await db.insert(otpTable).values({ target: user.email, code, purpose: "verification", expiresAt });
-      if (isEmailConfigured()) { await sendOtpEmail(user.email, code, "verification"); otpDelivery = "email"; }
-      else req.log.info({ target: user.email, code }, "login OTP generated (email not configured)");
+      if (isEmailConfigured()) {
+        otpDelivery = "email";
+        // Never make sign-in wait on the mail provider. The OTP is persisted first,
+        // then delivery happens in the background so the client can show the code
+        // screen immediately even if the SMTP/API relay is slow.
+        void sendOtpEmail(user.email, code, "verification").catch((e: any) => {
+          req.log.error({ err: e?.message, userId: user.id }, "login verification email failed");
+        });
+      } else req.log.info({ target: user.email, code }, "login OTP generated (email not configured)");
     } catch (e: any) {
       req.log.error({ err: e?.message, userId: user.id }, "login OTP email failed");
     }
@@ -285,8 +292,14 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     markOtpIssued(user.email, "login");
     await db.insert(otpTable).values({ target: user.email, code, purpose: "login", expiresAt });
-    if (isEmailConfigured()) { await sendOtpEmail(user.email, code, "login"); otpDelivery = "email"; }
-    else req.log.info({ target: user.email, code }, "login OTP generated (email not configured)");
+    if (isEmailConfigured()) {
+      otpDelivery = "email";
+      // Do not block the login response on the mail provider. The OTP row is
+      // already committed above, so delivery can safely continue in the background.
+      void sendOtpEmail(user.email, code, "login").catch((e: any) => {
+        req.log.error({ err: e?.message, userId: user.id }, "login OTP email failed");
+      });
+    } else req.log.info({ target: user.email, code }, "login OTP generated (email not configured)");
   } catch (e: any) {
     req.log.error({ err: e?.message, userId: user.id }, "login OTP email failed");
   }
