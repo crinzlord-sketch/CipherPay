@@ -3,7 +3,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db, transactionsTable, usersTable } from "@workspace/db";
 
 const router: IRouter = Router();
-const REFERRAL_BONUS_REFERRER = 500;
+const REFERRAL_BONUS_REFERRER = 200;
 const REFERRAL_BONUS_REFEREE = 200;
 const PUBLIC_WEB_URL = (process.env.PUBLIC_WEB_URL ?? "https://cipherpay-web.onrender.com").replace(/\/$/, "");
 
