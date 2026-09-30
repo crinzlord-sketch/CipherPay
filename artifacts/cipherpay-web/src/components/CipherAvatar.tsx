@@ -15,7 +15,7 @@ export function avatarGender(value?: unknown): AvatarGender {
 export function avatarDataUrl(seedValue: unknown, genderValue?: unknown): string {
   const seed = hashSeed(String(seedValue ?? 'cipherpay'));
   const gender = avatarGender(genderValue);
-  const variant = seed % 18;
+  const variant = seed % 144;
   const skinTones = ['#f4c7a1', '#e5ae82', '#d99a6c', '#c98257', '#b96f45', '#9d5d40', '#8c5036', '#70432f'];
   const hairColors = ['#17151d', '#241b2f', '#3a241b', '#30231b', '#20242b', '#4a2f22'];
   const backgrounds = [
@@ -25,13 +25,13 @@ export function avatarDataUrl(seedValue: unknown, genderValue?: unknown): string
   ];
   const skin = skinTones[(seed >>> 3) % skinTones.length];
   const hair = hairColors[(seed >>> 7) % hairColors.length];
-  const bg = backgrounds[variant % backgrounds.length];
+  const bg = backgrounds[(variant + ((seed >>> 27) % backgrounds.length)) % backgrounds.length];
   const faceRx = 17 + ((seed >>> 11) % 4);
   const eyeGap = 16 + ((seed >>> 15) % 5);
   const eyeY = 43 + ((seed >>> 19) % 4);
   const eyeSize = 2 + ((seed >>> 23) % 2) * 0.4;
   const shirt = ['#171522', '#202938', '#30244d', '#173b3b', '#3b2520', '#252525'][(seed >>> 5) % 6];
-  const hairStyle = variant % 6;
+  const hairStyle = variant % 12;
   const hairPath = hairStyle === 0
     ? '<path d="M23 40c0-15 9-24 21-24s21 9 21 24c-6-7-12-10-17-11-6 5-15 8-25 8z" fill="' + hair + '"/>'
     : hairStyle === 1
@@ -42,17 +42,29 @@ export function avatarDataUrl(seedValue: unknown, genderValue?: unknown): string
           ? '<path d="M22 43c-2-17 8-28 22-28s24 11 22 28c-5-7-10-11-15-14-7 7-17 10-29 14z" fill="' + hair + '"/>'
           : hairStyle === 4
             ? '<path d="M22 42c0-15 10-25 22-25s22 10 22 25c-5-8-11-12-17-13-7 5-15 7-27 7z" fill="' + hair + '"/><path d="M25 43c-2 13 0 23 6 30l-6 2c-7-9-8-22 0-32z" fill="' + hair + '"/>'
-            : '<path d="M24 41c0-15 8-24 20-24 13 0 21 9 21 24-5-5-10-9-16-11-7 6-15 9-25 11z" fill="' + hair + '"/><path d="M25 29c7-8 22-10 34-3" fill="none" stroke="' + hair + '" stroke-width="7" stroke-linecap="round"/>';
+            : hairStyle === 5
+          ? '<path d="M24 41c0-15 8-24 20-24 13 0 21 9 21 24-5-5-10-9-16-11-7 6-15 9-25 11z" fill="' + hair + '"/><path d="M25 29c7-8 22-10 34-3" fill="none" stroke="' + hair + '" stroke-width="7" stroke-linecap="round"/>'
+          : hairStyle === 6
+            ? '<path d="M22 39c2-15 10-23 22-23 12 0 20 8 22 23-8-4-15-6-22-6s-14 2-22 6z" fill="' + hair + '"/>'
+            : hairStyle === 7
+              ? '<path d="M23 39c0-14 9-24 21-24s21 10 21 24c-4-4-9-7-14-8-7 4-16 5-28 8z" fill="' + hair + '"/><circle cx="26" cy="31" r="6" fill="' + hair + '"/>'
+              : hairStyle === 8
+                ? '<path d="M21 43c0-17 11-28 23-28 13 0 23 11 23 28-5-6-10-10-16-13-8 6-18 9-30 13z" fill="' + hair + '"/><path d="M28 25c6-6 20-8 32-2" fill="none" stroke="' + hair + '" stroke-width="4" stroke-linecap="round"/>'
+                : hairStyle === 9
+                  ? '<path d="M24 39c1-14 9-22 20-22 12 0 20 8 20 22-6-6-12-9-19-9-7 0-14 3-21 9z" fill="' + hair + '"/><path d="M25 39v17M63 39v17" stroke="' + hair + '" stroke-width="5" stroke-linecap="round"/>'
+                  : hairStyle === 10
+                    ? '<path d="M23 42c-1-15 8-27 21-27s22 12 21 27c-7-7-14-11-21-11-8 0-14 4-21 11z" fill="' + hair + '"/><circle cx="31" cy="24" r="4" fill="' + hair + '"/><circle cx="57" cy="24" r="4" fill="' + hair + '"/>'
+                    : '<path d="M22 41c1-16 9-25 22-25 12 0 21 9 22 25-7-6-14-9-22-9-8 0-15 3-22 9z" fill="' + hair + '"/><path d="M29 20c4-4 10-6 15-6M49 14c5 0 11 2 14 6" fill="none" stroke="' + hair + '" stroke-width="5" stroke-linecap="round"/>';
 
-  const glasses = variant === 3 || variant === 9 || variant === 15
+  const glasses = variant % 17 === 3 || variant % 17 === 9 || variant % 17 === 15
     ? '<path d="M27 43h12v7H27zM49 43h12v7H49zM39 45h10" fill="none" stroke="#25212b" stroke-width="2" stroke-linejoin="round"/>'
     : '';
-  const beard = gender === 'male' && variant % 5 === 0
+  const beard = gender === 'male' && variant % 7 === 0
     ? '<path d="M31 53c3 9 23 9 26 0v7c-3 8-23 8-26 0z" fill="' + hair + '" opacity=".75"/>'
     : '';
-  const accessory = variant === 6
+  const accessory = variant % 19 === 6
     ? '<circle cx="61" cy="56" r="2.4" fill="#f6c344"/>'
-    : variant === 12
+    : variant % 19 === 12
       ? '<path d="M58 34l5-4" stroke="#f6c344" stroke-width="2" stroke-linecap="round"/>'
       : '';
 
