@@ -25,6 +25,7 @@ import { generateReference, generateReferralCode } from "../lib/auth";
 import { notifyUser } from "../lib/notifications";
 import { sendAdminAlertEmail, sendUserNotificationEmail } from "../lib/email";
 import { _typingAgentThrottle, clearSupportChat } from "./support";
+import { SERVICE_FEATURES, getServiceFeatureStatus, setServiceFeatureStatus } from "../lib/service-features";
 
 const router: IRouter = Router();
 
@@ -82,6 +83,25 @@ router.post("/admin/alerts/read", requireAdmin, async (req: AdminRequest, res): 
       eq(notificationsTable.isRead, false),
     ));
   res.json({ success: true });
+});
+
+router.get("/admin/service-features", requireAdmin, async (_req: AdminRequest, res): Promise<void> => {
+  const status = await getServiceFeatureStatus();
+  res.json({ data: SERVICE_FEATURES.map((feature) => ({ ...feature, enabled: status[feature.key] })) });
+});
+
+router.put("/admin/service-features/:key", requireAdmin, async (req: AdminRequest, res): Promise<void> => {
+  const key = String(req.params.key ?? "");
+  const feature = SERVICE_FEATURES.find((item) => item.key === key);
+  if (!feature) {
+    res.status(404).json({ error: "Service feature not found." });
+    return;
+  }
+
+  const enabled = req.body?.enabled === true;
+  const status = await setServiceFeatureStatus({ [key]: enabled });
+  req.log?.info?.({ adminId: req.admin!.id, feature: key, enabled }, "Admin changed service availability");
+  res.json({ success: true, feature: { ...feature, enabled: status[feature.key] } });
 });
 
 router.get("/admin/admins", requireAdmin, async (_req: AdminRequest, res): Promise<void> => {
