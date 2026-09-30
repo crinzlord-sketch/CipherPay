@@ -843,18 +843,6 @@ router.post("/auth/pin/set", async (req, res): Promise<void> => {
   const err = pinIssue(body.pin);
   if (err) { res.status(400).json({ error: err }); return; }
 
-  // First-time PIN setup is a dedicated enrollment flow: the user creates and
-  // confirms the 6-digit PIN, then it becomes immediately usable for transfers.
-  // Existing PIN changes still require the current PIN.
-  if (!body.currentPin && !body.password && !body.confirmPin) {
-    res.status(400).json({ error: "Confirm your new PIN to continue." });
-    return;
-  }
-  if (body.confirmPin !== body.pin) {
-    res.status(400).json({ error: "PINs do not match." });
-    return;
-  }
-
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
   if (!user) { res.status(404).json({ error: "User not found" }); return; }
 
@@ -862,6 +850,13 @@ router.post("/auth/pin/set", async (req, res): Promise<void> => {
   // is required (so a stolen unlocked session can't silently change the PIN).
   // If they don't yet have one, accept the account password instead. Either
   // way the device alone (without one secret the user knows) cannot enroll.
+  // First-time setup uses create + confirm. Existing PIN changes still require
+  // the current PIN; password-based enrollment remains supported for trusted clients.
+  if (!user.pinHash && body.confirmPin !== body.pin) {
+    res.status(400).json({ error: "PINs do not match." });
+    return;
+  }
+
   if (user.pinHash) {
     if (!body.currentPin || !(await bcrypt.compare(body.currentPin, user.pinHash))) {
       res.status(400).json({ error: "Current PIN is incorrect" }); return;
