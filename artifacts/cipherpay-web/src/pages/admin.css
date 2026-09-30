@@ -170,3 +170,103 @@
 }
 
 .admin-modal-backdrop{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.62);backdrop-filter:blur(10px)}.admin-detail-modal{width:min(680px,100%);max-height:92vh;overflow:auto;display:grid;gap:14px}.cp-support-image-link img{cursor:zoom-in}.cp-contact-support{margin-bottom:18px;display:grid;gap:16px}.cp-contact-support>div:first-child{display:grid;gap:6px}
+
+
+.admin-service-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-service-card {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 16px;
+  background: hsl(var(--background));
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.admin-service-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px hsl(var(--foreground) / .06);
+}
+
+.admin-service-card.is-disabled {
+  border-color: hsl(var(--primary) / .35);
+  background: linear-gradient(145deg, hsl(var(--card)), hsl(var(--accent) / .45));
+}
+
+.admin-service-copy {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.admin-service-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 11px;
+  background: hsl(var(--primary) / .11);
+  color: hsl(var(--primary));
+}
+
+.admin-service-copy b {
+  display: block;
+  font-size: .92rem;
+}
+
+.admin-service-copy p {
+  margin: 5px 0 0;
+  color: hsl(var(--muted-foreground));
+  font-size: .76rem;
+  line-height: 1.5;
+}
+
+.admin-service-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-service-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.admin-service-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.admin-service-status.online {
+  color: hsl(var(--chart-3));
+}
+
+.admin-service-status.maintenance {
+  color: hsl(var(--primary));
+}
+
+@media (max-width: 760px) {
+  .admin-service-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-service-control {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
