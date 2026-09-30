@@ -682,3 +682,140 @@
   }
   .cp-landing-nav-inner::before{border-radius:19px!important}
 }
+
+
+/* Final cleanup: fixed landing nav + clean readable security panel */
+.cp-landing-nav{
+  position:fixed!important;
+  top:18px!important;
+  left:0!important;
+  right:0!important;
+  z-index:5000!important;
+  transform:none!important;
+  animation:none!important;
+  will-change:auto!important;
+}
+.cp-landing-nav-inner{
+  transform:none!important;
+  animation:none!important;
+  perspective:none!important;
+  transform-style:flat!important;
+}
+.cp-landing-nav-inner::before,
+.cp-landing-nav-inner::after{display:none!important}
+
+/* No more floating 3D objects on the landing page. */
+.cp-3d-scene,
+.cp-3d-feature-stage,
+.cp-3d-security-orb,
+.cp-3d-cta-prism,
+.cp-3d-cube,
+.cp-3d-cube-shadow{display:none!important}
+
+/* Rebuilt security / "digital sidekick" section */
+.cp-clean-security{
+  position:relative!important;
+  overflow:hidden!important;
+  min-height:520px!important;
+  padding:44px!important;
+  background:#211a2d!important;
+  color:#fff!important;
+  border-radius:30px!important;
+  box-shadow:0 24px 70px rgba(33,26,45,.14)!important;
+}
+.cp-clean-security::before,
+.cp-clean-security::after{display:none!important}
+.cp-security-intro{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:18px!important;
+  margin-bottom:56px!important;
+}
+.cp-clean-security .cp-kicker{color:rgba(255,255,255,.58)!important}
+.cp-security-badge{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:7px!important;
+  padding:8px 11px!important;
+  border:1px solid rgba(255,255,255,.13)!important;
+  border-radius:999px!important;
+  color:rgba(255,255,255,.78)!important;
+  background:rgba(255,255,255,.055)!important;
+  font-size:10px!important;
+  font-weight:700!important;
+  letter-spacing:.02em!important;
+}
+.cp-clean-security h3{
+  position:relative!important;
+  z-index:2!important;
+  margin:0!important;
+  max-width:720px!important;
+  color:#fff!important;
+  font-size:clamp(38px,4.6vw,66px)!important;
+  line-height:.96!important;
+  letter-spacing:-.065em!important;
+}
+.cp-clean-security h3 span{
+  color:#c9bfff!important;
+}
+.cp-clean-security>p{
+  position:relative!important;
+  z-index:2!important;
+  max-width:560px!important;
+  margin:22px 0 34px!important;
+  color:rgba(255,255,255,.62)!important;
+  font-size:14px!important;
+  line-height:1.7!important;
+}
+.cp-security-grid{
+  position:relative!important;
+  z-index:2!important;
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  gap:10px!important;
+  max-width:760px!important;
+}
+.cp-security-item{
+  display:grid!important;
+  grid-template-columns:30px 1fr auto!important;
+  align-items:center!important;
+  gap:12px!important;
+  min-height:74px!important;
+  padding:14px 15px!important;
+  border:1px solid rgba(255,255,255,.10)!important;
+  border-radius:16px!important;
+  background:rgba(255,255,255,.055)!important;
+  transition:transform .2s ease,background .2s ease,border-color .2s ease!important;
+}
+.cp-security-item:hover{
+  transform:translateY(-2px)!important;
+  background:rgba(255,255,255,.085)!important;
+  border-color:rgba(201,191,255,.30)!important;
+}
+.cp-security-item>svg{color:#c9bfff!important}
+.cp-security-item b{
+  display:block!important;
+  color:#fff!important;
+  font-size:12px!important;
+}
+.cp-security-item small{
+  display:block!important;
+  margin-top:3px!important;
+  color:rgba(255,255,255,.48)!important;
+  font-size:10px!important;
+  line-height:1.4!important;
+}
+.cp-security-item>span{
+  color:rgba(255,255,255,.32)!important;
+  font-size:10px!important;
+  font-weight:800!important;
+  letter-spacing:.08em!important;
+}
+@media(max-width:700px){
+  .cp-landing-nav{top:10px!important}
+  .cp-clean-security{padding:28px 22px!important;min-height:auto!important}
+  .cp-security-intro{align-items:flex-start!important;flex-direction:column!important;margin-bottom:38px!important}
+  .cp-clean-security h3{font-size:39px!important}
+  .cp-security-grid{grid-template-columns:1fr!important}
+}
