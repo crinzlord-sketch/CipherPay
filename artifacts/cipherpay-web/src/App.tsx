@@ -229,6 +229,23 @@ function AuthLayout({ children, title, detail }: { children: ReactNode; title: s
 }
 
 function LandingPage() {
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [supportSending, setSupportSending] = useState(false);
+  const [supportSent, setSupportSent] = useState(false);
+  const [supportForm, setSupportForm] = useState({ email: '', subject: '', category: 'general', message: '' });
+  const scrollToSection = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const sendGuestSupport = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (supportSending) return;
+    setSupportSending(true);
+    try {
+      await apiRequest('/api/support/contact', { method: 'POST', body: supportForm });
+      setSupportSent(true);
+      setSupportForm({ email: '', subject: '', category: 'general', message: '' });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Could not send your message.');
+    } finally { setSupportSending(false); }
+  };
   const features = [
     { icon: WalletCards, title: 'One wallet. More control.', text: 'Fund your CipherPay wallet and keep everyday activity in one clear place.' },
     { icon: Receipt, title: 'Bills without the friction.', text: 'Handle airtime, data and bill payments through focused, simple flows.' },
@@ -240,7 +257,7 @@ function LandingPage() {
     <nav className="cp-landing-nav" aria-label="Landing navigation">
       <div className="cp-landing-nav-inner">
         <Logo />
-        <div className="cp-landing-links"><a href="#features">Features</a><a href="#experience">Experience</a><a href="#security">Security</a><Link href="/support">Support</Link></div>
+        <div className="cp-landing-links"><button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('experience')}>Experience</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={() => { setSupportSent(false); setSupportOpen(true); }}>Support</button></div>
         <div className="cp-landing-nav-actions"><Link className="cp-land-btn ghost" href="/login">Log in</Link><Link className="cp-land-btn primary" href="/register">Get started <ArrowRight size={15}/></Link></div>
       </div>
     </nav>
@@ -277,13 +294,14 @@ function LandingPage() {
     </section>
     <section className="cp-section"><div className="cp-cta"><span className="cp-kicker">CIPHERPAY</span><h2>Make everyday feel simpler.</h2><p>One place for the things you do often, with an interface that gets out of your way.</p><div className="cp-hero-actions"><Link className="cp-land-btn primary" href="/register">Get started <ArrowRight size={17}/></Link><Link className="cp-land-btn ghost" href="/login">Log in</Link></div></div></section>
     <footer className="cp-footer"><span>© 2026 CipherPay</span><span>Payments · Digital services · Communication</span></footer>
-    <section className="cp-endcap" aria-label="CipherPay closing section">
-      <div className="cp-endcap-inner">
-        <div><span className="cp-kicker">KEEP MOVING</span><h2>One account.<br/><span>Less to think about.</span></h2></div>
-        <Link className="cp-endcap-link" href="/register">Get started <ArrowRight size={17}/></Link>
+    {supportOpen && <div className="cp-support-overlay" role="dialog" aria-modal="true" aria-labelledby="guest-support-title">
+      <div className="cp-support-modal"><button className="cp-support-close" type="button" onClick={() => setSupportOpen(false)} aria-label="Close support form"><X size={19}/></button>
+        {!supportSent ? <form onSubmit={sendGuestSupport}><span className="cp-kicker">GUEST SUPPORT</span><h2 id="guest-support-title">How can we help?</h2><p>Send us the details and we’ll route your message to the CipherPay support team.</p>
+          <div className="cp-support-fields"><label><span>Your email</span><input type="email" required value={supportForm.email} onChange={e=>setSupportForm({...supportForm,email:e.target.value})} placeholder="you@example.com"/></label><label><span>Subject</span><input required minLength={3} value={supportForm.subject} onChange={e=>setSupportForm({...supportForm,subject:e.target.value})} placeholder="What do you need help with?"/></label><label><span>Category</span><select value={supportForm.category} onChange={e=>setSupportForm({...supportForm,category:e.target.value})}><option value="general">General</option><option value="payment">Payment</option><option value="wallet">Wallet</option><option value="account">Account</option><option value="technical">Technical issue</option><option value="verification">KYC / verification</option></select></label><label><span>Message</span><textarea required minLength={5} rows={5} value={supportForm.message} onChange={e=>setSupportForm({...supportForm,message:e.target.value})} placeholder="Tell us what happened..."/></label></div>
+          <button className="cp-support-submit" type="submit" disabled={supportSending}>{supportSending ? 'Sending…' : 'Send message'} <ArrowRight size={16}/></button>
+        </form> : <div className="cp-support-success"><div className="cp-support-success-icon"><Check size={22}/></div><span className="cp-kicker">MESSAGE SENT</span><h2>We’ve got it.</h2><p>Your message has been sent to the CipherPay support team. Keep an eye on your email for a response.</p><button className="cp-support-submit" type="button" onClick={() => setSupportOpen(false)}>Done</button></div>}
       </div>
-      <div className="cp-endcap-word">CIPHERPAY</div>
-    </section>
+    </div>}
     <section className="cp-endcap" aria-label="CipherPay closing section">
       <div className="cp-endcap-inner">
         <div><span className="cp-kicker">KEEP MOVING</span><h2>One account.<br/><span>Less to think about.</span></h2></div>
