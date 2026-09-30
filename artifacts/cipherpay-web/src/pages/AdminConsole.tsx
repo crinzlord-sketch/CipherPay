@@ -304,8 +304,8 @@ export default function AdminConsole() {
     }
     if (action === 'verify') await run(`/api/admin/users/${user.id}/verify`, { method: 'POST', body: { verified: !user.isVerified } }, user.isVerified ? 'Email verification removed.' : 'User marked as verified.');
     if (action === 'pin') {
-      if (!await confirm({ title: 'Clear this app PIN?', description: 'The user will need to set a new PIN before using PIN-protected actions.', confirmLabel: 'Clear PIN', destructive: true })) return;
-      await run(`/api/admin/users/${user.id}/pin-clear`, { method: 'POST', body: { reason: 'Cleared by support from admin console' } }, 'App PIN cleared.');
+      if (!await confirm({ title: 'Clear transaction PIN?', description: 'The user will need to set a new transaction PIN before making transfers or payments.', confirmLabel: 'Clear PIN', destructive: true })) return;
+      await run(`/api/admin/users/${user.id}/pin-clear`, { method: 'POST', body: { reason: 'Cleared by support from admin console' } }, 'Transaction PIN cleared.');
     }
     if (action === 'adjust') { setDetailAction({ kind: 'wallet', mode: 'adjust', user }); return; }
     if (action === 'set-balance') {
