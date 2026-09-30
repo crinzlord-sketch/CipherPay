@@ -38,7 +38,7 @@ async function savePrivateKey(key: CryptoKey): Promise<void> {
 function toB64(bytes: Uint8Array): string {
   let out = '';
   for (let i = 0; i < bytes.length; i += 0x8000) out += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return btoa(out).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/g, '');
+  return btoa(out).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 function fromB64(value: string): Uint8Array {
   const padded = value.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((value.length + 3) % 4);
