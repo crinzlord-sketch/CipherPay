@@ -1,4 +1,4 @@
-import { ArrowLeft, Ban, Check, Copy, Image as ImageIcon, MessageCircle, MoreVertical, Palette, Search, Send, Smile, Trash2, UserRound, X } from 'lucide-react';
+import { ArrowLeft, Ban, Check, Copy, Image as ImageIcon, MessageCircle, MoreVertical, Palette, Search, Send, Smile, Trash2, UserRound, X, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { apiRequest } from './page-api';
@@ -114,7 +114,7 @@ export default function ChatPage() {
       </section>
       <section className="cp-card cp-card-pad cp-chat-code-card"><span className="cp-kicker">YOUR CODE</span><h2>Share your code.</h2><p>Your unique code lets other CipherPay users find you without exposing extra personal details.</p><div className="cp-your-code">{/* populated from profile in a lightweight call */}<YourCode/></div></section>
     </div>
-    <section className="cp-card cp-card-pad cp-chat-list-card"><div className="cp-card-head"><div><span className="cp-kicker">MESSAGES</span><h2>Your conversations</h2></div></div>{chats.length===0?<div className="cp-chat-empty"><MessageCircle size={28}/><strong>No conversations yet</strong><span>Find someone above to start your first chat.</span></div>:<div className="cp-chat-list">{chats.map((item:any)=><button key={item.id} className="cp-chat-list-row" onClick={()=>setLocation('/chat/'+item.id)}><CipherAvatar src={item.other.avatarUrl} seed={item.other.id||item.other.email} gender={item.other.gender} size={50} alt=""/><div><strong>{item.other.firstName} {item.other.lastName}</strong><span>{item.lastMessage?.body|| (item.lastMessage?.gifUrl?'GIF':item.lastMessage?.imageUrl?'Photo':'Start a conversation')}</span></div><small>{item.lastMessageAt?new Date(item.lastMessageAt).toLocaleDateString('en-NG',{day:'numeric',month:'short'}):''}</small></button>)}</div>}</section>
+    <section className="cp-card cp-card-pad cp-chat-list-card"><div className="cp-card-head"><div><span className="cp-kicker">MESSAGES</span><h2>Your conversations</h2></div></div>{chats.length===0?<div className="cp-chat-empty"><MessageCircle size={28}/><strong>No conversations yet</strong><span>Find someone above to start your first chat.</span></div>:<div className="cp-chat-list">{chats.map((item:any)=><button key={item.id} className="cp-chat-list-row" onClick={()=>setLocation('/chat/'+item.id)}><CipherAvatar src={item.other.avatarUrl} seed={item.other.id||item.other.email} gender={item.other.gender} size={50} alt=""/><div><strong>{item.other.firstName} {item.other.lastName}</strong><span>{item.lastMessage?.body ? '🔒 Encrypted message' : 'Start a conversation'}</span></div><small>{item.lastMessageAt?new Date(item.lastMessageAt).toLocaleDateString('en-NG',{day:'numeric',month:'short'}):''}</small></button>)}</div>}</section>
   </div>;
 
   if(!chat||!other)return <div className="cp-page"><LoadingState label="Opening conversation" /></div>;
@@ -139,6 +139,8 @@ export default function ChatPage() {
 
 function YourCode(){
   const [code,setCode]=useState('');
-  useEffect(()=>{apiRequest<any>('/api/auth/me').then(r=>setCode(r.userCode||'')).catch(()=>{});},[]);
-  return <><strong>{code||'Loading…'}</strong><button onClick={()=>{if(code)void navigator.clipboard?.writeText(code)}} title="Copy code"><Copy size={16}/></button></>;
+  const [failed,setFailed]=useState(false);
+  const load=()=>{setFailed(false);apiRequest<any>('/api/auth/me').then(r=>{if(r.userCode)setCode(r.userCode);else setFailed(true);}).catch(()=>setFailed(true));};
+  useEffect(()=>{load();},[]);
+  return <>{code?<><strong>{code}</strong><button onClick={()=>{void navigator.clipboard?.writeText(code)}} title="Copy code"><Copy size={16}/></button></>:failed?<><strong>Couldn’t load your code</strong><button onClick={load} title="Retry"><RefreshCw size={16}/></button></>:<strong>Loading…</strong>}</>;
 }
