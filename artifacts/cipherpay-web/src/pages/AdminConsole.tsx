@@ -92,6 +92,7 @@ export default function AdminConsole() {
   });
   const [newAdmin, setNewAdmin] = useState({ email: '', password: '' });
   const [creatingAdmin, setCreatingAdmin] = useState(false);
+  const [detailAction, setDetailAction] = useState<any>(null);
 
   const loadAll = useCallback(async () => {
     if (!token) return;
@@ -237,14 +238,7 @@ export default function AdminConsole() {
       if (!await confirm({ title: 'Clear this app PIN?', description: 'The user will need to set a new PIN before using PIN-protected actions.', confirmLabel: 'Clear PIN', destructive: true })) return;
       await run(`/api/admin/users/${user.id}/pin-clear`, { method: 'POST', body: { reason: 'Cleared by support from admin console' } }, 'App PIN cleared.');
     }
-    if (action === 'adjust') {
-      const raw = await prompt({ title: 'Adjust wallet balance', description: 'Enter a positive amount to credit or a negative amount to debit, in NGN.', placeholder: 'e.g. 5,000 or -500', confirmLabel: 'Continue', format: 'grouped-number' });
-      if (raw === null) return;
-      const amount = Number(raw.replace(/,/g, ''));
-      const reason = await prompt({ title: 'Add an audit reason', defaultValue: 'Account correction', placeholder: 'Required audit reason', confirmLabel: 'Adjust wallet' });
-      if (reason === null) return;
-      await run(`/api/admin/users/${user.id}/wallet-adjust`, { method: 'POST', body: { amount, reason } }, 'Wallet adjusted.');
-    }
+    if (action === 'adjust') { setDetailAction({ kind: 'wallet', mode: 'adjust', user }); return; }
     if (action === 'set-balance') {
       const raw = await prompt({ title: 'Set wallet balance', description: 'Enter the exact wallet balance in NGN.', defaultValue: formatGroupedNumber(user.balance ?? 0), placeholder: 'Wallet balance', confirmLabel: 'Continue', format: 'grouped-number' });
       if (raw === null) return;
@@ -253,20 +247,15 @@ export default function AdminConsole() {
       if (reason === null) return;
       await run(`/api/admin/users/${user.id}/wallet-set`, { method: 'POST', body: { balance, reason } }, 'Wallet balance set.');
     }
-    if (action === 'debit-to-admin') {
-      const raw = await prompt({ title: 'Move funds to the admin wallet', description: 'Enter the amount to move from this user wallet, in NGN.', placeholder: 'Amount in NGN', confirmLabel: 'Continue', format: 'grouped-number' });
-      if (raw === null) return;
-      const amount = Number(raw.replace(/,/g, ''));
-      const description = await prompt({ title: 'Describe this ledger movement', defaultValue: 'Admin service charge', placeholder: 'Required description', confirmLabel: 'Move funds' });
-      if (!description) return;
-      await run(`/api/admin/users/${user.id}/debit-to-admin`, { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: { amount, description } }, 'Funds moved to the admin wallet.');
-    }
+    if (action === 'debit-to-admin') { setDetailAction({ kind: 'wallet', mode: 'debit-to-admin', user }); return; }
     if (action === 'kyc') {
       const raw = await prompt({ title: 'Set KYC level', description: 'Choose a level from 0 to 3.', defaultValue: String(user.kycLevel ?? 0), placeholder: '0, 1, 2, or 3', confirmLabel: 'Set level' });
       if (raw === null) return;
       const level = Number(raw);
       await run(`/api/admin/users/${user.id}/set-kyc`, { method: 'POST', body: { level } }, `KYC level set to L${level}.`);
     }
+    if (action === 'credit') { setDetailAction({ kind: 'wallet', mode: 'credit', user }); return; }
+    if (action === 'debit') { setDetailAction({ kind: 'wallet', mode: 'debit', user }); return; }
     if (action === 'notify') {
       const title = await prompt({ title: 'Notification title', defaultValue: 'Message from CipherPay', placeholder: 'Title', confirmLabel: 'Continue' });
       if (!title) return;
@@ -274,13 +263,7 @@ export default function AdminConsole() {
       if (!body) return;
       await run(`/api/admin/users/${user.id}/notify`, { method: 'POST', body: { title, body, email: false } }, 'Notification sent.');
     }
-    if (action === 'email') {
-      const subject = await prompt({ title: 'Email subject', placeholder: 'Subject', confirmLabel: 'Continue' });
-      if (!subject) return;
-      const message = await prompt({ title: 'Email message', placeholder: 'Write the email', confirmLabel: 'Send email' });
-      if (!message) return;
-      await run(`/api/admin/users/${user.id}/send-email`, { method: 'POST', body: { subject, message } }, 'Email sent.');
-    }
+    if (action === 'email') { setDetailAction({ kind: 'email', user }); return; }
     if (action === 'activity') {
       if (!await confirm({ title: 'Reset this user’s activity?', description: 'This removes their transactions, purchases, notifications, and wallet balance. This cannot be undone.', confirmLabel: 'Reset activity', destructive: true })) return;
       await run(`/api/admin/users/${user.id}/reset-activity`, { method: 'POST' }, 'User activity reset.');
@@ -413,11 +396,51 @@ export default function AdminConsole() {
     return Array.from(groups.values());
   }, [supportChats]);
 
+
+  const submitDetailAction = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!detailAction || !token) return;
+    const d = detailAction;
+    if (d.kind === 'email') {
+      const subject = String(d.subject || '').trim();
+      const message = [d.greeting, d.message, d.closing].map((v:any)=>String(v||'').trim()).filter(Boolean).join('\n\n');
+      if (!subject || !d.message?.trim()) { setError('Subject and message are required.'); return; }
+      const result = await run('/api/admin/users/' + d.user.id + '/send-email', { method:'POST', body:{subject, message} }, 'Detailed email sent.');
+      if (result) setDetailAction(null);
+      return;
+    }
+    const amount = Number(String(d.amount || '').replace(/,/g,''));
+    const reason = String(d.reason || '').trim();
+    if (!(amount > 0) || !reason) { setError('Enter a valid amount and a reason.'); return; }
+    let result:any = null;
+    if (d.mode === 'credit') result = await run('/api/admin/users/' + d.user.id + '/credit', {method:'POST',body:{amount,reason}}, 'User wallet credited.');
+    else if (d.mode === 'debit') result = await run('/api/admin/users/' + d.user.id + '/debit', {method:'POST',body:{amount,reason}}, 'User wallet debited.');
+    else if (d.mode === 'debit-to-admin') result = await run('/api/admin/users/' + d.user.id + '/debit-to-admin', {method:'POST',headers:{'Idempotency-Key':crypto.randomUUID()},body:{amount,description:reason}}, 'Funds moved to admin wallet.');
+    else result = await run('/api/admin/users/' + d.user.id + '/wallet-adjust', {method:'POST',body:{amount:d.direction === 'debit' ? -amount : amount,reason}}, 'Wallet adjusted.');
+    if (result) setDetailAction(null);
+  };
+
   if (!token) {
     return <main className="cp-page admin-console"><section className="cp-card cp-card-pad admin-unlock"><div className="admin-unlock-icon"><ShieldCheck size={24} /></div><h2>Admin session unavailable</h2><p>Your normal CipherPay admin sign-in is no longer active. Sign in again to continue.</p>{error && <div className="cp-notice cp-notice-error">{error}</div>}<button className="admin-btn admin-btn-primary" type="button" onClick={() => { localStorage.removeItem('cipherpay_token'); window.location.href = '/login'; }}>Back to sign in <ChevronRight size={16} /></button></section></main>;
   }
 
   return <main className="cp-page admin-console cp-page-reveal">
+
+  {detailAction && <div className="admin-modal-backdrop" onMouseDown={(e)=>{if(e.target===e.currentTarget)setDetailAction(null)}}><form className="cp-card cp-card-pad admin-detail-modal" onSubmit={submitDetailAction}>
+    <div className="admin-panel-head"><div><span className="cp-kicker">{detailAction.kind==='email'?'USER COMMUNICATION':'WALLET ACTION'}</span><h2>{detailAction.kind==='email'?'Detailed email':'Wallet action'}</h2><p>{detailAction.user.email} · Current balance {naira(detailAction.user.balance)}</p></div><AdminButton onClick={()=>setDetailAction(null)}><X size={15}/></AdminButton></div>
+    {detailAction.kind==='email' ? <>
+      <label className="cp-field"><span>Subject</span><input required value={detailAction.subject||''} onChange={e=>setDetailAction({...detailAction,subject:e.target.value})} placeholder="Clear, specific subject"/></label>
+      <label className="cp-field"><span>Greeting</span><input value={detailAction.greeting||''} onChange={e=>setDetailAction({...detailAction,greeting:e.target.value})} placeholder="Hi John,"/></label>
+      <label className="cp-field"><span>Message</span><textarea required rows={8} value={detailAction.message||''} onChange={e=>setDetailAction({...detailAction,message:e.target.value})} placeholder="Write the full details, what happened, what the user needs to know, and any next steps."/></label>
+      <label className="cp-field"><span>Closing</span><input value={detailAction.closing||''} onChange={e=>setDetailAction({...detailAction,closing:e.target.value})} placeholder="Regards, CipherPay Support"/></label>
+    </> : <>
+      <label className="cp-field"><span>Amount (NGN)</span><input required inputMode="decimal" value={detailAction.amount||''} onChange={e=>setDetailAction({...detailAction,amount:e.target.value})} placeholder="0.00"/></label>
+      {detailAction.mode==='adjust' && <label className="cp-field"><span>Adjustment</span><select value={detailAction.direction||'credit'} onChange={e=>setDetailAction({...detailAction,direction:e.target.value})}><option value="credit">Credit</option><option value="debit">Debit</option></select></label>}
+      <label className="cp-field"><span>Reason / audit note</span><textarea required rows={5} value={detailAction.reason||''} onChange={e=>setDetailAction({...detailAction,reason:e.target.value})} placeholder="Explain exactly why this wallet movement is being made. This is kept in the audit trail."/></label>
+    </>}
+    <div className="admin-actions" style={{justifyContent:'flex-end'}}><AdminButton onClick={()=>setDetailAction(null)}>Cancel</AdminButton><button className="admin-btn admin-btn-primary" type="submit">{detailAction.kind==='email'?'Send detailed email':'Confirm action'}</button></div>
+  </form></div>}
+
   {selectedKyc && <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) { setSelectedKyc(null); setKycIdentityCheck(null); } }} style={{ position: 'fixed', inset: 0, zIndex: 1200, display: 'grid', placeItems: 'center', padding: 18, background: 'rgba(3,7,18,.72)', backdropFilter: 'blur(8px)' }}>
     <section role="dialog" aria-modal="true" aria-labelledby="kyc-detail-title" className="cp-card cp-card-pad" style={{ width: 'min(980px, 100%)', maxHeight: '92vh', overflowY: 'auto' }}>
       <div className="admin-panel-head"><div><span className="cp-kicker">KYC / FULL REVIEW</span><h2 id="kyc-detail-title">{selectedKyc.userFirst} {selectedKyc.userLast}</h2><p>{selectedKyc.userEmail} · {selectedKyc.userPhone || 'No phone'} · User #{selectedKyc.userId}</p></div><AdminButton onClick={() => { setSelectedKyc(null); setKycIdentityCheck(null); }}><X size={15} /> Close</AdminButton></div>
@@ -540,7 +563,7 @@ export default function AdminConsole() {
       </div>
     </section>}
 
-    {tab === 'support' && <section className="admin-section admin-support-grid"><section className="cp-card admin-chat-list"><div className="admin-panel-head"><div><span className="cp-kicker">Support records</span><h2>{supportFilter === 'closed' ? 'Conversation history' : 'Support inbox'}</h2><p>{supportFilter === 'closed' ? 'Ended conversations grouped by customer.' : 'Every request from the customer support desk.'}</p></div><AdminButton onClick={() => void loadAll()}><RefreshCw size={14} /></AdminButton></div><div className="admin-support-filters">{(['open', 'closed', 'all'] as const).map((filter) => <button type="button" key={filter} className={supportFilter === filter ? 'active' : ''} onClick={() => { setSelectedSupport(null); setSupportFilter(filter); }}>{filter === 'open' ? 'Open now' : filter === 'closed' ? 'History' : 'All records'}</button>)}</div>{supportChats.length ? supportGroups.map((group) => <div key={group.label}><div className="admin-support-user-heading"><span><Users size={13} />{group.label}</span><small>{group.chats.length} conversation{group.chats.length === 1 ? '' : 's'}</small></div>{group.chats.map((chat) => <button type="button" className={`admin-chat-row ${selectedSupport?.chat?.id === chat.id ? 'active' : ''}`} key={chat.id} onClick={() => void openSupport(chat.id)}><span className={`admin-chat-dot ${chat.status}`} /><span><b>Conversation #{chat.id}</b><small>{chat.userEmail} · {chat.status} · {formatWhen(chat.lastMessageAt)}</small></span>{chat.unreadForAdmin > 0 && <strong>{chat.unreadForAdmin}</strong>}<ChevronRight size={15} /></button>)}</div>) : <div className="admin-empty"><LifeBuoy size={22} />{supportFilter === 'closed' ? 'No ended support conversations.' : 'No open support requests.'}</div>}</section><section className="cp-card admin-chat-detail">{selectedSupport ? <><div className="admin-panel-head"><div><span className="cp-kicker">Conversation #{selectedSupport.chat.id}</span><h2>{selectedSupport.user?.firstName} {selectedSupport.user?.lastName}</h2><p>{selectedSupport.user?.email} · KYC L{selectedSupport.user?.kycLevel ?? 0} · {selectedSupport.user?.isSuspended ? 'Suspended' : 'Active'}</p></div><div className="admin-actions">{selectedSupport.chat.status !== 'live' && selectedSupport.chat.status !== 'closed' && <AdminButton variant="primary" onClick={() => void supportAction('join')}><Headphones size={14} /> Join chat</AdminButton>}{selectedSupport.chat.status !== 'closed' && <AdminButton onClick={() => void supportAction('close')}><Check size={14} /> Close</AdminButton>}</div></div><div className="admin-chat-messages">{(selectedSupport.messages ?? []).map((message: any) => <div className={`admin-message ${message.sender === 'agent' ? 'agent' : message.sender === 'user' ? 'user' : 'system'}`} key={message.id}><small>{message.sender === 'agent' ? 'You / Support' : message.sender === 'user' ? 'Customer' : 'System'} · {formatWhen(message.createdAt)}</small><p>{message.imageUrl && <img src={message.imageUrl} alt="Attachment from support conversation" />}{message.body !== '📷 Image' && message.body}</p></div>)}</div>{selectedSupport.chat.status !== 'closed' && <form className="admin-chat-compose" onSubmit={sendSupportMessage}><input ref={supportImageRef} className="admin-sr-only" type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadSupportImage(file); }} /><button className="admin-chat-attach" type="button" onClick={() => supportImageRef.current?.click()} disabled={supportUploading}><Paperclip size={16} /></button><input value={supportDraft} onChange={(event) => { setSupportDraft(event.target.value); void adminRequest(`/api/admin/support/chats/${selectedSupport.chat.id}/typing`, token, { method: 'POST' }); }} placeholder={supportUploading ? 'Uploading image…' : 'Reply as Support…'} /><button type="submit" disabled={!supportDraft.trim() || supportUploading}><Send size={16} /></button></form>}</> : <div className="admin-detail-empty"><MessageCircle size={25} /><b>Select a support request</b><span>Messages, customer details, and live controls will appear here.</span></div>}</section></section>}
+    {tab === 'support' && <section className="admin-section admin-support-grid"><section className="cp-card admin-chat-list"><div className="admin-panel-head"><div><span className="cp-kicker">Support records</span><h2>{supportFilter === 'closed' ? 'Conversation history' : 'Support inbox'}</h2><p>{supportFilter === 'closed' ? 'Ended conversations grouped by customer.' : 'Every request from the customer support desk.'}</p></div><AdminButton onClick={() => void loadAll()}><RefreshCw size={14} /></AdminButton></div><div className="admin-support-filters">{(['open', 'closed', 'all'] as const).map((filter) => <button type="button" key={filter} className={supportFilter === filter ? 'active' : ''} onClick={() => { setSelectedSupport(null); setSupportFilter(filter); }}>{filter === 'open' ? 'Open now' : filter === 'closed' ? 'History' : 'All records'}</button>)}</div>{supportChats.length ? supportGroups.map((group) => <div key={group.label}><div className="admin-support-user-heading"><span><Users size={13} />{group.label}</span><small>{group.chats.length} conversation{group.chats.length === 1 ? '' : 's'}</small></div>{group.chats.map((chat) => <button type="button" className={`admin-chat-row ${selectedSupport?.chat?.id === chat.id ? 'active' : ''}`} key={chat.id} onClick={() => void openSupport(chat.id)}><span className={`admin-chat-dot ${chat.status}`} /><span><b>Conversation #{chat.id}</b><small>{chat.userEmail} · {chat.status} · {formatWhen(chat.lastMessageAt)}</small></span>{chat.unreadForAdmin > 0 && <strong>{chat.unreadForAdmin}</strong>}<ChevronRight size={15} /></button>)}</div>) : <div className="admin-empty"><LifeBuoy size={22} />{supportFilter === 'closed' ? 'No ended support conversations.' : 'No open support requests.'}</div>}</section><section className="cp-card admin-chat-detail">{selectedSupport ? <><div className="admin-panel-head"><div><span className="cp-kicker">Conversation #{selectedSupport.chat.id}</span><h2>{selectedSupport.user?.firstName} {selectedSupport.user?.lastName}</h2><p>{selectedSupport.user?.email} · KYC L{selectedSupport.user?.kycLevel ?? 0} · {selectedSupport.user?.isSuspended ? 'Suspended' : 'Active'}</p></div><div className="admin-actions">{selectedSupport.chat.status !== 'live' && selectedSupport.chat.status !== 'closed' && <AdminButton variant="primary" onClick={() => void supportAction('join')}><Headphones size={14} /> Join chat</AdminButton>}{selectedSupport.chat.status !== 'closed' && <AdminButton onClick={() => void supportAction('close')}><Check size={14} /> Close</AdminButton>}</div></div><div className="admin-chat-messages">{(selectedSupport.messages ?? []).map((message: any) => <div className={`admin-message ${message.sender === 'agent' ? 'agent' : message.sender === 'user' ? 'user' : 'system'}`} key={message.id}><small>{message.sender === 'agent' ? 'You / Support' : message.sender === 'user' ? 'Customer' : 'System'} · {formatWhen(message.createdAt)}</small><p>{message.imageUrl && <a href={apiUrl(message.imageUrl ?? "")} target="_blank" rel="noreferrer"><img src={apiUrl(message.imageUrl ?? "")} alt="Attachment from support conversation" /></a>}{message.body !== '📷 Image' && message.body}</p></div>)}</div>{selectedSupport.chat.status !== 'closed' && <form className="admin-chat-compose" onSubmit={sendSupportMessage}><input ref={supportImageRef} className="admin-sr-only" type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadSupportImage(file); }} /><button className="admin-chat-attach" type="button" onClick={() => supportImageRef.current?.click()} disabled={supportUploading}><Paperclip size={16} /></button><input value={supportDraft} onChange={(event) => { setSupportDraft(event.target.value); void adminRequest(`/api/admin/support/chats/${selectedSupport.chat.id}/typing`, token, { method: 'POST' }); }} placeholder={supportUploading ? 'Uploading image…' : 'Reply as Support…'} /><button type="submit" disabled={!supportDraft.trim() || supportUploading}><Send size={16} /></button></form>}</> : <div className="admin-detail-empty"><MessageCircle size={25} /><b>Select a support request</b><span>Messages, customer details, and live controls will appear here.</span></div>}</section></section>}
 
 
     {tab === 'verification' && <section className="admin-section"><section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">Compliance queue</span><h2>Identity review</h2><p>Approve or reject submitted verification records and keep limits current.</p></div><ClipboardCheck size={20} /></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Customer</th><th>Verification</th><th>Document</th><th>Submitted</th><th>Review</th></tr></thead><tbody>{kycRows.map((row) => { const level = row.level || (row.verificationType === 'basic' ? 1 : 2); return <tr key={row.id}><td><b>{row.userFirst} {row.userLast}</b><small>{row.userEmail}<br />{row.userPhone}</small></td><td><b>{row.verificationType === 'basic' ? 'Basic' : 'Advanced'}</b><small>Level {level}</small></td><td><b>{row.documentType}</b><small>{row.documentNumber}</small></td><td><small>{formatWhen(row.submittedAt)}</small></td><td><div className="admin-actions"><AdminButton onClick={() => openKyc(row)}><FileText size={13} /> View details</AdminButton><AdminButton variant="primary" onClick={() => void run(`/api/admin/kyc/${row.id}/approve`, { method: 'POST', body: { level } }, 'KYC approved.')}>Approve L${level}</AdminButton><AdminButton variant="danger" onClick={async () => { const reason = await prompt({ title: 'Reject this verification', defaultValue: 'Please submit a clearer document image.', placeholder: 'Reason for rejection', confirmLabel: 'Reject verification', destructive: true }); if (reason) void run(`/api/admin/kyc/${row.id}/reject`, { method: 'POST', body: { reason } }, 'KYC rejected.'); }}>Reject</AdminButton></div></td></tr>; })}</tbody></table>{!kycRows.length && <div className="admin-empty">No KYC submissions waiting for review.</div>}</div></section></section>}
