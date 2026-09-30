@@ -4,13 +4,24 @@ import { useLocation, useRoute } from 'wouter';
 import { apiRequest } from './page-api';
 import { Button, ErrorState, LoadingState, Notice, PageHeading } from './PagePieces';
 import { CipherAvatar } from '../components/CipherAvatar';
-import { decryptChatPayload, encryptChatPayload, ensureChatKey } from '../lib/chat-crypto';
 
 const EMOJIS = ['😀','😂','😍','🥹','😎','😭','😅','🤝','❤️','🔥','🎉','👏','🙏','💯','🤣','😘','🥰','😮','😢','😡','👍','👎','💙','✨','🚀','🫶','😈','🤔','🙌','💀'];
 const BGS = ['#000000','#ffffff','#f6f7fb','#f4f1ff','#eef6ff','#f4f8f5','#fff8ef'];
 
 type Person = { id:number; firstName:string; lastName:string; email:string; avatarUrl?:string|null; gender?:string|null; userCode?:string|null; chatPublicKey?:string|null };
 type Message = { id:number; senderId:number; body?:string|null; imageUrl?:string|null; gifUrl?:string|null; createdAt:string };
+
+
+function decodeChatMessage(m: any) {
+  const body = String(m.body ?? '');
+  if (body.startsWith('E2EE1.')) return { ...m, decrypted: { error: true, legacyEncrypted: true } };
+  try {
+    const parsed = JSON.parse(body);
+    return { ...m, decrypted: parsed };
+  } catch {
+    return { ...m, decrypted: { text: body } };
+  }
+}
 
 function dataUrl(file: File): Promise<string> {
   return new Promise((resolve,reject) => { const r=new FileReader(); r.onload=()=>typeof r.result==='string'?resolve(r.result):reject(new Error('Could not read image.')); r.onerror=()=>reject(new Error('Could not read image.')); r.readAsDataURL(file); });
@@ -49,17 +60,12 @@ export default function ChatPage() {
   const loadChat=async(id:string)=>{
     try{
       const r=await apiRequest<any>(`/api/chat/${id}`);
-      setChat(r.chat); setOther(r.other); setMessages(r.messages??[]); setBg(r.background||BGS[0]); setBlockedState(Boolean(r.blocked));
-      if(r.other?.chatPublicKey){
-        const decoded=await Promise.all((r.messages??[]).map(async (m:any)=>{
-          try { return { ...m, decrypted: await decryptChatPayload(Number(id), JSON.parse((m.senderId === currentUserId ? r.other.chatPublicKey : m.senderPublicKey) || 'null'), String(m.body??'')) }; }
-          catch { return { ...m, decrypted: { error: true } }; }
-        }));
-        setDecrypted(decoded);
-      } else setDecrypted((r.messages??[]).map((m:any)=>({...m,decrypted:{error:true}})));
+      const visible = (r.messages ?? []).filter((m:any) => !String(m.body ?? '').startsWith('E2EE1.'));
+      setChat(r.chat); setOther(r.other); setMessages(visible); setBg(r.background||BGS[0]); setBlockedState(Boolean(r.blocked));
+      setDecrypted(visible.map(decodeChatMessage));
     }catch(e){setError(e instanceof Error?e.message:'Could not open chat.');}
   };
-  useEffect(()=>{void loadChats(); void (async()=>{try{const me=await apiRequest<any>('/api/auth/me');if(me?.user?.id)setCurrentUserId(Number(me.user.id));}catch{} try{const key=await ensureChatKey(); await apiRequest('/api/auth/chat-key',{method:'POST',body:{publicKey:JSON.stringify(key)}});}catch(e){setError(e instanceof Error?e.message:'Secure chat encryption could not be initialized.');}})();},[]);
+  useEffect(()=>{void loadChats(); void (async()=>{try{const me=await apiRequest<any>('/api/auth/me');if(me?.user?.id)setCurrentUserId(Number(me.user.id));}catch{}})();},[]);
   useEffect(()=>{if(params?.id) void loadChat(params.id); else {setChat(null);setOther(null);setMessages([]);}},[params?.id]);
   useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'});},[decrypted.length]);
 
@@ -68,12 +74,9 @@ export default function ChatPage() {
     const t=window.setInterval(async()=>{
       try{
         const r=await apiRequest<any>(`/api/chat/${params.id}`);
-        setMessages(r.messages??[]); setOther(r.other); setChat(r.chat);
-        if(r.other?.chatPublicKey){
-          const key=JSON.parse(r.other.chatPublicKey);
-          const decoded=await Promise.all((r.messages??[]).map(async (m:any)=>{try{return {...m,decrypted:await decryptChatPayload(Number(params.id),JSON.parse((m.senderId === currentUserId ? r.other.chatPublicKey : m.senderPublicKey) || 'null'),String(m.body??''))};}catch{return {...m,decrypted:{error:true}};}}));
-          setDecrypted(decoded);
-        }
+        const visible = (r.messages ?? []).filter((m:any) => !String(m.body ?? '').startsWith('E2EE1.'));
+        setMessages(visible); setOther(r.other); setChat(r.chat); setBlockedState(Boolean(r.blocked));
+        setDecrypted(visible.map(decodeChatMessage));
       }catch{}
     },2500);
     return()=>window.clearInterval(t);
@@ -89,15 +92,14 @@ export default function ChatPage() {
     if(!params?.id || sending || blockedState)return;
     const payload={text:text.trim(), image:extra.image ?? null, gif:extra.gif ?? null, replyToId:replyTo?.id ?? null, replyPreview:replyTo ? (replyTo.decrypted?.text || (replyTo.decrypted?.image ? 'Image' : replyTo.decrypted?.gif ? 'GIF' : 'Message')) : null};
     if(!payload.text&&!payload.image&&!payload.gif)return;
-    if(!other?.chatPublicKey){setError('This chat is not ready for end-to-end encryption yet.');return;}
     setSending(true);setError('');
     try{
-      const ciphertext=await encryptChatPayload(Number(params.id),JSON.parse(other.chatPublicKey),payload);
-      const r=await apiRequest<any>(`/api/chat/${params.id}/message`,{method:'POST',body:{body:ciphertext}});
+      const plainBody=JSON.stringify(payload);
+      const r=await apiRequest<any>(`/api/chat/${params.id}/message`,{method:'POST',body:{body:plainBody}});
       setMessages(m=>[...m,r.message]);
       setDecrypted(m=>[...m,{...r.message,decrypted:payload}]);
       setText('');setReplyTo(null);setShowEmoji(false);setShowGif(false);void loadChats();
-    }catch(e){setError(e instanceof Error?e.message:'Could not send encrypted message.');}finally{setSending(false);}
+    }catch(e){setError(e instanceof Error?e.message:'Could not send message.');}finally{setSending(false);}
   };
   const pickImage=async(file?:File)=>{
     if(!file)return;
@@ -135,7 +137,7 @@ export default function ChatPage() {
         return <div key={m.id} className={`cp-chat-message-row ${m.senderId===other.id?'incoming':'outgoing'}`} onTouchStart={e=>{swipeStartX.current=e.changedTouches[0]?.clientX??null}} onTouchEnd={e=>{const start=swipeStartX.current;swipeStartX.current=null;const end=e.changedTouches[0]?.clientX??start??0;if(start!==null&&end-start>55)doReply();}}>
           <div className="cp-chat-bubble">
             {target&&replyPreview&&<button className="cp-chat-reply-preview" onClick={doReply}><span>↩ {target.senderId===currentUserId?'You':other.firstName}</span><b>{replyPreview}</b></button>}
-            {d.image&&<img className="cp-chat-image" src={d.image} alt="Shared image" draggable onDragStart={e=>e.stopPropagation()}/>} {d.gif&&<img className="cp-chat-gif" src={d.gif} alt="GIF" draggable onDragStart={e=>e.stopPropagation()}/>} {d.text&&<span>{d.text}</span>}{d.error&&<span>🔒 Encrypted message</span>}
+            {d.image&&<img className="cp-chat-image" src={d.image} alt="Shared image" draggable onDragStart={e=>e.stopPropagation()}/>} {d.gif&&<img className="cp-chat-gif" src={d.gif} alt="GIF" draggable onDragStart={e=>e.stopPropagation()}/>} {d.text&&<span>{d.text}</span>}{d.error&&!d.legacyEncrypted&&<span>Could not display this message.</span>}
             <button className="cp-chat-reply-action" onClick={doReply}>↩ Reply</button>
             <small>{new Date(m.createdAt).toLocaleTimeString('en-NG',{hour:'2-digit',minute:'2-digit'})}</small>
           </div>
