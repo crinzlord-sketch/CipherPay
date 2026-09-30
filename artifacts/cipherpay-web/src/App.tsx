@@ -229,19 +229,21 @@ function AuthLayout({ children, title, detail }: { children: ReactNode; title: s
 }
 
 function LandingPage() {
+  const [, setLocation] = useLocation();
   const [authNavigating, setAuthNavigating] = useState<'login' | 'register' | null>(null);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [supportForm, setSupportForm] = useState({ email: '', subject: '', category: 'general', message: '' });
   const [supportSending, setSupportSending] = useState(false);
   const [supportSent, setSupportSent] = useState(false);
   const [supportError, setSupportError] = useState('');
-  const scrollToSection = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const scrollToSection = (id: string) => { setMobileNavOpen(false); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   const goToAuth = (mode: 'login' | 'register') => {
     if (authNavigating) return;
     setAuthNavigating(mode);
     window.setTimeout(() => setLocation(mode === 'login' ? '/login' : '/register'), 360);
   };
-  const openSupport = () => { setSupportSent(false); setSupportError(''); setSupportOpen(true); };
+  const openSupport = () => { setMobileNavOpen(false); setSupportSent(false); setSupportError(''); setSupportOpen(true); };
   const submitSupport = async (event: React.FormEvent) => {
     event.preventDefault();
     setSupportSending(true); setSupportError('');
@@ -263,8 +265,11 @@ function LandingPage() {
     <nav className="cp-landing-nav" aria-label="Landing navigation">
       <div className="cp-landing-nav-inner">
         <Logo />
-        <div className="cp-landing-links"><button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('experience')}>Experience</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={() => { setSupportSent(false); setSupportOpen(true); }}>Support</button></div>
-        <div className="cp-landing-nav-actions"><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={15}/></button></div>
+        <div className="cp-landing-links"><button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('experience')}>Experience</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={openSupport}>Support</button></div>
+        <div className="cp-landing-nav-actions"><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={15}/></button><button type="button" className="cp-mobile-menu-toggle" aria-label="Open landing menu" aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen(v => !v)}><Menu size={19}/></button></div>
+        <div className={`cp-mobile-menu ${mobileNavOpen ? 'open' : ''}`}>
+          <button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('experience')}>Experience</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={openSupport}>Support</button><button type="button" onClick={() => { setMobileNavOpen(false); goToAuth('login'); }}>Log in</button><button type="button" onClick={() => { setMobileNavOpen(false); goToAuth('register'); }}>Get started</button>
+        </div>
       </div>
     </nav>
     <section className="cp-hero">
