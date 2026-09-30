@@ -1,6 +1,6 @@
 import { db, walletsTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { createPayoutWallet, updatePayoutWallet, fetchPayoutStaticAccount, findPayoutWalletByEmail } from "./flutterwave";
+import { createPayoutWallet, updatePayoutWallet, fetchPayoutWallet, fetchPayoutStaticAccount, findPayoutWalletByEmail } from "./flutterwave";
 
 export async function ensureUserPayoutWallet(userId: number) {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
@@ -55,14 +55,28 @@ export async function ensureUserPayoutWallet(userId: number) {
       .returning();
   }
 
-  // Keep the actual Flutterwave payout wallet name in sync so bank-app name enquiry
-  // returns the CipherPay-branded beneficiary name, not only our frontend display.
+  // Keep the Flutterwave payout wallet tied to this user. Flutterwave documents
+  // the payout-subaccount account_name as the customer's wallet name and requires
+  // debit_subaccount on withdrawals from that wallet.
   if (accountReference) {
     await updatePayoutWallet(accountReference, {
       accountName: desiredAccountName,
       email: user.email,
       phone: user.phone,
     });
+
+    // Re-read the provider record before allowing a withdrawal. This prevents
+    // CipherPay from silently sending a user's withdrawal from an unexpected
+    // payout wallet/identity.
+    const providerWallet = await fetchPayoutWallet(accountReference);
+    const providerName = providerWallet.accountName.trim().toLowerCase();
+    const expectedName = desiredAccountName.trim().toLowerCase();
+    if (providerWallet.status && providerWallet.status.toUpperCase() !== "ACTIVE") {
+      throw new Error("Flutterwave payout wallet is not active");
+    }
+    if (providerName !== expectedName) {
+      throw new Error("Flutterwave payout wallet identity does not match the user");
+    }
   }
 
   if (!wallet.flwPsaStaticAccount) {
