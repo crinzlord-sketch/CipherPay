@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import bcrypt from "bcryptjs";
 import { eq, desc, and, or, gte, lte, sql, ne, inArray } from "drizzle-orm";
 import { db, walletsTable, transactionsTable, usersTable } from "@workspace/db";
 import { FundWalletBody, VerifyFundingBody, WalletTransferBody, WithdrawFundsBody, ListTransactionsQueryParams, ClaimDepositBody } from "@workspace/api-zod";
@@ -28,6 +29,15 @@ export function internalTransferFee(amount: number): number {
   if (amount < 25000) return 25;
   if (amount < 100000) return 50;
   return 100;
+}
+
+
+async function requireTransferPin(userId: number, pin: unknown): Promise<string | null> {
+  if (typeof pin !== "string" || !/^\d{6}$/.test(pin)) return "Enter your 6-digit transfer PIN.";
+  const [user] = await db.select({ pinHash: usersTable.pinHash }).from(usersTable).where(eq(usersTable.id, userId));
+  if (!user?.pinHash) return "Set your 6-digit transfer PIN in Security settings before making a transfer.";
+  if (!(await bcrypt.compare(pin, user.pinHash))) return "Incorrect transfer PIN.";
+  return null;
 }
 
 function getUserId(req: any): number | null {
@@ -347,6 +357,8 @@ router.post("/wallet/transfer", async (req, res): Promise<void> => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("; ") }); return; }
 
   const { recipientEmail, amount, note } = parsed.data;
+  const pinError = await requireTransferPin(userId, req.body?.pin);
+  if (pinError) { res.status(401).json({ error: pinError, code: "TRANSFER_PIN_REQUIRED" }); return; }
   const [recipient] = await db.select().from(usersTable).where(eq(usersTable.email, recipientEmail.toLowerCase()));
   if (!recipient) { res.status(404).json({ error: "Recipient not found" }); return; }
   if (recipient.id === userId) { res.status(400).json({ error: "Cannot transfer to yourself" }); return; }
@@ -373,6 +385,8 @@ router.post("/wallet/transfer/p2p", async (req, res): Promise<void> => {
   const accountNumber = String(req.body?.accountNumber ?? "").trim();
   const amount = Number(req.body?.amount);
   const note = req.body?.note ? String(req.body.note).slice(0, 140) : "";
+  const pinError = await requireTransferPin(userId, req.body?.pin);
+  if (pinError) { res.status(401).json({ error: pinError, code: "TRANSFER_PIN_REQUIRED" }); return; }
 
   if (!/^\d{10}$/.test(accountNumber)) { res.status(400).json({ error: "Enter a valid 10-digit account number" }); return; }
   if (!Number.isFinite(amount) || amount < 100) { res.status(400).json({ error: "Minimum transfer is ₦100" }); return; }
@@ -433,6 +447,8 @@ router.post("/wallet/withdraw", async (req, res): Promise<void> => {
   if (user.isSuspended) { res.status(403).json({ error: "Account is suspended. Contact support." }); return; }
 
   const { amount, bankCode, accountNumber, accountName, narration } = parsed.data;
+  const pinError = await requireTransferPin(userId, req.body?.pin);
+  if (pinError) { res.status(401).json({ error: pinError, code: "TRANSFER_PIN_REQUIRED" }); return; }
   const fee = withdrawalFee(amount);
 
   const withdrawLimitError = checkPerTxLimitSync(user.kycLevel, amount);
