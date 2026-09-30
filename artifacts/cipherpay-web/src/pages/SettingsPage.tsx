@@ -2,6 +2,7 @@ import { Check, Moon, ShieldCheck, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useChangePassword } from '@workspace/api-client-react';
 import { Button, Notice, PageHeading } from './PagePieces';
+import { apiRequest } from './page-api';
 
 export function SettingsPage() {
   const password = useChangePassword();
