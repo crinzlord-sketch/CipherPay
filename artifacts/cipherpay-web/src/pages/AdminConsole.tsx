@@ -31,6 +31,16 @@ function naira(value: unknown) {
   return `₦${Number(value ?? 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function formatLagosWhen(value: unknown) {
+  if (!value) return '—';
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('en-NG', {
+    timeZone: 'Africa/Lagos', year: 'numeric', month: 'short', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
+  }).format(date) + ' WAT';
+}
+
 function formatGroupedNumber(value: string | number) {
   const raw = String(value);
   const negative = raw.trim().startsWith('-');
@@ -63,6 +73,8 @@ export default function AdminConsole() {
   const [serviceUpdating, setServiceUpdating] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
+  const [selectedUserDetails, setSelectedUserDetails] = useState<any>(null);
+  const [userDetailsLoading, setUserDetailsLoading] = useState(false);
   const [admins, setAdmins] = useState<any[]>([]);
   const [currentAdminId, setCurrentAdminId] = useState<number | null>(null);
   const [userQuery, setUserQuery] = useState('');
@@ -210,6 +222,20 @@ export default function AdminConsole() {
       setError(caught instanceof Error ? caught.message : 'The test email could not be sent.');
     } finally {
       setTestingEmail(false);
+    }
+  };
+
+  const openUserDetails = async (user: any) => {
+    if (!token) return;
+    setUserDetailsLoading(true);
+    setError('');
+    try {
+      const result = await adminRequest<any>(`/api/admin/users/${user.id}/details`, token);
+      setSelectedUserDetails(result.data);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'The user details could not be loaded.');
+    } finally {
+      setUserDetailsLoading(false);
     }
   };
 
@@ -546,7 +572,7 @@ export default function AdminConsole() {
        </section>
      </section>}
 
-     {tab === 'users' && <section className="admin-section"><section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">Account control</span><h2>Every registered user</h2><p>Suspend, verify, message, adjust wallets, clear PINs, reset activity, or remove accounts.</p></div><Users size={20} /></div><form className="admin-search" onSubmit={searchUsers}><Search size={17} /><input value={userQuery} onChange={(event) => setUserQuery(event.target.value)} placeholder="Search name, email, or phone" /><button type="submit">Search</button></form><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>User</th><th>Status</th><th>Wallet</th><th>Joined</th><th>Actions</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td><div className="admin-user-cell"><span className="admin-avatar">{String(user.firstName?.[0] ?? '')}{String(user.lastName?.[0] ?? '')}</span><span><b>{user.firstName} {user.lastName}</b><small>{user.email}<br />{user.phone}</small></span></div></td><td><span className={statusClass(user.isSuspended ? 'suspended' : user.isVerified ? 'verified' : 'unverified')}>{user.isSuspended ? 'Suspended' : user.isVerified ? 'Verified' : 'Unverified'}</span><small className="admin-muted">KYC L{user.kycLevel ?? 0}</small></td><td><b>{naira(user.balance)}</b></td><td><small>{formatWhen(user.createdAt)}</small></td><td><div className="admin-action-grid"><AdminButton onClick={() => void userAction(user, 'adjust')}>Adjust wallet</AdminButton><AdminButton onClick={() => void userAction(user, 'set-balance')}>Set balance</AdminButton><AdminButton onClick={() => void userAction(user, 'debit-to-admin')}>Debit → admin</AdminButton><AdminButton onClick={() => void userAction(user, 'kyc')}>Set KYC</AdminButton><AdminButton onClick={() => void userAction(user, 'notify')}><MessageCircle size={13} /> Notify</AdminButton><AdminButton onClick={() => void userAction(user, 'email')}><Mail size={13} /> Email</AdminButton><AdminButton onClick={() => void userAction(user, 'suspend')} variant={user.isSuspended ? 'primary' : 'soft'}>{user.isSuspended ? <><UserCheck size={13} /> Restore</> : <><Ban size={13} /> Suspend</>}</AdminButton><AdminButton onClick={() => void userAction(user, 'verify')}><Check size={13} /> {user.isVerified ? 'Unverify' : 'Verify'}</AdminButton><AdminButton onClick={() => void userAction(user, 'pin')}><ShieldCheck size={13} /> Clear PIN</AdminButton><AdminButton onClick={() => void userAction(user, 'activity')} variant="danger"><RefreshCw size={13} /> Reset activity</AdminButton>{user.isAdmin ? <span className="admin-protected-label">Admin · protected</span> : <AdminButton onClick={() => void userAction(user, 'delete')} variant="danger"><Trash2 size={13} /> Delete</AdminButton>}</div></td></tr>)}</tbody></table>{!users.length && <div className="admin-empty"><Users size={22} />No users match this search.</div>}</div></section></section>}
+     {tab === 'users' && <section className="admin-section"><section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">Account control</span><h2>Every registered user</h2><p>Suspend, verify, message, adjust wallets, clear PINs, reset activity, or remove accounts.</p></div><Users size={20} /></div><form className="admin-search" onSubmit={searchUsers}><Search size={17} /><input value={userQuery} onChange={(event) => setUserQuery(event.target.value)} placeholder="Search name, email, or phone" /><button type="submit">Search</button></form><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>User</th><th>Status</th><th>Wallet</th><th>Joined</th><th>Actions</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td><div className="admin-user-cell"><span className="admin-avatar">{String(user.firstName?.[0] ?? '')}{String(user.lastName?.[0] ?? '')}</span><span><button type="button" className="admin-user-name-button" onClick={() => void openUserDetails(user)}><b>{user.firstName} {user.lastName}</b></button><small>{user.email}<br />{user.phone}</small></span></div></td><td><span className={statusClass(user.isSuspended ? 'suspended' : user.isVerified ? 'verified' : 'unverified')}>{user.isSuspended ? 'Suspended' : user.isVerified ? 'Verified' : 'Unverified'}</span><small className="admin-muted">KYC L{user.kycLevel ?? 0}</small></td><td><b>{naira(user.balance)}</b></td><td><small>{formatWhen(user.createdAt)}</small></td><td><div className="admin-action-grid"><AdminButton variant="primary" onClick={() => void openUserDetails(user)}><FileText size={13} /> View profile</AdminButton><AdminButton onClick={() => void userAction(user, 'adjust')}>Adjust wallet</AdminButton><AdminButton onClick={() => void userAction(user, 'set-balance')}>Set balance</AdminButton><AdminButton onClick={() => void userAction(user, 'debit-to-admin')}>Debit → admin</AdminButton><AdminButton onClick={() => void userAction(user, 'kyc')}>Set KYC</AdminButton><AdminButton onClick={() => void userAction(user, 'notify')}><MessageCircle size={13} /> Notify</AdminButton><AdminButton onClick={() => void userAction(user, 'email')}><Mail size={13} /> Email</AdminButton><AdminButton onClick={() => void userAction(user, 'suspend')} variant={user.isSuspended ? 'primary' : 'soft'}>{user.isSuspended ? <><UserCheck size={13} /> Restore</> : <><Ban size={13} /> Suspend</>}</AdminButton><AdminButton onClick={() => void userAction(user, 'verify')}><Check size={13} /> {user.isVerified ? 'Unverify' : 'Verify'}</AdminButton><AdminButton onClick={() => void userAction(user, 'pin')}><ShieldCheck size={13} /> Clear PIN</AdminButton><AdminButton onClick={() => void userAction(user, 'activity')} variant="danger"><RefreshCw size={13} /> Reset activity</AdminButton>{user.isAdmin ? <span className="admin-protected-label">Admin · protected</span> : <AdminButton onClick={() => void userAction(user, 'delete')} variant="danger"><Trash2 size={13} /> Delete</AdminButton>}</div></td></tr>)}</tbody></table>{!users.length && <div className="admin-empty"><Users size={22} />No users match this search.</div>}</div></section></section>}
 
     {tab === 'money' && <section className="admin-section">
       <div className="admin-money-hero">
@@ -622,5 +648,119 @@ export default function AdminConsole() {
         <button type="submit">Find transaction</button>
       </form>
       <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Transaction</th><th>User</th><th>Amount</th><th>Status</th><th>Controls</th></tr></thead><tbody>{visibleTransactions.map((tx) => <tr key={tx.id}><td><b>#{tx.id} · {tx.type}</b><small>{tx.reference}<br />{formatWhen(tx.createdAt)}</small></td><td><small>{tx.userName || tx.userEmail}</small></td><td><b>{naira(tx.amount)}</b></td><td><span className={statusClass(tx.isFlagged ? 'flagged' : tx.status)}>{tx.isFlagged ? 'Flagged' : tx.status}</span></td><td><div className="admin-actions"><AdminButton onClick={() => void run(`/api/admin/transactions/${tx.id}/flag`, { method: 'POST', body: { flagged: !tx.isFlagged, reason: tx.isFlagged ? null : 'Flagged for admin review' } }, tx.isFlagged ? 'Flag removed.' : 'Transaction flagged.')}>{tx.isFlagged ? 'Unflag' : 'Flag'}</AdminButton>{tx.status === 'pending' && <><AdminButton variant="primary" onClick={() => void run(`/api/admin/transactions/${tx.id}/mark-success`, { method: 'POST' }, 'Transaction marked successful.')}>Mark success</AdminButton><AdminButton variant="danger" onClick={async () => { const reason = await prompt({ title: 'Refund this transaction', defaultValue: 'Reviewed and refunded by admin', placeholder: 'Refund reason', confirmLabel: 'Refund transaction', destructive: true }); if (reason) void run(`/api/admin/transactions/${tx.id}/mark-failed-refund`, { method: 'POST', body: { reason } }, 'Transaction failed and refunded.'); }}>Refund</AdminButton></>}</div></td></tr>)}</tbody></table></div></section><div className="admin-grid-two"><section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">SMS activity</span><h2>Recent activations</h2></div><Smartphone size={19} /></div><div className="admin-mini-list">{smsActivations.slice(0, 12).map((row) => <div key={row.id}><span><b>{row.userEmail}</b><small>{row.phoneNumber || row.number} · {row.service}</small></span><span className={statusClass(row.status)}>{row.status}</span></div>)}{!smsActivations.length && <div className="admin-empty">No SMS activations.</div>}</div></section><section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">Social fulfilment</span><h2>Recent social orders</h2></div><Zap size={19} /></div><div className="admin-mini-list">{socialOrders.slice(0, 12).map((row) => <div key={row.id}><span><b>{row.userEmail}</b><small>{row.service} · {row.reference}</small></span><span className={statusClass(row.status)}>{row.status}</span></div>)}{!socialOrders.length && <div className="admin-empty">No social orders.</div>}</div></section></div><section className="cp-card cp-card-pad admin-danger-zone"><div className="admin-card-title"><div><span className="cp-kicker">Restricted system actions</span><h2>Break-glass controls</h2><p>These actions permanently remove data. They are intentionally separate from routine operations and require a second confirmation.</p></div><AlertTriangle size={20} /></div><div className="admin-danger-actions"><AdminButton variant="danger" onClick={async () => { if (!await confirm({ title: 'Reset the entire system?', description: 'This will wipe every non-admin account, wallet, transaction, support chat, KYC record, and notification.', confirmLabel: 'Continue to reset', destructive: true })) return; const phrase = await prompt({ title: 'Confirm system reset', description: 'Type RESET_CIPHERPAY_SYSTEM exactly to continue.', placeholder: 'RESET_CIPHERPAY_SYSTEM', confirmLabel: 'Reset system', destructive: true }); if (phrase === 'RESET_CIPHERPAY_SYSTEM') void run('/api/admin/system/reset', { method: 'POST', headers: { 'x-reset-confirm': phrase } }, 'System reset completed. Admin data was preserved.'); }}>Reset entire system</AdminButton><AdminButton variant="danger" onClick={async () => { if (await confirm({ title: 'Purge completed withdrawals?', description: 'All successful and failed withdrawal records will be deleted. This cannot be undone.', confirmLabel: 'Purge withdrawals', destructive: true })) void run('/api/admin/withdrawals', { method: 'DELETE' }, 'Completed withdrawal records purged.'); }}>Purge completed withdrawals</AdminButton></div></section></section>}
+
+    {selectedUserDetails && <div className="admin-user-detail-backdrop" role="dialog" aria-modal="true" aria-label="User profile details">
+      <section className="admin-user-detail-drawer">
+        <div className="admin-user-detail-header">
+          <div className="admin-user-detail-identity">
+            <span className="admin-avatar admin-avatar-large">{String(selectedUserDetails.user.firstName?.[0] ?? '')}{String(selectedUserDetails.user.lastName?.[0] ?? '')}</span>
+            <div>
+              <span className="cp-kicker">CUSTOMER PROFILE · #{selectedUserDetails.user.id}</span>
+              <h2>{selectedUserDetails.user.firstName} {selectedUserDetails.user.lastName}</h2>
+              <p>{selectedUserDetails.user.email} · {selectedUserDetails.user.phone || 'No phone number'}</p>
+            </div>
+          </div>
+          <div className="admin-user-detail-header-actions">
+            <span className={statusClass(selectedUserDetails.user.isSuspended ? 'suspended' : selectedUserDetails.user.isVerified ? 'verified' : 'unverified')}>{selectedUserDetails.user.isSuspended ? 'Suspended' : selectedUserDetails.user.isVerified ? 'Verified' : 'Unverified'}</span>
+            <button type="button" className="admin-icon-close" onClick={() => setSelectedUserDetails(null)} aria-label="Close user details"><X size={19} /></button>
+          </div>
+        </div>
+
+        <div className="admin-user-detail-meta"><span>Created <b>{formatLagosWhen(selectedUserDetails.user.createdAt)}</b></span><span>Updated <b>{formatLagosWhen(selectedUserDetails.user.updatedAt)}</b></span><span>Console timezone <b>Africa/Lagos · WAT (UTC+1)</b></span></div>
+
+        <div className="admin-user-detail-body">
+          <section className="admin-user-detail-stats">
+            <StatCard icon={WalletCards} label="Available balance" value={naira(selectedUserDetails.wallet.balance)} detail={selectedUserDetails.wallet.currency} tone="green" />
+            <StatCard icon={CircleDollarSign} label="Ledger balance" value={naira(selectedUserDetails.wallet.ledgerBalance)} detail="Accounting balance" tone="purple" />
+            <StatCard icon={Database} label="Transactions" value={selectedUserDetails.activity.transactionCount} detail={`${selectedUserDetails.activity.successfulTransactions} successful`} tone="orange" />
+            <StatCard icon={ShieldCheck} label="Active sessions" value={selectedUserDetails.security.activeSessions} detail={`${selectedUserDetails.security.totalSessions} recorded`} tone="blue" />
+          </section>
+
+          <div className="admin-user-detail-grid">
+            <section className="cp-card cp-card-pad">
+              <div className="admin-card-title"><div><span className="cp-kicker">IDENTITY & ACCOUNT</span><h3>Account information</h3></div><UserCheck size={19} /></div>
+              <div className="admin-detail-facts">
+                <span><small>Full name</small><b>{selectedUserDetails.user.firstName} {selectedUserDetails.user.lastName}</b></span>
+                <span><small>Email</small><b>{selectedUserDetails.user.email}</b></span>
+                <span><small>Phone</small><b>{selectedUserDetails.user.phone || '—'}</b></span>
+                <span><small>Gender</small><b>{selectedUserDetails.user.gender || 'Not provided'}</b></span>
+                <span><small>Account number</small><b>{selectedUserDetails.user.accountNumber || '—'}</b></span>
+                <span><small>User code</small><b>{selectedUserDetails.user.userCode || '—'}</b></span>
+                <span><small>Referral code</small><b>{selectedUserDetails.user.referralCode || '—'}</b></span>
+                <span><small>Referred by</small><b>{selectedUserDetails.user.referredBy || 'Direct signup'}</b></span>
+                <span><small>KYC level</small><b>L{selectedUserDetails.user.kycLevel ?? 0}</b></span>
+                <span><small>Account status</small><b>{selectedUserDetails.user.isSuspended ? `Suspended · ${selectedUserDetails.user.suspendReason || 'No reason recorded'}` : 'Active'}</b></span>
+              </div>
+            </section>
+
+            <section className="cp-card cp-card-pad">
+              <div className="admin-card-title"><div><span className="cp-kicker">SECURITY & ACCESS</span><h3>Login intelligence</h3></div><ShieldCheck size={19} /></div>
+              <div className="admin-detail-facts">
+                <span><small>Last logged in / active</small><b>{formatLagosWhen(selectedUserDetails.security.lastLoggedInAt)}</b></span>
+                <span><small>Last IP address</small><b className="admin-mono">{selectedUserDetails.security.lastIpAddress || '—'}</b></span>
+                <span><small>Last device</small><b>{selectedUserDetails.security.lastDevice ? `${selectedUserDetails.security.lastDevice.deviceName} · ${selectedUserDetails.security.lastDevice.platform}` : '—'}</b></span>
+                <span><small>Known IPs</small><b>{selectedUserDetails.knownIps.length ? selectedUserDetails.knownIps.join(' · ') : 'No IP history recorded'}</b></span>
+                <span><small>Generated</small><b>{formatLagosWhen(selectedUserDetails.generatedAt)}</b></span>
+              </div>
+            </section>
+          </div>
+
+          <section className="cp-card cp-card-pad">
+            <div className="admin-card-title"><div><span className="cp-kicker">WALLET</span><h3>Financial snapshot</h3><p>Current balances plus the customer's recorded money movement totals.</p></div><WalletCards size={19} /></div>
+            <div className="admin-financial-strip">
+              <span><small>Available</small><b>{naira(selectedUserDetails.wallet.balance)}</b></span>
+              <span><small>Ledger</small><b>{naira(selectedUserDetails.wallet.ledgerBalance)}</b></span>
+              <span><small>Provider-held</small><b>{naira(selectedUserDetails.wallet.flwSubaccountBalance)}</b></span>
+              <span><small>Total incoming</small><b>{naira(selectedUserDetails.activity.totalIncoming)}</b></span>
+              <span><small>Total outgoing</small><b>{naira(selectedUserDetails.activity.totalOutgoing)}</b></span>
+              <span><small>Fees recorded</small><b>{naira(selectedUserDetails.activity.totalFees)}</b></span>
+            </div>
+          </section>
+
+          <section className="cp-card cp-card-pad">
+            <div className="admin-card-title"><div><span className="cp-kicker">DEVICES & LOCATIONS</span><h3>Session history</h3><p>IP-derived location is approximate. Timestamps are shown in Lagos time.</p></div><Smartphone size={19} /></div>
+            <div className="admin-session-list">
+              {selectedUserDetails.sessions.length ? selectedUserDetails.sessions.map((session: any) => <div className="admin-session-row" key={session.id}>
+                <div className="admin-session-icon"><Smartphone size={17} /></div>
+                <div className="admin-session-main"><b>{session.deviceName || 'Unknown device'}</b><span>{session.platform || 'Unknown platform'} · Session #{session.id}</span><span>{session.ipAddress || 'No IP recorded'}{session.location ? ` · ${[session.location.city, session.location.region, session.location.country].filter(Boolean).join(', ')}` : ''}</span></div>
+                <div className="admin-session-time"><span className={statusClass(session.revoked ? 'revoked' : 'active')}>{session.revoked ? 'Revoked' : 'Active'}</span><small>Last active<br />{formatLagosWhen(session.lastActiveAt)}</small><small>Started<br />{formatLagosWhen(session.createdAt)}</small></div>
+              </div>) : <div className="admin-empty"><Smartphone size={22} />No recorded sessions.</div>}
+            </div>
+          </section>
+
+          <section className="cp-card cp-card-pad">
+            <div className="admin-card-title"><div><span className="cp-kicker">TRANSACTION HISTORY</span><h3>Every recorded money movement</h3><p>Showing the latest {selectedUserDetails.transactions.length} transactions returned for this user.</p></div><Database size={19} /></div>
+            <div className="admin-table-wrap">
+              <table className="admin-table admin-user-transactions"><thead><tr><th>Time</th><th>Type / reference</th><th>Amount</th><th>Status</th><th>Balance</th><th>Review</th></tr></thead><tbody>
+                {selectedUserDetails.transactions.map((tx: any) => <tr key={tx.id}><td><small>{formatLagosWhen(tx.createdAt)}</small></td><td><b>{tx.type}</b><small>{tx.reference}<br />{tx.description}</small></td><td><b>{naira(tx.amount)}</b>{Number(tx.fee) > 0 && <small>Fee {naira(tx.fee)}</small>}</td><td><span className={statusClass(tx.isFlagged ? 'flagged' : tx.status)}>{tx.isFlagged ? 'Flagged' : tx.status}</span></td><td><small>Before {tx.balanceBefore == null ? '—' : naira(tx.balanceBefore)}<br />After {tx.balanceAfter == null ? '—' : naira(tx.balanceAfter)}</small></td><td>{tx.flagReason ? <small>{tx.flagReason}</small> : <small>—</small>}</td></tr>)}
+              </tbody></table>
+              {!selectedUserDetails.transactions.length && <div className="admin-empty">No transactions recorded for this user.</div>}
+            </div>
+          </section>
+
+          <div className="admin-user-detail-grid">
+            <section className="cp-card cp-card-pad">
+              <div className="admin-card-title"><div><span className="cp-kicker">VERIFICATION</span><h3>KYC record</h3></div><ClipboardCheck size={19} /></div>
+              {selectedUserDetails.kyc ? <div className="admin-detail-facts">
+                <span><small>Status</small><b>{selectedUserDetails.kyc.status}</b></span><span><small>Level</small><b>L{selectedUserDetails.kyc.level}</b></span>
+                <span><small>Document</small><b>{selectedUserDetails.kyc.documentType || '—'}</b></span><span><small>Document number</small><b>{selectedUserDetails.kyc.documentNumber || '—'}</b></span>
+                <span><small>BVN</small><b>{selectedUserDetails.kyc.bvn || '—'}</b></span><span><small>NIN</small><b>{selectedUserDetails.kyc.nin || '—'}</b></span>
+                <span><small>Date of birth</small><b>{selectedUserDetails.kyc.dateOfBirth || '—'}</b></span><span><small>Address</small><b>{selectedUserDetails.kyc.address || '—'}</b></span>
+                <span><small>Submitted</small><b>{formatLagosWhen(selectedUserDetails.kyc.submittedAt)}</b></span><span><small>Verified</small><b>{formatLagosWhen(selectedUserDetails.kyc.verifiedAt)}</b></span>
+              </div> : <div className="admin-empty">No KYC record found.</div>}
+            </section>
+
+            <section className="cp-card cp-card-pad">
+              <div className="admin-card-title"><div><span className="cp-kicker">ACCOUNT ACTIVITY</span><h3>Usage footprint</h3></div><ActivityIcon /></div>
+              <div className="admin-detail-facts">
+                <span><small>Notifications</small><b>{selectedUserDetails.activity.notifications}</b></span><span><small>Support conversations</small><b>{selectedUserDetails.activity.supportChats}</b></span>
+                <span><small>Social orders</small><b>{selectedUserDetails.activity.socialOrders}</b></span><span><small>SMS activations</small><b>{selectedUserDetails.activity.smsActivations}</b></span>
+                <span><small>Flagged transactions</small><b>{selectedUserDetails.activity.flaggedTransactions}</b></span><span><small>Successful transactions</small><b>{selectedUserDetails.activity.successfulTransactions}</b></span>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </div>}
   </main>;
 }
