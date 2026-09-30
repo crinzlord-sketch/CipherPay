@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type
 import { useAnimatedDialog } from '../components/animated-dialog';
 import { apiUrl, formatWhen } from './page-api';
 import './admin.css';
+import UserDetailView from './UserDetailView';
 
 type Tab = 'overview' | 'users' | 'admins' | 'support' | 'money' | 'verification' | 'activity' | 'services';
 type AdminOptions = { method?: string; body?: unknown; headers?: Record<string, string> };
@@ -107,6 +108,8 @@ export default function AdminConsole() {
   const [newAdmin, setNewAdmin] = useState({ email: '', password: '' });
   const [creatingAdmin, setCreatingAdmin] = useState(false);
   const [detailAction, setDetailAction] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [userDetailLoading, setUserDetailLoading] = useState(false);
 
   const loadAll = useCallback(async () => {
     if (!token) return;
@@ -266,6 +269,20 @@ export default function AdminConsole() {
       if (!(result.data ?? []).length) setNotice('No transaction matched that reference.');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Transactions could not be searched.');
+    }
+  };
+
+  const openUserDetail = async (user: any) => {
+    if (!token) return;
+    setUserDetailLoading(true);
+    setError('');
+    try {
+      const result = await adminRequest<any>(`/api/admin/users/${user.id}/details`, token);
+      setSelectedUser(result.data);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not load this user profile.');
+    } finally {
+      setUserDetailLoading(false);
     }
   };
 
@@ -572,7 +589,7 @@ export default function AdminConsole() {
        </section>
      </section>}
 
-     {tab === 'users' && <section className="admin-section"><section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">Account control</span><h2>Every registered user</h2><p>Suspend, verify, message, adjust wallets, clear PINs, reset activity, or remove accounts.</p></div><Users size={20} /></div><form className="admin-search" onSubmit={searchUsers}><Search size={17} /><input value={userQuery} onChange={(event) => setUserQuery(event.target.value)} placeholder="Search name, email, or phone" /><button type="submit">Search</button></form><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>User</th><th>Status</th><th>Wallet</th><th>Joined</th><th>Actions</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td><div className="admin-user-cell"><span className="admin-avatar">{String(user.firstName?.[0] ?? '')}{String(user.lastName?.[0] ?? '')}</span><span><button type="button" className="admin-user-name-button" onClick={() => void openUserDetails(user)}><b>{user.firstName} {user.lastName}</b></button><small>{user.email}<br />{user.phone}</small></span></div></td><td><span className={statusClass(user.isSuspended ? 'suspended' : user.isVerified ? 'verified' : 'unverified')}>{user.isSuspended ? 'Suspended' : user.isVerified ? 'Verified' : 'Unverified'}</span><small className="admin-muted">KYC L{user.kycLevel ?? 0}</small></td><td><b>{naira(user.balance)}</b></td><td><small>{formatWhen(user.createdAt)}</small></td><td><div className="admin-action-grid"><AdminButton variant="primary" onClick={() => void openUserDetails(user)}><FileText size={13} /> View profile</AdminButton><AdminButton onClick={() => void userAction(user, 'adjust')}>Adjust wallet</AdminButton><AdminButton onClick={() => void userAction(user, 'set-balance')}>Set balance</AdminButton><AdminButton onClick={() => void userAction(user, 'debit-to-admin')}>Debit → admin</AdminButton><AdminButton onClick={() => void userAction(user, 'kyc')}>Set KYC</AdminButton><AdminButton onClick={() => void userAction(user, 'notify')}><MessageCircle size={13} /> Notify</AdminButton><AdminButton onClick={() => void userAction(user, 'email')}><Mail size={13} /> Email</AdminButton><AdminButton onClick={() => void userAction(user, 'suspend')} variant={user.isSuspended ? 'primary' : 'soft'}>{user.isSuspended ? <><UserCheck size={13} /> Restore</> : <><Ban size={13} /> Suspend</>}</AdminButton><AdminButton onClick={() => void userAction(user, 'verify')}><Check size={13} /> {user.isVerified ? 'Unverify' : 'Verify'}</AdminButton><AdminButton onClick={() => void userAction(user, 'pin')}><ShieldCheck size={13} /> Clear PIN</AdminButton><AdminButton onClick={() => void userAction(user, 'activity')} variant="danger"><RefreshCw size={13} /> Reset activity</AdminButton>{user.isAdmin ? <span className="admin-protected-label">Admin · protected</span> : <AdminButton onClick={() => void userAction(user, 'delete')} variant="danger"><Trash2 size={13} /> Delete</AdminButton>}</div></td></tr>)}</tbody></table>{!users.length && <div className="admin-empty"><Users size={22} />No users match this search.</div>}</div></section></section>}
+     {tab === 'users' && <section className="admin-section">{selectedUser ? <UserDetailView detail={selectedUser} loading={userDetailLoading} onBack={() => setSelectedUser(null)} onRefresh={() => void openUserDetail(selectedUser.user)} /> : <section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">Account control</span><h2>Every registered user</h2><p>Click any customer name to open their complete account, security, device, location, wallet, and activity profile.</p></div><Users size={20} /></div><form className="admin-search" onSubmit={searchUsers}><Search size={17} /><input value={userQuery} onChange={(event) => setUserQuery(event.target.value)} placeholder="Search name, email, or phone" /><button type="submit">Search</button></form><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>User</th><th>Status</th><th>Wallet</th><th>Joined</th><th>Actions</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td><div className="admin-user-cell"><span className="admin-avatar">{String(user.firstName?.[0] ?? '')}{String(user.lastName?.[0] ?? '')}</span><span><button type="button" className="admin-user-name-button" onClick={() => void openUserDetails(user)}><b>{user.firstName} {user.lastName}</b></button><small>{user.email}<br />{user.phone}</small></span></div></td><td><span className={statusClass(user.isSuspended ? 'suspended' : user.isVerified ? 'verified' : 'unverified')}>{user.isSuspended ? 'Suspended' : user.isVerified ? 'Verified' : 'Unverified'}</span><small className="admin-muted">KYC L{user.kycLevel ?? 0}</small></td><td><b>{naira(user.balance)}</b></td><td><small>{formatWhen(user.createdAt)}</small></td><td><div className="admin-action-grid"><AdminButton variant="primary" onClick={() => void openUserDetails(user)}><FileText size={13} /> View profile</AdminButton><AdminButton onClick={() => void userAction(user, 'adjust')}>Adjust wallet</AdminButton><AdminButton onClick={() => void userAction(user, 'set-balance')}>Set balance</AdminButton><AdminButton onClick={() => void userAction(user, 'debit-to-admin')}>Debit → admin</AdminButton><AdminButton onClick={() => void userAction(user, 'kyc')}>Set KYC</AdminButton><AdminButton onClick={() => void userAction(user, 'notify')}><MessageCircle size={13} /> Notify</AdminButton><AdminButton onClick={() => void userAction(user, 'email')}><Mail size={13} /> Email</AdminButton><AdminButton onClick={() => void userAction(user, 'suspend')} variant={user.isSuspended ? 'primary' : 'soft'}>{user.isSuspended ? <><UserCheck size={13} /> Restore</> : <><Ban size={13} /> Suspend</>}</AdminButton><AdminButton onClick={() => void userAction(user, 'verify')}><Check size={13} /> {user.isVerified ? 'Unverify' : 'Verify'}</AdminButton><AdminButton onClick={() => void userAction(user, 'pin')}><ShieldCheck size={13} /> Clear PIN</AdminButton><AdminButton onClick={() => void userAction(user, 'activity')} variant="danger"><RefreshCw size={13} /> Reset activity</AdminButton>{user.isAdmin ? <span className="admin-protected-label">Admin · protected</span> : <AdminButton onClick={() => void userAction(user, 'delete')} variant="danger"><Trash2 size={13} /> Delete</AdminButton>}</div></td></tr>)}</tbody></table>{!users.length && <div className="admin-empty"><Users size={22} />No users match this search.</div>}</div></section>}</section>}
 
     {tab === 'money' && <section className="admin-section">
       <div className="admin-money-hero">
