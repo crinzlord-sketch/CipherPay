@@ -455,3 +455,34 @@
   .admin-session-meta{grid-column:2;text-align:left;min-width:0}
   .admin-user-hero-main{align-items:flex-start}
 }
+
+
+.admin-live-transactions .admin-card-title { align-items: flex-start; }
+.admin-live-status { display: flex; align-items: center; gap: 7px; color: var(--cp-muted); font-size: .7rem; white-space: nowrap; }
+.admin-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #28a745; box-shadow: 0 0 0 4px rgba(40,167,69,.12); }
+.admin-transaction-filters { display: grid; grid-template-columns: minmax(280px, 1fr) 160px 190px; gap: 9px; margin: 16px 0; }
+.admin-transaction-filters select { min-height: 39px; padding: 0 11px; border: 1px solid var(--cp-line); border-radius: 10px; background: hsl(var(--background)); color: var(--cp-ink); font-size: .76rem; }
+.admin-live-transaction-table td { vertical-align: top; }
+.admin-live-transaction-table td small { display: block; line-height: 1.45; }
+.admin-live-transaction-table td:nth-child(1) { min-width: 155px; }
+.admin-live-transaction-table td:nth-child(2) { min-width: 175px; }
+.admin-live-transaction-table td:nth-child(3) { min-width: 205px; }
+.admin-live-transaction-table td:nth-child(6) { min-width: 125px; }
+.admin-time-note { margin: 12px 0 0; color: var(--cp-muted); font-size: .68rem; }
+.admin-transaction-detail { display: grid; gap: 18px; }
+.admin-transaction-detail-hero { display: grid; gap: 7px; padding: 16px; border: 1px solid var(--cp-line); border-radius: 12px; background: hsl(var(--muted) / .5); }
+.admin-transaction-detail-hero strong { font-size: 1.5rem; color: var(--cp-ink); }
+.admin-transaction-detail-hero small { color: var(--cp-muted); }
+.admin-transaction-description { padding: 13px; border: 1px solid var(--cp-line); border-radius: 11px; }
+.admin-transaction-description small { color: var(--cp-muted); text-transform: uppercase; letter-spacing: .05em; font-size: .65rem; }
+.admin-transaction-description p { margin: 6px 0 0; color: var(--cp-ink); font-size: .8rem; line-height: 1.5; }
+@media (max-width: 850px) {
+  .admin-live-status { flex-wrap: wrap; justify-content: flex-end; white-space: normal; }
+  .admin-transaction-filters { grid-template-columns: 1fr 1fr; }
+  .admin-transaction-filters .admin-search { grid-column: 1 / -1; }
+}
+@media (max-width: 560px) {
+  .admin-transaction-filters { grid-template-columns: 1fr; }
+  .admin-transaction-filters .admin-search { grid-column: auto; }
+  .admin-live-status { justify-content: flex-start; }
+}
