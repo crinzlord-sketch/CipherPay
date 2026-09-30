@@ -17,6 +17,7 @@ import SocialBoostPage from './pages/SocialBoostPage';
 import EmailProPage from './pages/EmailProPage';
 import BillsPage from './pages/BillsPage';
 import { apiRequest, apiUrl } from './pages/page-api';
+import { CipherAvatar } from './components/CipherAvatar';
 import {
   useBuyAirtime, useBuyData, useBuySmsNumber, useChangePassword, useFundWallet,
   useFundWalletBankTransfer, useGetDashboardSummary, useGetKycStatus, useGetMe,
@@ -190,7 +191,7 @@ function Shell({ children }: { children: ReactNode }) {
       <div className="sidebar-bottom">
         {user && <div className="user-menu-wrap">
           <button className="user-row" onClick={() => setUserMenuOpen((open) => !open)} aria-expanded={userMenuOpen} aria-haspopup="menu" data-testid="button-user-menu">
-            <span className="avatar">{initials}</span><span className="user-copy"><b>{user.firstName} {user.lastName}</b><small>{user.email}</small></span><MoreHorizontal size={17} />
+            <CipherAvatar src={user.avatarUrl} seed={user.id || user.email} gender={user.gender} size={38} alt="" /><span className="user-copy"><b>{user.firstName} {user.lastName}</b><small>{user.email}</small></span><MoreHorizontal size={17} />
           </button>
           {userMenuOpen && <div className="user-menu" role="menu" aria-label="Account menu">
             <button type="button" className="user-menu-item" role="menuitem" onClick={() => { setUserMenuOpen(false); setLocation('/profile'); }} data-testid="button-user-profile"><UserRound size={16} /><span>Profile</span></button>
@@ -631,6 +632,7 @@ function Register() {
   const [, setLocation] = useLocation();
   const mutation = useRegister();
   const [form, setForm] = useState({ firstName: '', lastName: '', email: authDraft.email, phone: '', password: authDraft.password, confirmPassword: '' });
+  const [gender, setGender] = useState<'male' | 'female'>('male');
   const [activeField, setActiveField] = useState<'name' | 'email' | 'password' | 'idle'>('idle');
   const [gaze, setGaze] = useState<BuddyGaze>({ x: 0, y: 3 });
   const [typing, setTyping] = useState(false);
@@ -667,6 +669,7 @@ function Register() {
         email: form.email,
         phone: form.phone,
         password: form.password,
+        gender,
       },
     }, {
       onSuccess: (result: any) => {
@@ -684,7 +687,7 @@ function Register() {
        onError: (reason: any) => { setFaceMood('error'); setFaceReaction((value) => value + 1); setError(reason?.message ?? 'We could not create your account. Please review your details.'); },
     });
   };
-  return <AuthLayout title="Start with CipherPay." detail="A calmer way to manage your day-to-day."><form className="auth-form" onSubmit={submit}><AuthBuddy key={`register-buddy-${faceReaction}`} field={activeField} hasText={Boolean(form.firstName || form.lastName || form.email || form.password || form.confirmPassword)} gaze={gaze} typing={typing} mood={faceMood} buddyRef={buddyRef} /><div className="field-row"><Field label="First name" placeholder="Ada" value={form.firstName} onFocus={(event: any) => { setActiveField('name'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('firstName')} required data-testid="input-first-name" /><Field label="Last name" placeholder="Okafor" value={form.lastName} onFocus={(event: any) => { setActiveField('name'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('lastName')} required data-testid="input-last-name" /></div><Field label="Email address" type="email" autoComplete="username" placeholder="you@example.com" value={form.email} onFocus={(event: any) => { setActiveField('email'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('email')} required data-testid="input-email" /><Field label="Phone number" type="tel" placeholder="Your phone number" value={form.phone} onChange={update('phone')} required data-testid="input-phone" /><label className="field"><span>Create password</span><div className="password-wrap"><input type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="At least 6 characters" value={form.password} onFocus={(event: any) => { setActiveField('password'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('password')} required minLength={6} data-testid="input-password" /><button type="button" className="password-toggle" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} data-testid="button-toggle-password">{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label><label className="field"><span>Confirm password</span><div className="password-wrap"><input type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="Repeat your password" value={form.confirmPassword} onFocus={(event: any) => { setActiveField('password'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('confirmPassword')} required minLength={6} data-testid="input-confirm-password" /><button type="button" className="password-toggle" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} data-testid="button-toggle-confirm-password">{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>{error && <div className="error-box">{error}</div>}<Button type="submit" className="full-btn" disabled={mutation.isPending} data-testid="button-register">{mutation.isPending ? 'Creating account…' : 'Create account'} <ArrowRight size={17} /></Button></form><p className="auth-switch">Already have an account? <Link href="/login" className="text-link" data-testid="link-login">Sign in</Link></p></AuthLayout>;
+  return <AuthLayout title="Start with CipherPay." detail="A calmer way to manage your day-to-day."><form className="auth-form" onSubmit={submit}><AuthBuddy key={`register-buddy-${faceReaction}`} field={activeField} hasText={Boolean(form.firstName || form.lastName || form.email || form.password || form.confirmPassword)} gaze={gaze} typing={typing} mood={faceMood} buddyRef={buddyRef} /><div className="field-row"><Field label="First name" placeholder="Ada" value={form.firstName} onFocus={(event: any) => { setActiveField('name'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('firstName')} required data-testid="input-first-name" /><Field label="Last name" placeholder="Okafor" value={form.lastName} onFocus={(event: any) => { setActiveField('name'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('lastName')} required data-testid="input-last-name" /></div><Field label="Email address" type="email" autoComplete="username" placeholder="you@example.com" value={form.email} onFocus={(event: any) => { setActiveField('email'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('email')} required data-testid="input-email" /><Field label="Phone number" type="tel" placeholder="Your phone number" value={form.phone} onChange={update('phone')} required data-testid="input-phone" /><label className="field"><span>Avatar style</span><select value={gender} onChange={(event) => setGender(event.target.value as 'male' | 'female')} data-testid="select-avatar-gender"><option value="male">Male</option><option value="female">Female</option></select></label><label className="field"><span>Create password</span><div className="password-wrap"><input type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="At least 6 characters" value={form.password} onFocus={(event: any) => { setActiveField('password'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('password')} required minLength={6} data-testid="input-password" /><button type="button" className="password-toggle" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} data-testid="button-toggle-password">{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label><label className="field"><span>Confirm password</span><div className="password-wrap"><input type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="Repeat your password" value={form.confirmPassword} onFocus={(event: any) => { setActiveField('password'); updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze); }} onSelect={(event: any) => updateBuddyGaze(event.currentTarget, buddyRef.current, setGaze)} onChange={update('confirmPassword')} required minLength={6} data-testid="input-confirm-password" /><button type="button" className="password-toggle" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} data-testid="button-toggle-confirm-password">{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>{error && <div className="error-box">{error}</div>}<Button type="submit" className="full-btn" disabled={mutation.isPending} data-testid="button-register">{mutation.isPending ? 'Creating account…' : 'Create account'} <ArrowRight size={17} /></Button></form><p className="auth-switch">Already have an account? <Link href="/login" className="text-link" data-testid="link-login">Sign in</Link></p></AuthLayout>;
 }
 
 function Dashboard() {
@@ -1019,6 +1022,9 @@ function Send() {
   const [result, setResult] = useState<any>(null);
   const [resultStatus, setResultStatus] = useState<'pending' | 'success' | 'failed'>('pending');
   const [error, setError] = useState('');
+  const [recipient, setRecipient] = useState<any>(null);
+  const [recipientChecking, setRecipientChecking] = useState(false);
+  const recipientTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (mode !== 'bank' || banks.length) return;
@@ -1065,6 +1071,22 @@ function Send() {
       setResolving(false);
     }
   };
+
+  useEffect(() => {
+    if (mode !== 'cipherpay') return;
+    const email = form.recipientEmail.trim().toLowerCase();
+    setRecipient(null);
+    if (!email || !email.includes('@')) { setRecipientChecking(false); return; }
+    if (recipientTimer.current) clearTimeout(recipientTimer.current);
+    setRecipientChecking(true);
+    recipientTimer.current = setTimeout(() => {
+      void apiRequest<any>(`/api/users/lookup-email?email=${encodeURIComponent(email)}`)
+        .then((value) => setRecipient(value))
+        .catch(() => setRecipient(null))
+        .finally(() => setRecipientChecking(false));
+    }, 450);
+    return () => { if (recipientTimer.current) clearTimeout(recipientTimer.current); };
+  }, [form.recipientEmail, mode]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -1156,6 +1178,9 @@ function Send() {
           <>
             <div className="form-section-title"><span className="step">01</span><div><h2>Who are you sending to?</h2><p>Use their CipherPay email address.</p></div></div><div style={{marginBottom:14,fontSize:12,color:'var(--muted-foreground, #737373)'}}>Minimum transfer: <b>₦100</b>. A small transfer fee is added to the sender's debit.</div>
             <Field label="Recipient email" type="email" placeholder="friend@example.com" value={form.recipientEmail} onChange={(event: any) => setForm({ ...form, recipientEmail: event.target.value })} required data-testid="input-recipient-email" />
+            {(recipientChecking || recipient) && <div className="recipient-preview">
+              {recipient ? <><CipherAvatar src={recipient.avatarUrl} seed={recipient.id || recipient.email} gender={recipient.gender} size={52} alt="" /><div><b>{recipient.firstName} {recipient.lastName}</b><small>{recipient.email}{recipient.isSelf ? ' · This is you' : ' · CipherPay user'}</small></div><span className="recipient-verified">Verified</span></> : <div className="recipient-checking">Checking CipherPay account…</div>}
+            </div>}
           </>
         ) : (
           <>
