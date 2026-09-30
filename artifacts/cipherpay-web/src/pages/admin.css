@@ -270,3 +270,24 @@
     flex-direction: column;
   }
 }
+
+/* Clear active state for the admin navigation so the current area never blends into the rest. */
+.admin-tabs button.admin-tab { transition: background-color .16s ease, color .16s ease, box-shadow .16s ease, border-color .16s ease; }
+.admin-tabs button.admin-tab.active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow: 0 4px 12px hsl(var(--primary) / .22);
+  font-weight: 800;
+}
+.admin-tabs button.admin-tab.active::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: .8;
+}
+.admin-tabs button.admin-tab:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
