@@ -622,54 +622,90 @@ router.get("/wallet/stats", async (req, res): Promise<void> => {
       or(eq(transactionsTable.status, "success"), eq(transactionsTable.status, "pending")),
     ));
 
-  let totalFunded = 0, totalSpent = 0, totalWithdrawn = 0, totalTransfers = 0, monthlySpend = 0;
+  let totalFunded = 0, totalSpent = 0, totalWithdrawn = 0, totalTransfers = 0;
   const categoryMap: Record<string, { amount: number; count: number }> = {};
   const now = new Date();
+  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekStart = new Date(dayStart);
+  const dayOfWeek = weekStart.getDay();
+  weekStart.setDate(weekStart.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const yearStart = new Date(now.getFullYear(), 0, 1);
+
+  const isSpend = (tx: any) => !["fund", "withdraw", "transfer_in", "refund", "admin_credit"].includes(String(tx.type));
+  const spendAmount = (tx: any) => isSpend(tx) ? Math.max(0, parseFloat(tx.amount) || 0) : 0;
+
+  let todaySpend = 0, weeklySpend = 0, monthlySpend = 0, yearlySpend = 0;
 
   for (const tx of transactions) {
-    const amt = parseFloat(tx.amount);
-    if (tx.type === "fund") { totalFunded += amt; }
-    else if (tx.type === "withdraw" && tx.status !== "failed") { totalWithdrawn += amt; }
-    else if (tx.type === "transfer_out") { totalTransfers += amt; }
-    else if (tx.type === "transfer_in" || tx.type === "refund" || tx.type === "admin_credit") {
-      // inbound / neutral — not counted as spending
-    } else {
-      totalSpent += amt;
+    const amt = Math.max(0, parseFloat(tx.amount) || 0);
+    if (tx.type === "fund") totalFunded += amt;
+    else if (tx.type === "withdraw" && tx.status !== "failed") totalWithdrawn += amt;
+    else if (tx.type === "transfer_out") totalTransfers += amt;
+
+    const spent = spendAmount(tx);
+    if (spent > 0) {
+      totalSpent += spent;
       if (!categoryMap[tx.type]) categoryMap[tx.type] = { amount: 0, count: 0 };
-      categoryMap[tx.type].amount += amt;
+      categoryMap[tx.type].amount += spent;
       categoryMap[tx.type].count++;
-      if (tx.createdAt >= monthStart) monthlySpend += amt;
+      if (tx.createdAt >= dayStart) todaySpend += spent;
+      if (tx.createdAt >= weekStart) weeklySpend += spent;
+      if (tx.createdAt >= monthStart) monthlySpend += spent;
+      if (tx.createdAt >= yearStart) yearlySpend += spent;
     }
   }
 
-  const categoryBreakdown = Object.entries(categoryMap).map(([category, data]) => ({
-    category, amount: data.amount, count: data.count,
-  }));
+  const categoryBreakdown = Object.entries(categoryMap)
+    .map(([category, data]) => ({ category, amount: data.amount, count: data.count }))
+    .sort((a, b) => b.amount - a.amount);
 
-  // Monthly breakdown — last 6 months including current
+  const daily: { label: string; date: string; spent: number }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(dayStart);
+    d.setDate(dayStart.getDate() - i);
+    const next = new Date(d);
+    next.setDate(d.getDate() + 1);
+    daily.push({
+      label: d.toLocaleString("en", { weekday: "short" }),
+      date: d.toISOString().slice(0, 10),
+      spent: transactions.reduce((sum, tx) => sum + (tx.createdAt >= d && tx.createdAt < next ? spendAmount(tx) : 0), 0),
+    });
+  }
+
+  const weekly: { label: string; start: string; spent: number }[] = [];
+  for (let i = 7; i >= 0; i--) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() - i * 7);
+    const next = new Date(d);
+    next.setDate(d.getDate() + 7);
+    weekly.push({
+      label: i === 0 ? "This week" : d.toLocaleString("en", { month: "short", day: "numeric" }),
+      start: d.toISOString().slice(0, 10),
+      spent: transactions.reduce((sum, tx) => sum + (tx.createdAt >= d && tx.createdAt < next ? spendAmount(tx) : 0), 0),
+    });
+  }
+
   const monthly: { month: string; year: number; spent: number; received: number }[] = [];
-  for (let i = 5; i >= 0; i--) {
+  for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
-    const monthLabel = d.toLocaleString("en", { month: "short" });
     let mSpent = 0, mReceived = 0;
     for (const tx of transactions) {
       if (tx.createdAt >= d && tx.createdAt < next) {
-        const amt = parseFloat(tx.amount);
-        if (tx.type === "fund" || tx.type === "transfer_in" || tx.type === "admin_credit") {
-          mReceived += amt;
-        } else if (tx.type === "refund") {
-          // refunds are neutral — skip both buckets
-        } else {
-          mSpent += amt;
-        }
+        const amt = Math.max(0, parseFloat(tx.amount) || 0);
+        if (tx.type === "fund" || tx.type === "transfer_in" || tx.type === "admin_credit") mReceived += amt;
+        else mSpent += spendAmount(tx);
       }
     }
-    monthly.push({ month: monthLabel, year: d.getFullYear(), spent: mSpent, received: mReceived });
+    monthly.push({ month: d.toLocaleString("en", { month: "short" }), year: d.getFullYear(), spent: mSpent, received: mReceived });
   }
 
-  res.json({ totalFunded, totalSpent, totalWithdrawn, totalTransfers, monthlySpend, categoryBreakdown, monthly });
+  res.json({
+    totalFunded, totalSpent, totalWithdrawn, totalTransfers,
+    todaySpend, weeklySpend, monthlySpend, yearlySpend,
+    categoryBreakdown, daily, weekly, monthly,
+  });
 });
 
 router.get("/transactions", async (req, res): Promise<void> => {
