@@ -12,6 +12,7 @@ import supportRouter from "./support";
 import adsRouter from "./ads";
 import temporaryEmailRouter from "./temporary-email";
 import emailRouter from "./email";
+import chatRouter from "./chat";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(supportRouter);
 router.use(adsRouter);
 router.use(temporaryEmailRouter);
 router.use(emailRouter);
+router.use(chatRouter);
 
 export default router;
