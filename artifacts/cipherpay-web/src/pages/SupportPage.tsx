@@ -46,7 +46,7 @@ export function SupportPage() {
     setFaqError('');
     try {
       const result = await apiRequest<{ items: FaqItem[] }>('/api/support/faq');
-      setFaq(result.items ?? []);
+      setFaq(Array.isArray(result.items) ? result.items : []);
     } catch (caught) {
       setFaqError(caught instanceof Error ? caught.message : 'Frequently asked questions are unavailable.');
     } finally {
@@ -59,8 +59,8 @@ export function SupportPage() {
     setChatError('');
     try {
       const result = await apiRequest<ChatResponse>('/api/support/chat');
-      setChat(result.chat ?? null);
-      setMessages(mergeMessages([], Array.isArray(result.messages) ? result.messages : []));
+      setChat(result?.chat ?? null);
+      setMessages(mergeMessages([], Array.isArray(result?.messages) ? result.messages : []));
     } catch (caught) {
       setChatError(caught instanceof Error ? caught.message : 'Your support chat could not be loaded.');
     } finally {
@@ -71,7 +71,7 @@ export function SupportPage() {
   const loadHistory = async () => {
     try {
       const result = await apiRequest<{ data: HistoryItem[] }>('/api/support/history');
-      setHistory((result.data ?? []).map((item) => ({ ...item, messages: Array.isArray(item.messages) ? item.messages : [] })));
+      setHistory(Array.isArray(result.data) ? result.data.map((item) => ({ ...item, messages: Array.isArray(item.messages) ? item.messages : [] })) : []);
     } catch {
       // History is secondary to the active support desk; keep the chat usable.
     }
@@ -91,7 +91,7 @@ export function SupportPage() {
         const query = last ? `?since=${encodeURIComponent(String(last.id))}` : '';
         const result = await apiRequest<ChatResponse>(`/api/support/chat/${chat.id}/poll${query}`);
         setChat(result.chat);
-        setMessages((current) => mergeMessages(current, Array.isArray(result.messages) ? result.messages : []));
+        setMessages((current) => mergeMessages(current, Array.isArray(result?.messages) ? result.messages : []));
         setNetworkError('');
       } catch (caught) {
         setNetworkError(caught instanceof Error ? caught.message : 'We could not refresh the chat. Your message is safe.');
