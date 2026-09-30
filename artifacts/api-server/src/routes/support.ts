@@ -24,7 +24,7 @@ import { sendMail, sendAdminAlertEmail, isEmailConfigured } from "../lib/email";
 import { getBotReply, WELCOME_MESSAGE } from "../lib/support-bot";
 import { notifyUser } from "../lib/notifications";
 
-const SUPPORT_INBOX = process.env.SUPPORT_INBOX_EMAIL ?? "gglteam.2025@gmail.com";
+const SUPPORT_INBOX = process.env.SUPPORT_INBOX_EMAIL?.trim() ?? "";
 
 // Chats are historical records. Closing a conversation only changes its status;
 // messages and attachments must remain available to the user and support team.
@@ -96,7 +96,7 @@ router.post("/support/contact", async (req, res): Promise<void> => {
     const [u] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
     if (u) { userInfo = `${u.firstName} ${u.lastName} (#${u.id}) — ${u.email} — KYC Level ${u.kycLevel}`; replyEmail = u.email; }
   }
-  if (!isEmailConfigured()) { res.status(503).json({ error: "Email service not configured. Please email gglteam.2025@gmail.com directly." }); return; }
+
   const safeMessage = String(message).replace(/[<>]/g, (c) => ({ "<": "&lt;", ">": "&gt;" }[c] ?? c));
   const html = `<div style="font-family:-apple-system,sans-serif;max-width:560px;padding:24px;background:#15162a;color:#e7e7f0;border-radius:14px"><h2 style="color:#a78bfa">New CipherPay Support Request</h2><p style="color:#8b8c9e">Category: <strong style="color:#fff">${category ?? "general"}</strong></p><div style="background:#0b0c1a;border:1px solid #2a2b45;border-radius:10px;padding:14px;margin-bottom:14px"><div style="color:#8b8c9e;font-size:11px;text-transform:uppercase;letter-spacing:1px">From</div><div style="color:#fff">${userInfo}</div></div><div style="background:#0b0c1a;border:1px solid #2a2b45;border-radius:10px;padding:14px;margin-bottom:14px"><div style="color:#8b8c9e;font-size:11px;text-transform:uppercase;letter-spacing:1px">Subject</div><div style="color:#fff">${String(subject).replace(/[<>]/g, "")}</div></div><div style="background:#0b0c1a;border:1px solid #2a2b45;border-radius:10px;padding:14px"><div style="color:#8b8c9e;font-size:11px;text-transform:uppercase;letter-spacing:1px">Message</div><div style="color:#fff;white-space:pre-wrap">${safeMessage}</div></div></div>`;
   // Store an unread admin alert first so support requests are not lost if
@@ -114,7 +114,7 @@ router.post("/support/contact", async (req, res): Promise<void> => {
   // Email is best-effort. A Brevo suspension must not make the user's support
   // request disappear; the admin console notification remains available.
   try {
-    if (isEmailConfigured()) {
+    if (isEmailConfigured() && SUPPORT_INBOX) {
       await sendAdminAlertEmail(
         "New support request",
         `Category: ${category ?? "general"}\n\nFrom: ${userInfo}\n\nSubject: ${subject}\n\n${message}`,
