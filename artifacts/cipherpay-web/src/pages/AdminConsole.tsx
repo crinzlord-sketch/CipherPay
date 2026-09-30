@@ -503,7 +503,7 @@ export default function AdminConsole() {
         : key === 'support'
           ? Math.max(adminAlertCounts.support, supportChats.filter((chat) => chat.unreadForAdmin > 0).length)
           : 0;
-      return <button type="button" key={key} className="admin-tab" onClick={() => setTab(key)}><Icon size={16} />{label}{unread > 0 && <span className="admin-tab-unread" aria-label={`${unread} unread`}>{unread > 99 ? '99+' : unread}</span>}</button>;
+      return <button type="button" key={key} className={`admin-tab ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}><Icon size={16} />{label}{unread > 0 && <span className="admin-tab-unread" aria-label={`${unread} unread`}>{unread > 99 ? '99+' : unread}</span>}</button>;
     })}</nav>
 
     {tab === 'overview' && <section className="admin-section">
