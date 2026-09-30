@@ -447,6 +447,7 @@ router.post("/wallet/withdraw", async (req, res): Promise<void> => {
   if (user.isSuspended) { res.status(403).json({ error: "Account is suspended. Contact support." }); return; }
 
   const { amount, bankCode, accountNumber, accountName, narration } = parsed.data;
+  const bankName = String(req.body?.bankName ?? "").trim();
   const pinError = await requireTransferPin(userId, req.body?.pin);
   if (pinError) { res.status(401).json({ error: pinError, code: "TRANSFER_PIN_REQUIRED" }); return; }
   const fee = withdrawalFee(amount);
@@ -461,7 +462,7 @@ router.post("/wallet/withdraw", async (req, res): Promise<void> => {
   let tx;
   try {
     ({ tx } = await debitWallet(userId, amount + fee, `Withdrawal to ${accountName} (${accountNumber})${narration ? ` - ${narration}` : ""}`, "withdraw", {
-      bankCode, accountNumber, accountName, fee, requestedAt: new Date().toISOString(),
+      bankCode, bankName, accountNumber, accountName, fee, requestedAt: new Date().toISOString(),
     }));
   } catch (e: any) {
     res.status(400).json({ error: e.message });
@@ -529,7 +530,7 @@ router.post("/wallet/withdraw", async (req, res): Promise<void> => {
   // so the webhook knows whether to restore flwSubaccountBalance on failure.
   await db.update(transactionsTable).set({
     metadata: JSON.stringify({
-      bankCode, accountNumber, accountName, fee,
+      bankCode, bankName, accountNumber, accountName, fee,
       reference: tx.reference, flwTransferId: transfer.id, payoutMethod: "flutterwave",
       requestedAt: new Date().toISOString(),
       payoutSource: "flutterwave_psa",
