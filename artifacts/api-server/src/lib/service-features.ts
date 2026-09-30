@@ -4,7 +4,6 @@ import { db, appSettingsTable } from "@workspace/db";
 export const SERVICE_FEATURES = [
   { key: "transfers", label: "Transfers", description: "Send money to CipherPay users or external bank accounts." },
   { key: "wallet_funding", label: "Wallet funding", description: "Add money to a CipherPay wallet." },
-  { key: "withdrawals", label: "Withdrawals", description: "Withdraw wallet funds to a bank account." },
   { key: "airtime", label: "Airtime", description: "Buy airtime for supported networks." },
   { key: "data", label: "Data", description: "Buy mobile data plans." },
   { key: "bills", label: "Bills", description: "Pay electricity and other supported bills." },
