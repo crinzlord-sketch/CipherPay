@@ -64,56 +64,27 @@ router.post("/kyc/submit", async (req, res): Promise<void> => {
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   const body = (req.body ?? {}) as Record<string, any>;
-  const requestedType = String(body.verificationType ?? "").trim().toLowerCase();
-  if (requestedType !== "basic" && requestedType !== "advanced") {
-    res.status(400).json({ error: "Choose Basic or Advanced verification." }); return;
-  }
-  const verificationType = requestedType as "basic" | "advanced";
-  const documentType = String(body.documentType ?? "").trim() as DocType;
+  const verificationType = "basic" as const;
+  const documentType = "nin" as DocType;
   if (!VALID_DOC_TYPES.includes(documentType)) {
     res.status(400).json({ error: "Please choose a document type." }); return;
   }
-  const isBasic = verificationType === "basic";
-  if (isBasic && documentType !== "bvn" && documentType !== "nin") {
-    res.status(400).json({ error: "Basic verification uses BVN or NIN. Choose Advanced for a photo ID." }); return;
-  }
-  if (!isBasic && (documentType === "bvn" || documentType === "nin")) {
-    res.status(400).json({ error: "Advanced verification needs a photo ID such as a passport or driver's licence." }); return;
-  }
-
-  const documentNumber: string = String(body.documentNumber ?? body.bvn ?? body.nin ?? "").trim();
+  const documentNumber: string = String(body.documentNumber ?? body.nin ?? "").trim();
   const fullName: string = String(body.fullName ?? "").trim();
   const dateOfBirth: string = String(body.dateOfBirth ?? "").trim();
   const address: string = String(body.address ?? "").trim();
-
-  if (!documentNumber || documentNumber.length < 5) { res.status(400).json({ error: "Document number is required (min 5 characters)." }); return; }
-  if ((documentType === "bvn" || documentType === "nin") && !/^\d{10,11}$/.test(documentNumber)) { res.status(400).json({ error: `${documentType.toUpperCase()} must be 10–11 digits.` }); return; }
-  if (!fullName || fullName.split(/\s+/).length < 2) { res.status(400).json({ error: "Please enter your full legal name (first and last)." }); return; }
-
-  // Basic verification is BVN/NIN plus personal details. Advanced verification
-  // requires the document image and selfie used for a full manual review.
-  const needsPhoto = verificationType === "advanced";
-  if (needsPhoto && !body.documentFrontImage) {
-    res.status(400).json({ error: "Please attach a clear photo of your ID document." }); return;
-  }
-  if (needsPhoto && !body.selfieImage) {
-    res.status(400).json({ error: "Please attach a selfie holding your ID for verification." }); return;
-  }
+  if (!/^\d{11}$/.test(documentNumber)) { res.status(400).json({ error: "NIN must contain 11 digits." }); return; }
+  if (!fullName || fullName.split(/\s+/).length < 2) { res.status(400).json({ error: "Please enter your full legal name." }); return; }
+  if (!dateOfBirth) { res.status(400).json({ error: "Date of birth is required." }); return; }
+  if (address.length < 8) { res.status(400).json({ error: "Please enter your residential address." }); return; }
 
   const [existing] = await db.select().from(kycTable).where(eq(kycTable.userId, userId));
   if (existing?.status === "verified") { res.status(400).json({ error: "Your KYC is already verified." }); return; }
   if (existing?.status === "submitted") { res.status(400).json({ error: "Your previous submission is still under review." }); return; }
 
-  let frontUrl: string | null = null, backUrl: string | null = null, selfieUrl: string | null = null;
-  try {
-    if (body.documentFrontImage) frontUrl = await saveDataUrl(userId, "front", body.documentFrontImage);
-    if (body.documentBackImage) backUrl = await saveDataUrl(userId, "back", body.documentBackImage);
-    if (body.selfieImage) selfieUrl = await saveDataUrl(userId, "selfie", body.selfieImage);
-  } catch (e: any) {
-    res.status(400).json({ error: "Could not save your photos. Try smaller images (under 6MB)." }); return;
-  }
-  if (needsPhoto && !frontUrl) { res.status(400).json({ error: "Front-of-ID photo could not be saved. Please retake it." }); return; }
-  if (needsPhoto && !selfieUrl) { res.status(400).json({ error: "Selfie could not be saved. Please retake it." }); return; }
+  const frontUrl: string | null = null;
+  const backUrl: string | null = null;
+  const selfieUrl: string | null = null;
 
   const now = new Date();
   const values = {
