@@ -179,6 +179,7 @@ function Shell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
+
     const loadServiceFeatures = async () => {
       if (!useToken() || location.startsWith('/admin')) {
         if (active) {
@@ -188,9 +189,9 @@ function Shell({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Re-check immediately whenever the user navigates. This prevents a
-      // notification deep-link from opening a service that was just disabled
-      // while the previous 15-second polling window was still stale.
+      // Check once when the user enters/navigates to a page. Do not poll while
+      // the user is using the page; continuous checks were causing the UI to
+      // refresh underneath active forms and interactions.
       if (active) setServiceFeaturesCheckedFor(null);
       try {
         const response = await fetch(apiUrl('/api/service-features'), {
@@ -203,17 +204,14 @@ function Shell({ children }: { children: ReactNode }) {
           setServiceFeaturesCheckedFor(location);
         }
       } catch {
-        // Keep the last known state during a transient network failure.
-        // A fresh check will run again shortly.
+        // Keep the page usable during a temporary network failure.
         if (active) setServiceFeaturesCheckedFor(location);
       }
     };
 
     void loadServiceFeatures();
-    const interval = window.setInterval(() => void loadServiceFeatures(), 2_000);
     return () => {
       active = false;
-      window.clearInterval(interval);
     };
   }, [location]);
 
