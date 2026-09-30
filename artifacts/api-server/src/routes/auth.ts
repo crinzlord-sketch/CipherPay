@@ -852,7 +852,7 @@ router.post("/auth/pin/set", async (req, res): Promise<void> => {
   // way the device alone (without one secret the user knows) cannot enroll.
   // First-time setup uses create + confirm. Existing PIN changes still require
   // the current PIN; password-based enrollment remains supported for trusted clients.
-  if (!user.pinHash && body.confirmPin !== body.pin) {
+  if (!user.pinHash && !body.password && body.confirmPin !== body.pin) {
     res.status(400).json({ error: "PINs do not match." });
     return;
   }
