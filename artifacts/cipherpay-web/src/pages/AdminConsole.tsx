@@ -2,7 +2,7 @@ import {
   AlertTriangle, ArrowDownLeft, Ban, Check, CheckCircle2, ChevronRight, CircleDollarSign,
   ClipboardCheck, CreditCard, Database, FileText, Flag, Headphones, LifeBuoy,
   Image as ImageIcon, Mail, MessageCircle, Paperclip, RefreshCw, Search, Send, ShieldCheck, Smartphone,
-  Trash2, UserCheck, Users, WalletCards, X, Zap,
+  Trash2, UserCheck, Users, WalletCards, X, Zap, Activity,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useAnimatedDialog } from '../components/animated-dialog';
@@ -751,7 +751,7 @@ export default function AdminConsole() {
             </section>
 
             <section className="cp-card cp-card-pad">
-              <div className="admin-card-title"><div><span className="cp-kicker">ACCOUNT ACTIVITY</span><h3>Usage footprint</h3></div><ActivityIcon /></div>
+              <div className="admin-card-title"><div><span className="cp-kicker">ACCOUNT ACTIVITY</span><h3>Usage footprint</h3></div><Activity size={19} /></div>
               <div className="admin-detail-facts">
                 <span><small>Notifications</small><b>{selectedUserDetails.activity.notifications}</b></span><span><small>Support conversations</small><b>{selectedUserDetails.activity.supportChats}</b></span>
                 <span><small>Social orders</small><b>{selectedUserDetails.activity.socialOrders}</b></span><span><small>SMS activations</small><b>{selectedUserDetails.activity.smsActivations}</b></span>
