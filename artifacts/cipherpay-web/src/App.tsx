@@ -1216,7 +1216,7 @@ function Send() {
   const recipientTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (mode !== 'bank' || banks.length) return;
+    if (banks.length) return;
     let active = true;
     setLoadingBanks(true);
     apiRequest<{ data: any[] }>('/api/bank/list')
@@ -1228,12 +1228,19 @@ function Send() {
 
   const bankQuery = bankSearch.trim().toLowerCase();
   const filteredBanks = banks
-    .filter((bank) => String(bank.name ?? '').toLowerCase().includes(bankQuery))
+    .filter((bank) => {
+      const name = String(bank.name ?? '').toLowerCase();
+      const code = String(bank.code ?? '').toLowerCase();
+      const slug = String(bank.slug ?? '').toLowerCase();
+      return !bankQuery || name.includes(bankQuery) || code.includes(bankQuery) || slug.includes(bankQuery);
+    })
     .sort((a, b) => {
       const an = String(a.name ?? '').toLowerCase();
       const bn = String(b.name ?? '').toLowerCase();
-      const as = an === bankQuery ? 0 : an.startsWith(bankQuery) ? 1 : 2;
-      const bs = bn === bankQuery ? 0 : bn.startsWith(bankQuery) ? 1 : 2;
+      const ac = String(a.code ?? '').toLowerCase();
+      const bc = String(b.code ?? '').toLowerCase();
+      const as = an === bankQuery ? 0 : an.startsWith(bankQuery) ? 1 : ac === bankQuery ? 2 : an.includes(bankQuery) ? 3 : 4;
+      const bs = bn === bankQuery ? 0 : bn.startsWith(bankQuery) ? 1 : bc === bankQuery ? 2 : bn.includes(bankQuery) ? 3 : 4;
       return as - bs || an.localeCompare(bn);
     });
 
