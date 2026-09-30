@@ -2769,3 +2769,57 @@ html.dark .cp-support-close{
   .auth-sidekick-device.sidekick-one{left:3%!important;right:auto!important;top:12%!important}
   .auth-sidekick-device.sidekick-two{right:3%!important;bottom:10%!important}
 }
+
+
+/* AUTH VISUAL FIX — keep the sidekick panel vivid purple and give both
+   floating phones a clean lane so neither sits underneath the quote panel. */
+.auth-quote{
+  background:
+    radial-gradient(circle at 82% 10%,rgba(196,155,255,.46),transparent 30%),
+    radial-gradient(circle at 12% 92%,rgba(112,65,224,.48),transparent 36%),
+    linear-gradient(145deg,#7545c7 0%,#5a35a8 52%,#321a67 100%)!important;
+  border-color:rgba(225,209,255,.30)!important;
+  box-shadow:
+    0 42px 90px rgba(20,5,50,.56),
+    0 0 80px rgba(118,76,229,.28),
+    inset 0 1px rgba(255,255,255,.22),
+    inset 0 -1px rgba(24,8,52,.24)!important;
+}
+.auth-sidekick-device.sidekick-one{
+  left:auto!important;
+  right:8%!important;
+  top:8%!important;
+}
+.auth-sidekick-device.sidekick-two{
+  right:6%!important;
+  bottom:8%!important;
+}
+.auth-sidekick-mockups{
+  z-index:6!important;
+}
+.auth-quote{
+  z-index:20!important;
+}
+@media(max-width:900px){
+  .auth-sidekick-device.sidekick-one{
+    left:auto!important;
+    right:4%!important;
+    top:7%!important;
+  }
+  .auth-sidekick-device.sidekick-two{
+    right:3%!important;
+    bottom:7%!important;
+  }
+}
+@media(max-width:700px){
+  .auth-sidekick-device.sidekick-one{
+    right:2%!important;
+    top:7%!important;
+    opacity:.52!important;
+  }
+  .auth-sidekick-device.sidekick-two{
+    right:2%!important;
+    bottom:6%!important;
+    opacity:.52!important;
+  }
+}
