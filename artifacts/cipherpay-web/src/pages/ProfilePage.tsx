@@ -1,4 +1,4 @@
-import { Check, Pencil, UserRound, X } from 'lucide-react';
+import { Check, Camera, Pencil, UserRound, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useGetMe, useUpdateProfile } from '@workspace/api-client-react';
@@ -13,6 +13,7 @@ export function ProfilePage() {
   const user: any = profile.data;
   const [form, setForm] = useState({ firstName: '', lastName: '', phone: '' });
   const [gender, setGender] = useState<'male' | 'female'>('male');
+  const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [notice, setNotice] = useState<{ text: string; tone: 'success' | 'error' } | null>(null);
   useEffect(() => { if (user) { setForm({ firstName: user.firstName ?? '', lastName: user.lastName ?? '', phone: user.phone ?? '' }); if (user.gender === 'female') setGender('female'); else if (user.gender === 'male') setGender('male'); } }, [user]);
@@ -35,6 +36,21 @@ export function ProfilePage() {
       onError: (reason: any) => setNotice({ text: reason?.message ?? 'Could not save your profile.', tone: 'error' }),
     });
   };
+  const uploadAvatar = async (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setNotice({ text: 'Please choose an image file.', tone: 'error' }); return; }
+    if (file.size > 4 * 1024 * 1024) { setNotice({ text: 'Profile picture must be under 4MB.', tone: 'error' }); return; }
+    setUploading(true); setNotice(null);
+    try {
+      const reader = new FileReader();
+      const dataUrl = await new Promise<string>((resolve, reject) => { reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Could not read image.')); reader.onerror = () => reject(new Error('Could not read image.')); reader.readAsDataURL(file); });
+      const saved = await apiRequest<any>('/api/auth/avatar', { method: 'POST', body: { image: dataUrl } });
+      queryClient.setQueryData(['/api/auth/me'], saved);
+      await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      setNotice({ text: 'Profile picture updated.', tone: 'success' });
+    } catch (e) { setNotice({ text: e instanceof Error ? e.message : 'Could not update profile picture.', tone: 'error' }); }
+    finally { setUploading(false); }
+  };
   const cancelEdit = () => {
     setForm({ firstName: user.firstName ?? '', lastName: user.lastName ?? '', phone: user.phone ?? '' }); setGender(user.gender === 'female' ? 'female' : 'male');
     setEditing(false);
@@ -45,7 +61,7 @@ export function ProfilePage() {
   return <div className="cp-page">
     <PageHeading eyebrow="CIPHERPAY / ACCOUNT" title="Your profile." detail="Keep your account details current so payments and security checks reach you." actions={!editing && <Button type="button" variant="soft" onClick={() => { setNotice(null); setEditing(true); }} data-testid="button-edit-profile"><Pencil size={15} /> Edit profile</Button>} />
     <div className="cp-grid cp-grid-two">
-      <section className="cp-card cp-card-pad"><div className="cp-profile-identity"><CipherAvatar src={user.avatarUrl} seed={user.id || user.email} gender={user.gender} size={88} alt={`${user.firstName} ${user.lastName}`} /><div><h2>{user.firstName} {user.lastName}</h2><p>{user.email}</p></div></div>
+      <section className="cp-card cp-card-pad"><div className="cp-profile-identity"><div style={{ position: 'relative' }}><CipherAvatar src={user.avatarUrl} seed={user.id || user.email} gender={user.gender} size={88} alt={`${user.firstName} ${user.lastName}`} /><label title="Change profile picture" style={{ position: 'absolute', right: -2, bottom: -2, width: 32, height: 32, borderRadius: 10, display: 'grid', placeItems: 'center', cursor: uploading ? 'wait' : 'pointer', background: 'var(--cp-surface, #171923)', border: '1px solid rgba(255,255,255,.12)' }}><Camera size={15} /><input type="file" accept="image/*" disabled={uploading} onChange={e => void uploadAvatar(e.target.files?.[0])} style={{ display: 'none' }} /></label></div><div><h2>{user.firstName} {user.lastName}</h2><p>{user.email}</p>{uploading && <small>Uploading picture…</small>}</div></div>
         {editing ? <form className="cp-form" onSubmit={submit}><div className="cp-field-row"><label className="cp-field"><span>First name</span><input value={form.firstName} onChange={(event) => setForm({ ...form, firstName: event.target.value })} required data-testid="input-profile-first-name" /></label><label className="cp-field"><span>Last name</span><input value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} required data-testid="input-profile-last-name" /></label></div><label className="cp-field"><span>Phone number</span><input type="tel" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} required data-testid="input-profile-phone" /></label><label className="cp-field"><span>Avatar style</span><select value={gender} onChange={(event) => setGender(event.target.value as 'male' | 'female')} data-testid="select-profile-avatar-gender"><option value="male">Male</option><option value="female">Female</option></select></label>{notice && <Notice tone={notice.tone}>{notice.text}</Notice>}<div className="cp-actions"><Button type="button" variant="quiet" onClick={cancelEdit} disabled={update.isPending} data-testid="button-cancel-profile"><X size={15} /> Cancel</Button><Button type="submit" disabled={update.isPending} data-testid="button-save-profile">{update.isPending ? 'Saving changes…' : 'Save changes'} <Check size={15} /></Button></div></form> : <div className="cp-profile-details">
           <div className="cp-profile-detail-row"><div className="cp-profile-detail"><span>First name</span><strong>{user.firstName || 'Not added'}</strong></div><div className="cp-profile-detail"><span>Last name</span><strong>{user.lastName || 'Not added'}</strong></div></div>
           <div className="cp-profile-detail-row"><div className="cp-profile-detail"><span>Email address</span><strong>{user.email || 'Not added'}</strong></div><div className="cp-profile-detail"><span>Phone number</span><strong>{user.phone || 'Not added'}</strong></div></div>
