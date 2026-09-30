@@ -313,6 +313,15 @@ function LandingPage() {
           <div className="cp-3d-card cp-3d-card-back"><span>CP</span><small>EVERYDAY WALLET</small></div>
           <div className="cp-3d-card cp-3d-card-front"><small>CIPHERPAY</small><b>₦24,680</b><i/></div>
           <div className="cp-3d-coin">CP</div>
+        <div className="cp-hero-depth-orbs" aria-hidden="true">
+          <span className="cp-depth-orb orb-a">₦</span>
+          <span className="cp-depth-orb orb-b">↗</span>
+          <span className="cp-depth-orb orb-c">✦</span>
+          <span className="cp-depth-orb orb-d">CP</span>
+        </div>
+        <div className="cp-hero-data-ring" aria-hidden="true">
+          <i/><i/><i/><i/><i/><i/>
+        </div>
         </div>
         <div className="cp-wallet-card">
           <div className="cp-card-top"><span className="cp-card-label">CIPHERPAY / WALLET</span><span className="cp-card-chip"/></div>
