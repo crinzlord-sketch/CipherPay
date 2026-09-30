@@ -46,9 +46,8 @@ export default function ChatPage() {
       const r=await apiRequest<any>(`/api/chat/${id}`);
       setChat(r.chat); setOther(r.other); setMessages(r.messages??[]); setBg(r.background||BGS[0]);
       if(r.other?.chatPublicKey){
-        const key=JSON.parse(r.other.chatPublicKey);
         const decoded=await Promise.all((r.messages??[]).map(async (m:any)=>{
-          try { return { ...m, decrypted: await decryptChatPayload(Number(id), JSON.parse(m.senderPublicKey || r.other.chatPublicKey || 'null'), String(m.body??'')) }; }
+          try { return { ...m, decrypted: await decryptChatPayload(Number(id), JSON.parse((m.senderId === r.chat.userOneId ? r.other.chatPublicKey : m.senderPublicKey) || 'null'), String(m.body??'')) }; }
           catch { return { ...m, decrypted: { error: true } }; }
         }));
         setDecrypted(decoded);
@@ -67,7 +66,7 @@ export default function ChatPage() {
         setMessages(r.messages??[]); setOther(r.other); setChat(r.chat);
         if(r.other?.chatPublicKey){
           const key=JSON.parse(r.other.chatPublicKey);
-          const decoded=await Promise.all((r.messages??[]).map(async (m:any)=>{try{return {...m,decrypted:await decryptChatPayload(Number(params.id),JSON.parse(m.senderPublicKey || r.other.chatPublicKey || 'null'),String(m.body??''))};}catch{return {...m,decrypted:{error:true}};}}));
+          const decoded=await Promise.all((r.messages??[]).map(async (m:any)=>{try{return {...m,decrypted:await decryptChatPayload(Number(params.id),JSON.parse((m.senderId === r.chat.userOneId ? r.other.chatPublicKey : m.senderPublicKey) || 'null'),String(m.body??''))};}catch{return {...m,decrypted:{error:true}};}}));
           setDecrypted(decoded);
         }
       }catch{}
@@ -140,7 +139,8 @@ export default function ChatPage() {
 function YourCode(){
   const [code,setCode]=useState('');
   const [failed,setFailed]=useState(false);
+  const [copied,setCopied]=useState(false);
   const load=()=>{setFailed(false);apiRequest<any>('/api/auth/me').then(r=>{if(r.userCode)setCode(r.userCode);else setFailed(true);}).catch(()=>setFailed(true));};
   useEffect(()=>{load();},[]);
-  return <>{code?<><strong>{code}</strong><button onClick={()=>{void navigator.clipboard?.writeText(code)}} title="Copy code"><Copy size={16}/></button></>:failed?<><strong>Couldn’t load your code</strong><button onClick={load} title="Retry"><RefreshCw size={16}/></button></>:<strong>Loading…</strong>}</>;
+  return <>{code?<><strong>{code}</strong><button onClick={()=>{void navigator.clipboard?.writeText(code);setCopied(true);window.setTimeout(()=>setCopied(false),1800)}} title="Copy code"><Copy size={16}/>{copied&&<span className="cp-copy-confirm">Copied</span>}</button></>:failed?<><strong>Couldn’t load your code</strong><button onClick={load} title="Retry"><RefreshCw size={16}/></button></>:<strong>Loading…</strong>}</>;
 }
