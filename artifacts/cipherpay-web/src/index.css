@@ -6063,3 +6063,102 @@ html[data-route-transition="auth-switch"]::after {
   .cp-support-overlay{padding:12px!important}
   .cp-support-modal{max-height:calc(100dvh - 24px)!important;padding:26px 20px!important;border-radius:22px!important}
 }
+
+
+/* =========================================================
+   CIPHERPAY THEME SYNC — dark mode applies across the whole app
+   ========================================================= */
+html.dark,
+html.dark body{
+  background:#17131d!important;
+  color:#f7f3fb!important;
+  color-scheme:dark;
+}
+html.dark body{
+  background:
+    radial-gradient(circle at 8% 0%,rgba(115,92,255,.16),transparent 25rem),
+    radial-gradient(circle at 92% 12%,rgba(241,132,85,.10),transparent 24rem),
+    #17131d!important;
+}
+html.dark .app-shell,
+html.dark .main-area{background:transparent!important}
+html.dark .topbar{
+  background:rgba(25,20,34,.72)!important;
+  border-bottom-color:rgba(255,255,255,.08)!important;
+  box-shadow:0 8px 35px rgba(0,0,0,.22)!important;
+}
+html.dark .sidebar{
+  background:rgba(13,10,18,.92)!important;
+  border-right-color:rgba(255,255,255,.08)!important;
+}
+html.dark .panel,
+html.dark .info-page-panel,
+html.dark .sms-order-panel,
+html.dark .sms-inbox-panel,
+html.dark .sms-history-panel,
+html.dark .transactions-page-panel,
+html.dark .more-menu,
+html.dark .user-menu{
+  background:rgba(35,28,47,.72)!important;
+  border-color:rgba(255,255,255,.09)!important;
+  box-shadow:0 22px 70px rgba(0,0,0,.28)!important;
+  color:#f7f3fb!important;
+}
+html.dark .panel::before{background:linear-gradient(135deg,rgba(255,255,255,.055),transparent 42%)}
+html.dark input,
+html.dark textarea,
+html.dark select{
+  background:rgba(24,19,32,.82)!important;
+  color:#f7f3fb!important;
+  border-color:rgba(255,255,255,.12)!important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder{color:rgba(247,243,251,.42)!important}
+html.dark .service-card,
+html.dark .cp-card,
+html.dark .sms-number-row,
+html.dark .sms-code-card,
+html.dark .temp-address-block{
+  background:rgba(35,28,47,.72)!important;
+  border-color:rgba(255,255,255,.09)!important;
+  color:#f7f3fb!important;
+}
+html.dark .service-card-copy strong,
+html.dark .service-card-copy b,
+html.dark .service-card h2,
+html.dark .service-card h3,
+html.dark .cp-card h1,
+html.dark .cp-card h2,
+html.dark .cp-card h3,
+html.dark .cp-card strong,
+html.dark .page-title h1,
+html.dark .page-title h2,
+html.dark .section-head h2{
+  color:#f7f3fb!important;
+}
+html.dark .service-card-copy small,
+html.dark .service-note,
+html.dark .cp-card p,
+html.dark .page-title p,
+html.dark .section-head p,
+html.dark .muted,
+html.dark small{
+  color:rgba(247,243,251,.58);
+}
+html.dark .more-menu a{color:#f7f3fb!important}
+html.dark .more-menu a:hover,
+html.dark .more-menu a:focus-visible{background:rgba(255,255,255,.07)!important}
+html.dark .scrim{background:rgba(0,0,0,.55)!important}
+html.dark .auth-page{background:#17131d!important}
+html.dark .auth-form-wrap{background:rgba(23,19,29,.86)!important}
+html.dark .auth-form-inner input{background:rgba(35,28,47,.82)!important;border-color:rgba(255,255,255,.12)!important;color:#f7f3fb!important}
+html.dark .auth-form-inner .auth-detail,
+html.dark .auth-form-inner .auth-legal{color:rgba(247,243,251,.58)!important}
+html.dark .temp-privacy-panel,
+html.dark .social-boost-side,
+html.dark .temp-message-detail{
+  background:linear-gradient(150deg,rgba(35,28,47,.82),rgba(55,42,76,.65))!important;
+}
+html.dark table tbody tr:hover,
+html.dark .list-item:hover,
+html.dark .transaction-row:hover{background:rgba(115,92,255,.10)!important}
