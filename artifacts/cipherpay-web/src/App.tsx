@@ -127,7 +127,6 @@ function Shell({ children }: { children: ReactNode }) {
   const [notificationReturnPath, setNotificationReturnPath] = useState<string>('/');
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [serviceFeatures, setServiceFeatures] = useState<Record<string, boolean> | null>(null);
-  const [serviceFeaturesCheckedFor, setServiceFeaturesCheckedFor] = useState<string | null>(null);
   const { confirm } = useAnimatedDialog();
   const me = useGetMe({ query: { enabled: !!useToken(), queryKey: ['/api/auth/me'] } });
   const user = me.data as any;
@@ -182,43 +181,34 @@ function Shell({ children }: { children: ReactNode }) {
   }, [setLocation]);
 
   useEffect(() => {
-    let active = true;
-    const loadServiceFeatures = async () => {
-      if (!useToken() || location.startsWith('/admin')) {
-        if (active) {
-          setServiceFeatures(null);
-          setServiceFeaturesCheckedFor(null);
-        }
-        return;
-      }
+    const featureKey = serviceFeatureForPath(location);
+    if (!featureKey || location.startsWith('/admin') || !useToken()) {
+      return;
+    }
 
-      // Re-check immediately whenever the user navigates. This prevents a
-      // notification deep-link from opening a service that was just disabled
-      // while the previous 15-second polling window was still stale.
-      if (active) setServiceFeaturesCheckedFor(null);
+    const controller = new AbortController();
+    const loadServiceFeatures = async () => {
       try {
         const response = await fetch(apiUrl('/api/service-features'), {
           cache: 'no-store',
           headers: { 'Cache-Control': 'no-cache' },
+          signal: controller.signal,
         });
+        if (!response.ok) return;
         const payload = await response.json();
-        if (active && response.ok) {
+        if (!controller.signal.aborted) {
           setServiceFeatures(payload.data ?? null);
-          setServiceFeaturesCheckedFor(location);
         }
       } catch {
-        // Keep the last known state during a transient network failure.
-        // A fresh check will run again shortly.
-        if (active) setServiceFeaturesCheckedFor(location);
+        // Availability is advisory. A failed check must never blank, reload,
+        // or otherwise block the current page; the API enforces maintenance
+        // server-side for the actual service request.
       }
     };
 
     void loadServiceFeatures();
-    return () => {
-      active = false;
-    };
+    return () => controller.abort();
   }, [location]);
-
   useEffect(() => {
     let active = true;
     const loadUnreadCount = async () => {
@@ -286,8 +276,7 @@ function Shell({ children }: { children: ReactNode }) {
       }} aria-label={location === '/notifications' ? 'Close notifications' : unreadNotifications > 0 ? `Open notifications, ${unreadNotifications} unread` : 'Open notifications'} aria-pressed={location === '/notifications'} data-testid="button-notifications"><Bell size={19} />{unreadNotifications > 0 && <i />}</button>{user && <span className="topbar-name">{user.firstName}</span>}<button className="logout-link" onClick={() => void logout()} data-testid="button-logout"><LogOut size={16} /> <span>Log out</span></button></header>
       <div className="content">{(() => {
         const featureKey = serviceFeatureForPath(location);
-        const statusReady = !featureKey || serviceFeaturesCheckedFor === location;
-        const maintenance = statusReady && featureKey && serviceFeatures && serviceFeatures[featureKey] === false;
+        const maintenance = Boolean(featureKey && serviceFeatures && serviceFeatures[featureKey] === false);
         const labels: Record<string, string> = {
           transfers: 'Transfers',
           wallet_funding: 'Wallet funding',
@@ -299,7 +288,6 @@ function Shell({ children }: { children: ReactNode }) {
           email_pro: 'Email Pro',
           crypto: 'Crypto',
         };
-        if (!statusReady) return <div className="service-status-loading" aria-live="polite"><RefreshCw size={18} className="spin" /><span>Checking service availability…</span></div>;
         return maintenance ? <ServiceMaintenance serviceLabel={labels[featureKey] ?? 'This service'} /> : children;
       })()}</div>
     </main>
@@ -1944,3 +1932,4 @@ function BillProviderPage() {
     {done && <PurchaseSuccessPop kind="bill" onClose={() => setDone(null)} />}
   </>;
 }
+
