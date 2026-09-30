@@ -2644,3 +2644,79 @@ html.dark .cp-support-close{
     margin-left:6px!important;
   }
 }
+
+
+/* AUTH SIDEKICK FINAL — purple display panel + protected 3D phone lanes */
+.auth-quote{
+  z-index:10!important;
+  left:clamp(28px,6vw,76px)!important;
+  top:48%!important;
+  width:min(470px,calc(100% - 120px))!important;
+  max-width:470px!important;
+  padding:28px 30px 26px!important;
+  border:1px solid rgba(214,195,255,.24)!important;
+  border-radius:30px!important;
+  background:
+    radial-gradient(circle at 82% 12%,rgba(202,174,255,.34),transparent 28%),
+    radial-gradient(circle at 14% 88%,rgba(115,79,226,.30),transparent 34%),
+    linear-gradient(145deg,rgba(111,73,186,.92),rgba(67,39,123,.88) 52%,rgba(35,20,68,.94))!important;
+  box-shadow:
+    0 42px 90px rgba(7,3,18,.52),
+    0 0 70px rgba(126,86,235,.20),
+    inset 0 1px rgba(255,255,255,.20),
+    inset 0 -1px rgba(0,0,0,.18)!important;
+  backdrop-filter:blur(18px) saturate(135%)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(135%)!important;
+}
+.auth-quote::before{
+  content:"";
+  position:absolute;
+  inset:1px;
+  border-radius:29px;
+  pointer-events:none;
+  background:
+    linear-gradient(115deg,rgba(255,255,255,.13),transparent 28%,transparent 72%,rgba(255,255,255,.05)),
+    radial-gradient(circle at 50% 110%,rgba(170,133,255,.20),transparent 42%);
+}
+.auth-quote > *{position:relative;z-index:1}
+.auth-quote .auth-overline{color:#d9caff!important}
+.auth-quote .quote-mark{color:#e1d3ff!important}
+.auth-quote h2{color:#fff!important}
+.auth-quote h2 em{color:#d8c4ff!important}
+.auth-quote p{color:rgba(255,255,255,.76)!important}
+.auth-quote-line span{background:linear-gradient(90deg,#d6c1ff,rgba(255,255,255,.10))!important}
+
+/* Keep both 3D phones visibly separate from the sidekick display. */
+.auth-sidekick-mockups{z-index:5!important}
+.sidekick-one{
+  left:2%!important;
+  top:4%!important;
+}
+.sidekick-two{
+  right:2%!important;
+  bottom:3%!important;
+}
+.auth-sidekick-device{z-index:1!important}
+
+@media(max-width:900px){
+  .auth-quote{
+    left:24px!important;
+    width:calc(100% - 48px)!important;
+    max-width:none!important;
+    padding:24px 24px 22px!important;
+  }
+  .sidekick-one{left:-3%!important;top:3%!important}
+  .sidekick-two{right:-3%!important;bottom:2%!important}
+}
+@media(max-width:600px){
+  .auth-quote{
+    width:calc(100% - 34px)!important;
+    margin:76px 17px 0!important;
+    padding:22px 20px 20px!important;
+    border-radius:24px!important;
+  }
+  .auth-quote::before{border-radius:23px}
+  .sidekick-one{left:-12%!important;top:2%!important}
+  .sidekick-two{right:-12%!important;bottom:1%!important}
+  .auth-sidekick-device{opacity:.58!important}
+}
