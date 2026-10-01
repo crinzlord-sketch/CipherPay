@@ -35,8 +35,10 @@ router.get("/crypto/markets", async (_req, res): Promise<void> => {
       priceNgn: Number(row.current_price?.ngn ?? 0),
       priceUsd: Number(row.current_price?.usd ?? 0),
       change24h: Number(row.price_change_percentage_24h ?? 0),
-      marketCap: Number(row.market_cap ?? 0),
-      volume24h: Number(row.total_volume ?? 0),
+      marketCapNgn: Number(row.market_cap?.ngn ?? 0),
+      marketCapUsd: Number(row.market_cap?.usd ?? 0),
+      volumeNgn: Number(row.total_volume?.ngn ?? 0),
+      volumeUsd: Number(row.total_volume?.usd ?? 0),
     }));
     (globalThis as any).__cipherPayCryptoMarkets = { at: now, data };
     res.setHeader("Cache-Control", "public, max-age=20");
