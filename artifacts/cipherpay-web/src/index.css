@@ -6908,8 +6908,8 @@ html.dark .cp-chat-list-row.has-unread .cp-chat-list-copy span{color:#f7f3fb!imp
     width: 520px;
     height: 520px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(115, 92, 255, .13) 0%, rgba(115, 92, 255, .07) 32%, transparent 70%);
-    filter: blur(6px);
+    background: radial-gradient(circle, rgba(115, 92, 255, .20) 0%, rgba(115, 92, 255, .095) 34%, transparent 70%);
+    filter: blur(2px);
     pointer-events: none;
   }
 
