@@ -267,7 +267,8 @@ function Shell({ children }: { children: ReactNode }) {
     if (!confirmed) return;
     localStorage.removeItem('cipherpay_token');
     queryClient.clear();
-    setLocation('/');
+    // Hard-navigate immediately so the authenticated shell and cached user state are gone without a manual refresh.
+    window.location.replace('/');
   };
   const linkList = (items: typeof nav) => items.map(({ href, label, icon: Icon }) => {
     const badge = href === '/chat' ? unreadChats : href === '/notifications' ? unreadNotifications : 0;
