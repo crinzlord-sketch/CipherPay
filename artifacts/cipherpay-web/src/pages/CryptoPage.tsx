@@ -37,6 +37,9 @@ export default function CryptoPage(){
   const [marketLoading,setMarketLoading]=useState(true);
   const [marketError,setMarketError]=useState('');
   const [panel,setPanel]=useState<'send'|'receive'|'swap'|'sell'|null>(null);
+  const [panelClosing,setPanelClosing]=useState(false);
+  const openPanel=(next:'send'|'receive'|'swap'|'sell')=>{ setPanelClosing(false); setPanel(next); };
+  const closePanel=()=>{ if(!panel || panelClosing) return; setPanelClosing(true); window.setTimeout(()=>{ setPanel(null); setPanelClosing(false); },220); };
   const [currency,setCurrency]=useState<'USD'|'NGN'>('USD');
 
   // Keep action modals independent of the page layout and lock the page behind them.
@@ -93,10 +96,10 @@ export default function CryptoPage(){
         </div>
         <span className="cp-kicker">CIPHERPAY / CRYPTO WALLET</span>
         <div className="cp-crypto-actions"><span className="cp-actions-label">WALLET ACTIONS</span>
-          <button onClick={()=>setPanel('receive')}><ArrowDownLeft/>Receive</button>
-          <button onClick={()=>setPanel('send')}><ArrowUpRight/>Send</button>
-          <button onClick={()=>setPanel('swap')}><RefreshCw/>Swap</button>
-          <button onClick={()=>setPanel('sell')}><b>₦</b>Sell to NGN</button>
+          <button onClick={()=>openPanel('receive')}><ArrowDownLeft/>Receive</button>
+          <button onClick={()=>openPanel('send')}><ArrowUpRight/>Send</button>
+          <button onClick={()=>openPanel('swap')}><RefreshCw/>Swap</button>
+          <button onClick={()=>openPanel('sell')}><b>₦</b>Sell to NGN</button>
         </div>
       </div>
     </section>
@@ -124,6 +127,6 @@ export default function CryptoPage(){
       <article className="cp-crypto-glass cp-detail-card cp-security-card"><span className="cp-kicker">CIPHERPAY WALLET</span><h2>Built around your control.</h2><div className="cp-security-lines"><span><ShieldCheck/> One CipherPay KYC</span><span><CircleDollarSign/> User-paid blockchain gas</span><span><WalletCards/> Multi-asset wallet architecture</span></div></article>
     </section>
 
-    {panel&&typeof document!=='undefined'&&createPortal(<div className="cp-crypto-modal-backdrop" role="presentation" onMouseDown={e=>e.target===e.currentTarget&&setPanel(null)}><div className="cp-crypto-modal" role="dialog" aria-modal="true" aria-labelledby="cp-crypto-modal-title" onMouseDown={e=>e.stopPropagation()}><button type="button" className="cp-crypto-close" onClick={()=>setPanel(null)} aria-label="Close">×</button><span className="cp-kicker">CRYPTO / {panel}</span><h2 id="cp-crypto-modal-title">{panel==='sell'?'Sell to NGN':panel==='swap'?'Swap crypto':panel==='send'?'Send crypto':'Receive crypto'}</h2><div className="cp-modal-asset"><img src={icon((selectedMarket?.symbol ?? selected).toLowerCase())} alt=""/><span><b>{selectedMarket?.name ?? selected}</b><small>{selectedMarket?.symbol ?? selected} · {assets.find(a=>a.symbol===(selectedMarket?.symbol??selected))?.network ?? 'Network'}</small></span></div><div className="cp-modal-field">Current market price <strong>{selectedMarket?money(selectedMarket.priceUsd,selectedMarket.priceNgn):'—'}</strong></div><button type="button" className="cp-modal-disabled">Coming soon</button></div></div>,document.body)}
+    {panel&&typeof document!=='undefined'&&createPortal(<div className={`cp-crypto-modal-backdrop ${panelClosing?"is-closing":""}`} role="presentation" onMouseDown={e=>e.target===e.currentTarget&&closePanel()}><div className={`cp-crypto-modal ${panelClosing?"is-closing":""}`} role="dialog" aria-modal="true" aria-labelledby="cp-crypto-modal-title" onMouseDown={e=>e.stopPropagation()}><button type="button" className="cp-crypto-close" onClick={closePanel} aria-label="Close">×</button><span className="cp-kicker">CRYPTO / {panel}</span><h2 id="cp-crypto-modal-title">{panel==='sell'?'Sell to NGN':panel==='swap'?'Swap crypto':panel==='send'?'Send crypto':'Receive crypto'}</h2><div className="cp-modal-asset"><img src={icon((selectedMarket?.symbol ?? selected).toLowerCase())} alt=""/><span><b>{selectedMarket?.name ?? selected}</b><small>{selectedMarket?.symbol ?? selected} · {assets.find(a=>a.symbol===(selectedMarket?.symbol??selected))?.network ?? 'Network'}</small></span></div><div className="cp-modal-field">Current market price <strong>{selectedMarket?money(selectedMarket.priceUsd,selectedMarket.priceNgn):'—'}</strong></div><button type="button" className="cp-modal-disabled">Coming soon</button></div></div>,document.body)}
   </div>;
 }
