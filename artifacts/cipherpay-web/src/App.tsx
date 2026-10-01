@@ -1023,7 +1023,7 @@ function Dashboard() {
             <Link href="/crypto" className="action-tile" data-testid="link-quick-crypto">
               <span className="action-icon purple"><Coins size={19} /></span><b>Crypto</b><small>Manage your crypto</small>
             </Link>
-            <Link href="/fund" className="action-tile" data-testid="link-quick-fund"><span className="action-icon orange"><ArrowDownLeft size={19} /></span><b>Fund wallet</b><small>Card or transfer</small></Link>
+            <Link href="/social-boost" className="action-tile" data-testid="link-quick-social-boost"><span className="action-icon orange"><Target size={19} /></span><b>Social Boost</b><small>Grow your social presence</small></Link>
             <Link href="/sms" className="action-tile" data-testid="link-quick-sms"><span className="action-icon green"><MessageSquare size={19} /></span><b>SMS verification</b><small>Get a verification number</small></Link>
           </div>
         </div>
