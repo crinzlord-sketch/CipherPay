@@ -829,7 +829,10 @@ router.post("/sms/buy-number", async (req, res): Promise<void> => {
   }
   if (!offer) { res.status(400).json({ error: "Service or country not available right now" }); return; }
   const providerPrice = Math.ceil((offer.priceUsd * rate) / 10) * 10;
-  const price = providerPrice + 400;
+  // The SMSPool account is the funded provider wallet. Charge the user the
+  // live displayed price only; do not require a second transfer from the
+  // user's payout wallet and do not add a hidden fee at checkout.
+  const price = providerPrice;
 
   let tx: any;
   try {
@@ -838,19 +841,19 @@ router.post("/sms/buy-number", async (req, res): Promise<void> => {
       country,
       provider: "SMSPool",
       providerPriceUsd: offer.priceUsd,
-      cipherPayProfit: 400,
+      cipherPayProfit: 0,
       usdNgnRate: rate,
     }));
   } catch (e: any) {
     res.status(400).json({ error: e.message }); return;
   }
 
-  let sourceFunded = false;
   let purchasedOrderId: string | null = null;
   let purchasedNumber: string | null = null;
   try {
-    await fundBillSourceFromUser(userId, price, tx.id);
-    sourceFunded = true;
+    // SMSPool is already funded on the provider side. Ordering directly from
+    // that account avoids incorrectly requiring the user to fund a separate
+    // Flutterwave payout/source wallet.
     const result = await orderSmsPoolNumber(offer);
     purchasedOrderId = result.orderId;
     purchasedNumber = result.number;
@@ -895,9 +898,6 @@ router.post("/sms/buy-number", async (req, res): Promise<void> => {
         });
         return;
       }
-      if (sourceFunded) await refundBillSourceToUser(userId, price, tx.id);
-    } else if (sourceFunded) {
-      await refundBillSourceToUser(userId, price, tx.id);
     }
     await refundFailed(userId, tx.id, price, `Provider error: ${e.message ?? "unknown"}`, "sms");
     req.log.warn({ txId: tx.id, err: e?.message }, "SMS purchase failed after wallet debit");
