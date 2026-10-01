@@ -21,7 +21,7 @@ router.get("/crypto/markets", async (_req, res): Promise<void> => {
       res.json({ data: cached.data, updatedAt: new Date(cached.at).toISOString() });
       return;
     }
-    const response = await fetch("https://api.coingecko.com/api/v3/coins/markets?vs_currency=ngn&ids=" + ids + "&order=market_cap_desc&per_page=12&page=1&sparkline=false&price_change_percentage=24h");
+    const response = await fetch("https://api.coingecko.com/api/v3/coins/markets?vs_currencies=usd%2Cngn&ids=" + ids + "&order=market_cap_desc&per_page=12&page=1&sparkline=false&price_change_percentage=24h");
     if (!response.ok) {
       res.status(response.status === 429 ? 429 : 502).json({ error: "Live market provider unavailable." });
       return;
@@ -32,7 +32,8 @@ router.get("/crypto/markets", async (_req, res): Promise<void> => {
       symbol: String(row.symbol ?? "").toUpperCase(),
       name: row.name,
       image: row.image,
-      priceNgn: Number(row.current_price ?? 0),
+      priceNgn: Number(row.current_price?.ngn ?? 0),
+      priceUsd: Number(row.current_price?.usd ?? 0),
       change24h: Number(row.price_change_percentage_24h ?? 0),
       marketCap: Number(row.market_cap ?? 0),
       volume24h: Number(row.total_volume ?? 0),
