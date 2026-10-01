@@ -46,7 +46,7 @@ export default function CryptoPage(){
     const previousPaddingRight=document.body.style.paddingRight;
     const scrollbarWidth=window.innerWidth-document.documentElement.clientWidth;
     document.body.style.overflow='hidden';
-    if(scrollbarWidth>0) document.body.style.paddingRight=\`\${scrollbarWidth}px\`;
+    if(scrollbarWidth>0) document.body.style.paddingRight=`${scrollbarWidth}px`;
     return()=>{
       document.body.style.overflow=previousOverflow;
       document.body.style.paddingRight=previousPaddingRight;
@@ -113,7 +113,6 @@ export default function CryptoPage(){
     </section>
 
     <section className="cp-crypto-overview-grid">
-
       <article className="cp-crypto-glass cp-crypto-market-card">
         <div className="cp-card-heading"><span><BarChart3 size={16}/> MARKET SNAPSHOT</span><b>{markets.length || 12} ASSETS</b></div>
         {selectedMarket ? <div className="cp-selected-market"><img src={icon(selectedMarket.symbol.toLowerCase())}/><div><b>{selectedMarket.name} · {selectedMarket.symbol}</b><small>Live {currency} price</small></div><strong>{money(selectedMarket.priceUsd,selectedMarket.priceNgn)}</strong><em className={selectedMarket.change24h<0?'down':''}>{selectedMarket.change24h>=0?'+':''}{selectedMarket.change24h.toFixed(2)}%</em></div> : <div className="cp-market-loading">{marketLoading?'Loading live prices…':'Select an asset below.'}</div>}
