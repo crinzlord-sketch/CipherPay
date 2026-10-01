@@ -6818,3 +6818,68 @@ html.dark .cp-chat-list-row.has-unread .cp-chat-list-copy span{color:#f7f3fb!imp
   .cp-gif-grid{grid-template-columns:repeat(3,1fr)!important}
   .cp-gif-grid img{height:76px!important}
 }
+
+
+/* CIPHER CHAT — true full-screen conversation layout */
+@media (max-width: 760px) {
+  .cp-chat-page {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .cp-chat-page:has(.cp-chat-shell) {
+    min-height: 0 !important;
+  }
+
+  .cp-chat-shell {
+    width: 100% !important;
+    height: calc(100dvh - 100px) !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-bottom: 0 !important;
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  .cp-chat-header {
+    flex: 0 0 auto !important;
+    min-height: 64px !important;
+  }
+
+  .cp-chat-messages {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow-y: auto !important;
+    padding: 14px 10px 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    background-color: transparent !important;
+  }
+
+  .cp-chat-message-row {
+    flex: 0 0 auto !important;
+  }
+
+  .cp-chat-composer {
+    flex: 0 0 auto !important;
+    min-height: 58px !important;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .cp-chat-composer textarea {
+    min-height: 40px !important;
+    max-height: 88px !important;
+    height: 40px !important;
+    padding: 8px 11px !important;
+  }
+}
