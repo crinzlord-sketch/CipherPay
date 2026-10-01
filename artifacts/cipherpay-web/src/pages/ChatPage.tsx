@@ -34,6 +34,7 @@ export default function ChatPage() {
   const [found,setFound]=useState<Person|null>(null);
   const [chats,setChats]=useState<any[]>([]);
   const [chat,setChat]=useState<any>(null);
+  const [chatLoading,setChatLoading]=useState(false);
   const [messages,setMessages]=useState<Message[]>([]);
   const [decrypted,setDecrypted]=useState<any[]>([]);
   const [other,setOther]=useState<Person|null>(null);
@@ -60,12 +61,20 @@ export default function ChatPage() {
 
   const loadChats=async()=>{ try{const r=await apiRequest<any>('/api/chat/list');setChats(r.chats??[]);}catch{} };
   const loadChat=async(id:string)=>{
+    setChatLoading(true);
+    setError('');
     try{
       const r=await apiRequest<any>(`/api/chat/${id}`);
       const visible = (r.messages ?? []).filter((m:any) => !String(m.body ?? '').startsWith('E2EE1.'));
       setChat(r.chat); setOther(r.other); setMessages(visible); setBg(r.background||BGS[0]); setBlockedState(Boolean(r.blocked));
       setDecrypted(visible.map(decodeChatMessage));
-    }catch(e){setError(e instanceof Error?e.message:'Could not open chat.');}
+    }catch(e){
+      setChat(null);
+      setOther(null);
+      setError(e instanceof Error?e.message:'Could not open chat.');
+    }finally{
+      setChatLoading(false);
+    }
   };
   useEffect(()=>{void loadChats(); void (async()=>{try{const me=await apiRequest<any>('/api/auth/me');if(me?.user?.id)setCurrentUserId(Number(me.user.id));}catch{}})();},[]);
   useEffect(()=>{
@@ -169,7 +178,8 @@ export default function ChatPage() {
 </button>)}</div>}</section>
   </div>;
 
-  if(!chat||!other)return <div className="cp-page"><LoadingState label="Opening conversation" /></div>;
+  if(chatLoading && (!chat || !other))return <div className="cp-page"><LoadingState label="Opening conversation" /></div>;
+  if(!chat||!other)return <div className="cp-page"><ErrorState title="Could not open conversation" message={error || 'The conversation could not be loaded.'} action={<Button type="button" onClick={()=>params?.id&&void loadChat(params.id)}>Retry</Button>} /></div>;
   return <div className="cp-page cp-chat-page">
     <style>{`.cp-chat-image{max-width:min(100%,360px)!important;max-height:360px!important;object-fit:contain;cursor:pointer}.cp-chat-gif{width:min(210px,100%)!important;max-width:210px!important;max-height:190px!important;object-fit:contain;border-radius:10px!important}.cp-chat-reply-preview{display:grid;gap:3px;width:100%;padding:7px 9px;border:0;border-left:3px solid #7c5cff;border-radius:7px;background:rgba(20,20,30,.07);color:inherit;text-align:left;cursor:pointer}.cp-chat-reply-preview span{font-size:9px;font-weight:800;opacity:.62}.cp-chat-reply-preview b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:600;opacity:.72}.cp-chat-reply-action{justify-self:start;padding:0;border:0;background:transparent;color:#7c5cff;font-size:9px;font-weight:700;cursor:pointer;opacity:.72}.cp-chat-reply-bar{position:absolute;left:10px;right:10px;bottom:70px;display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:#151722;color:#fff;z-index:8;box-shadow:0 10px 30px rgba(0,0,0,.28)}.cp-chat-reply-bar>div{display:grid;gap:2px;min-width:0;flex:1}.cp-chat-reply-bar span{font-size:9px;opacity:.6}.cp-chat-reply-bar b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}.cp-chat-reply-bar button{width:28px;height:28px;border:0;border-radius:8px;background:rgba(255,255,255,.08);color:#fff;display:grid;place-items:center;cursor:pointer}.cp-chat-bg-picker{background:#151722!important;border-color:rgba(255,255,255,.12)!important;box-shadow:0 14px 35px rgba(0,0,0,.32)}.cp-chat-bg-picker button{box-shadow:0 0 0 1px rgba(255,255,255,.14) inset}`}</style>
     <div className="cp-chat-shell">
