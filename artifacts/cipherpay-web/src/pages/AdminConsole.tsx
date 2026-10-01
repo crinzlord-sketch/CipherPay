@@ -618,9 +618,9 @@ export default function AdminConsole() {
              </div>
              <div className="admin-service-control">
                <span className={`admin-service-status ${feature.enabled ? 'online' : 'maintenance'}`}>{feature.enabled ? 'Available' : 'Maintenance'}</span>
-               <AdminButton variant={feature.enabled ? 'soft' : 'primary'} disabled={serviceUpdating === feature.key} onClick={() => void toggleServiceFeature(feature)}>
-                 {serviceUpdating === feature.key ? 'Updating…' : feature.enabled ? 'Disable service' : 'Enable service'}
-               </AdminButton>
+               <button type="button" className={`admin-service-toggle ${feature.enabled ? 'is-on' : ''}`} disabled={serviceUpdating === feature.key} onClick={() => void toggleServiceFeature(feature)} aria-label={feature.enabled ? `Disable ${feature.label}` : `Enable ${feature.label}`} aria-pressed={feature.enabled}>
+                 <span className="admin-service-toggle-track"><span className="admin-service-toggle-thumb" /></span>
+               </button>
              </div>
            </div>)}
            {!serviceFeatures.length && <div className="admin-empty"><Zap size={22} />Service controls are loading.</div>}
