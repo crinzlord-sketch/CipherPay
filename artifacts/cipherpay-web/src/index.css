@@ -6409,7 +6409,7 @@ html.dark .transfer-result-pop p,
 html.dark .purchase-success-pop p{color:rgba(246,242,251,.62)!important}
 html.dark .scrim{background:rgba(0,0,0,.70)!important}
 html.dark .topbar{background:rgba(18,15,24,.90)!important}
-html.dark .sidebar{background:rgba(12,9,17,.98)!important}
+html.dark .sidebar{background:radial-gradient(circle at 18% 12%,rgba(124,92,255,.34),transparent 36%),radial-gradient(circle at 88% 82%,rgba(124,92,255,.19),transparent 40%),rgba(12,9,17,.98)!important}
 html.dark .sidebar .nav-item,
 html.dark .sidebar .nav-caption,
 html.dark .sidebar .user-copy,
