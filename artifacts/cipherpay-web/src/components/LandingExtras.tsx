@@ -14,7 +14,7 @@ export default function LandingExtras() {
         <div className="cp-wallet-3d-shadow"/>
         <div className="cp-wallet-3d-face">
           <div className="cp-wallet-3d-top"><span>CRYPTO / PORTFOLIO</span><b>LIVE</b></div>
-          <div className="cp-wallet-3d-balance"><small>YOUR BALANCE</small><strong>₦0.00</strong><span>0 assets held</span></div>
+          <div className="cp-wallet-3d-balance"><small>YOUR BALANCE</small><strong>$24,680.00</strong><span>Portfolio value · USD</span></div>
           <div className="cp-wallet-3d-chart"><i/><i/><i/><i/><i/><i/><i/><i/><i/><i/></div>
           <div className="cp-wallet-3d-coins">{coins.slice(0,3).map(([code,symbol,name])=><div key={symbol}><img src={logo(code)}/><span><b>{symbol}</b><small>{name}</small></span><em>—</em></div>)}</div>
           <div className="cp-wallet-3d-actions"><span>↓ Receive</span><span>↑ Send</span><span>↔ Swap</span></div>
