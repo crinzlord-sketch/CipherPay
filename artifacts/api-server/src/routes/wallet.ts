@@ -11,6 +11,40 @@ import { notifyUser } from "../lib/notifications";
 import { checkDepositLimit, checkPerTxLimitSync, getDepositFlagReason } from "../lib/kycLimits";
 
 const router: IRouter = Router();
+router.get("/crypto/markets", async (_req, res): Promise<void> => {
+  const ids = "bitcoin,ethereum,solana,tether,usd-coin,binancecoin,ripple,dogecoin,cardano,avalanche-2,tron,stellar";
+  try {
+    const now = Date.now();
+    const cached = (globalThis as any).__cipherPayCryptoMarkets as { at: number; data: unknown } | undefined;
+    if (cached && now - cached.at < 20_000) {
+      res.setHeader("Cache-Control", "public, max-age=20");
+      res.json({ data: cached.data, updatedAt: new Date(cached.at).toISOString() });
+      return;
+    }
+    const response = await fetch("https://api.coingecko.com/api/v3/coins/markets?vs_currency=ngn&ids=" + ids + "&order=market_cap_desc&per_page=12&page=1&sparkline=false&price_change_percentage=24h");
+    if (!response.ok) {
+      res.status(response.status === 429 ? 429 : 502).json({ error: "Live market provider unavailable." });
+      return;
+    }
+    const rows = await response.json() as any[];
+    const data = rows.map((row) => ({
+      id: row.id,
+      symbol: String(row.symbol ?? "").toUpperCase(),
+      name: row.name,
+      image: row.image,
+      priceNgn: Number(row.current_price ?? 0),
+      change24h: Number(row.price_change_percentage_24h ?? 0),
+      marketCap: Number(row.market_cap ?? 0),
+      volume24h: Number(row.total_volume ?? 0),
+    }));
+    (globalThis as any).__cipherPayCryptoMarkets = { at: now, data };
+    res.setHeader("Cache-Control", "public, max-age=20");
+    res.json({ data, updatedAt: new Date(now).toISOString() });
+  } catch {
+    res.status(502).json({ error: "Live market provider unavailable." });
+  }
+});
+
 
 // Tiered withdrawal processing fee (NGN). Charged on top of the amount the
 // user wants delivered. Kept here next to the route that consumes it so the
