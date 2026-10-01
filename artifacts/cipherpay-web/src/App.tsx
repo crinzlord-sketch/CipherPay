@@ -1986,7 +1986,6 @@ function App() {
             <Route path="/social-boost"><ProtectedArea><SocialBoostPage /></ProtectedArea></Route>
             <Route path="/email-pro"><ProtectedArea><EmailProPage /></ProtectedArea></Route>
             <Route path="/crypto"><ProtectedArea><CryptoPage /></ProtectedArea></Route>
-            <Route path="/crypto"><ProtectedArea><CryptoPage /></ProtectedArea></Route>
             <Route path="/transactions"><ProtectedArea><TransactionsPage /></ProtectedArea></Route>
           <Route path="/spending"><ProtectedArea><SpendingInsightsPage /></ProtectedArea></Route>
             <Route path="/chat/:id"><ProtectedArea><ChatPage /></ProtectedArea></Route>
