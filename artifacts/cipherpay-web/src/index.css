@@ -6803,7 +6803,7 @@ html.dark .cp-chat-message-row.incoming .cp-chat-bubble{background:#292137!impor
 html.dark .cp-chat-message-row.outgoing .cp-chat-bubble{color:#fff!important}
 html.dark .cp-chat-list-copy strong{color:#f7f3fb!important}
 html.dark .cp-chat-list-copy span,html.dark .cp-chat-list-meta small{color:rgba(247,243,251,.55)!important}
-html.dark .cp-chat-row.has-unread .cp-chat-list-copy span{color:#f7f3fb!important}
+html.dark .cp-chat-list-row.has-unread .cp-chat-list-copy span{color:#f7f3fb!important}
 @media(max-width:760px){
   .cp-chat-find-grid{grid-template-columns:1fr!important}
   .cp-chat-shell{height:calc(100dvh - 108px)!important;min-height:520px!important;border-radius:20px!important}
