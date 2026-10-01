@@ -92,18 +92,23 @@ export default function ChatPage() {
   const messagesRef=useRef<HTMLElement>(null);
   const shouldAutoScrollRef=useRef(true);
   const lastMessageCountRef=useRef(0);
+  const initialScrollDoneRef=useRef(false);
   useEffect(()=>{
     const el=messagesRef.current;
-    if(!el) return;
+    if(!el || !decrypted.length) return;
+    if(!initialScrollDoneRef.current){
+      initialScrollDoneRef.current=true;
+      lastMessageCountRef.current=decrypted.length;
+      requestAnimationFrame(()=>{ el.scrollTop=el.scrollHeight; });
+      return;
+    }
     const distanceFromBottom=el.scrollHeight-el.scrollTop-el.clientHeight;
-    shouldAutoScrollRef.current=distanceFromBottom<120;
-  },[decrypted.length]);
-  useEffect(()=>{
-    const el=messagesRef.current;
-    if(!el) return;
     const isNewMessage=decrypted.length>lastMessageCountRef.current;
-    if(isNewMessage && shouldAutoScrollRef.current){
+    if(isNewMessage && distanceFromBottom<160){
+      shouldAutoScrollRef.current=true;
       el.scrollTo({top:el.scrollHeight,behavior:'smooth'});
+    } else {
+      shouldAutoScrollRef.current=distanceFromBottom<160;
     }
     lastMessageCountRef.current=decrypted.length;
   },[decrypted]);
