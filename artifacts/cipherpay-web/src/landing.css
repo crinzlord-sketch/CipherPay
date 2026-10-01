@@ -2823,3 +2823,9 @@ html.dark .cp-support-close{
     opacity:.52!important;
   }
 }
+
+/* Animated 3D display typography */
+.cp-hero h1,.cp-section h2,.cp-cta h2{font-family:inherit;font-weight:950;transform-style:preserve-3d;text-shadow:0 2px 0 rgba(255,255,255,.8),0 7px 0 rgba(110,88,180,.10),0 18px 35px rgba(85,65,145,.12);animation:cpType3D 5s ease-in-out infinite}
+.cp-hero h1 span,.cp-section h2 span{display:inline-block;transform-style:preserve-3d;animation:cpTypeGradient 6s ease-in-out infinite}
+@keyframes cpType3D{0%,100%{transform:perspective(900px) rotateX(0deg) rotateY(0deg) translateZ(0)}50%{transform:perspective(900px) rotateX(2deg) rotateY(-2deg) translateZ(7px)}}
+@keyframes cpTypeGradient{0%,100%{transform:translateZ(0) rotateY(0deg)}50%{transform:translateZ(12px) rotateY(-2deg)}}
