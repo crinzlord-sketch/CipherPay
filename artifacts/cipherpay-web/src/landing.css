@@ -2840,3 +2840,9 @@ html.dark .cp-support-close{
 .cp-footer-bottom{display:flex;justify-content:space-between;gap:15px;padding-top:18px;border-top:1px solid rgba(40,30,60,.08);font-size:8px;color:#96929e}
 @media(max-width:800px){.cp-footer-top{grid-template-columns:1fr 1fr;gap:28px}.cp-footer-brand,.cp-footer-quote{grid-column:1/-1}.cp-footer-orbit{display:none}}@media(max-width:520px){.cp-footer-premium{padding-top:46px}.cp-footer-top{grid-template-columns:1fr 1fr}.cp-footer-bottom{display:grid;gap:7px}.cp-footer-quote b{font-size:23px}}
 @media(prefers-reduced-motion:reduce){.cp-footer-premium *{scroll-behavior:auto}}
+
+
+/* Full-bleed landing footer: escape the centered page column and touch both viewport edges. */
+.cp-footer-premium{width:100vw;max-width:none!important;margin-left:calc(50% - 50vw)!important;margin-right:calc(50% - 50vw)!important;padding-left:max(28px,calc((100vw - 1184px)/2))!important;padding-right:max(28px,calc((100vw - 1184px)/2))!important;}
+.cp-footer-premium .cp-footer-top,.cp-footer-premium .cp-footer-bottom{width:100%;}
+@media(max-width:600px){.cp-footer-premium{padding-left:17px!important;padding-right:17px!important;}}
