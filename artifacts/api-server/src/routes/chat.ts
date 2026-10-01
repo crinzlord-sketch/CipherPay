@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, asc, desc, eq, or, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, or, inArray, sql } from "drizzle-orm";
 import { db, usersTable, directChatsTable, directMessagesTable, blockedUsersTable } from "@workspace/db";
 import path from "path";
 import fs from "fs/promises";
@@ -7,6 +7,41 @@ import fs from "fs/promises";
 const router: IRouter = Router();
 const CHAT_UPLOAD_DIR = path.resolve(process.cwd(), "uploads", "chat");
 const CHAT_PUBLIC_BASE = "/api/uploads/chat";
+
+let readStateReady: Promise<void> | null = null;
+async function ensureReadStateTable() {
+  if (!readStateReady) {
+    readStateReady = db.execute(sql`
+      CREATE TABLE IF NOT EXISTS chat_read_states (
+        chat_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        last_read_message_id INTEGER NOT NULL DEFAULT 0,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (chat_id, user_id)
+      )
+    `).then(() => undefined).catch((error) => {
+      readStateReady = null;
+      throw error;
+    });
+  }
+  await readStateReady;
+}
+
+async function markChatRead(chatId: number, me: number) {
+  await ensureReadStateTable();
+  const [latest] = await db.select({ id: directMessagesTable.id })
+    .from(directMessagesTable)
+    .where(eq(directMessagesTable.chatId, chatId))
+    .orderBy(desc(directMessagesTable.id))
+    .limit(1);
+  const lastId = Number(latest?.id ?? 0);
+  await db.execute(sql`
+    INSERT INTO chat_read_states (chat_id, user_id, last_read_message_id, updated_at)
+    VALUES (${chatId}, ${me}, ${lastId}, NOW())
+    ON CONFLICT (chat_id, user_id)
+    DO UPDATE SET last_read_message_id = EXCLUDED.last_read_message_id, updated_at = NOW()
+  `);
+}
 
 function userId(req: any): number | null {
   const raw = req.headers["x-user-id"];
@@ -58,7 +93,30 @@ router.get("/chat/list", async (req, res): Promise<void> => {
   const rows = await Promise.all(visible.map(async c => {
     const otherId = c.userOneId === me ? c.userTwoId : c.userOneId;
     const [last] = await db.select().from(directMessagesTable).where(eq(directMessagesTable.chatId, c.id)).orderBy(desc(directMessagesTable.id)).limit(1);
-    return { id: c.id, other: byId.get(otherId), lastMessage: last ?? null, lastMessageAt: c.lastMessageAt, background: c.userOneId === me ? c.backgroundOne : c.backgroundTwo };
+    await ensureReadStateTable();
+    const unreadResult = await db.execute(sql`
+      SELECT COUNT(*)::int AS count
+      FROM direct_messages m
+      WHERE m.chat_id = ${c.id}
+        AND m.sender_id <> ${me}
+        AND m.id > COALESCE((
+          SELECT last_read_message_id FROM chat_read_states
+          WHERE chat_id = ${c.id} AND user_id = ${me}
+        ), 0)
+    `);
+    const unreadCount = Number((unreadResult as any)?.rows?.[0]?.count ?? 0);
+    let lastPreview = '';
+    if (last?.body) {
+      try {
+        const payload = JSON.parse(String(last.body));
+        lastPreview = typeof payload.text === 'string' && payload.text.trim()
+          ? payload.text.trim()
+          : payload.image ? '📷 Photo' : payload.gif ? 'GIF' : 'Message';
+      } catch {
+        lastPreview = String(last.body).slice(0, 120);
+      }
+    }
+    return { id: c.id, other: byId.get(otherId), lastMessage: last ?? null, lastMessagePreview: lastPreview, unreadCount, lastMessageSenderId: last?.senderId ?? null, lastMessageAt: c.lastMessageAt, background: c.userOneId === me ? c.backgroundOne : c.backgroundTwo };
   }));
   res.json({ chats: rows.filter(r => r.other) });
 });
@@ -85,7 +143,16 @@ router.get("/chat/:id", async (req, res): Promise<void> => {
   const otherId = chat.userOneId === me ? chat.userTwoId : chat.userOneId;
   const [other] = await db.select({ id: usersTable.id, firstName: usersTable.firstName, lastName: usersTable.lastName, email: usersTable.email, avatarUrl: usersTable.avatarUrl, gender: usersTable.gender, userCode: usersTable.userCode, chatPublicKey: usersTable.chatPublicKey }).from(usersTable).where(eq(usersTable.id, otherId));
   const messages = await db.select().from(directMessagesTable).where(eq(directMessagesTable.chatId, chat.id)).orderBy(asc(directMessagesTable.id));
+  await markChatRead(chat.id, me);
   res.json({ chat, other, messages, blocked: await blocked(me, otherId), background: chat.userOneId === me ? chat.backgroundOne : chat.backgroundTwo });
+});
+
+router.post("/chat/:id/read", async (req, res): Promise<void> => {
+  const me = userId(req); if (!me) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const chat = await chatFor(Number(req.params.id), me);
+  if (!chat) { res.status(404).json({ error: "Chat not found." }); return; }
+  await markChatRead(chat.id, me);
+  res.json({ success: true });
 });
 
 router.post("/chat/:id/message", async (req, res): Promise<void> => {
