@@ -126,9 +126,9 @@ export default function ChatPage() {
     const payload={text:text.trim(), image:extra.image ?? null, gif:extra.gif ?? null, replyToId:replyTo?.id ?? null, replyPreview:replyTo ? (replyTo.decrypted?.text || (replyTo.decrypted?.image ? 'Image' : replyTo.decrypted?.gif ? 'GIF' : 'Message')) : null};
     if(!payload.text&&!payload.image&&!payload.gif)return;
     setSending(true);setError('');
+    const optimisticId = -Date.now();
     try{
       const plainBody=JSON.stringify(payload);
-      const optimisticId = -Date.now();
       const optimisticMessage = { id: optimisticId, senderId: currentUserId ?? 0, body: plainBody, createdAt: new Date().toISOString() };
       setMessages(m=>[...m,optimisticMessage]);
       setDecrypted(m=>[...m,{...optimisticMessage,decrypted:payload,optimistic:true}]);
