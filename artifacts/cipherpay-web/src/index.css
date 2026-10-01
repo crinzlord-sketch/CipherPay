@@ -6774,7 +6774,7 @@ html.dark .spending-month-row>div{background:rgba(255,255,255,.08)!important}
   background:rgba(255,255,255,.88)!important;backdrop-filter:blur(18px)!important;-webkit-backdrop-filter:blur(18px)!important;
 }
 .cp-chat-composer>button:not(.cp-chat-send){width:36px!important;height:36px!important;flex:0 0 36px!important;border:0!important;border-radius:11px!important;background:rgba(115,92,255,.07)!important;color:var(--cp-muted)!important;display:grid!important;place-items:center!important;cursor:pointer!important}
-.cp-chat-composer textarea{min-height:38px!important;max-height:110px!important;resize:none!important;border-radius:13px!important;padding:10px 12px!important;font-size:12px!important;line-height:1.35!important;flex:1!important}
+.cp-chat-composer textarea{min-height:40px!important;max-height:110px!important;resize:none!important;border-radius:13px!important;padding:9px 12px!important;font-size:16px!important;line-height:1.35!important;flex:1!important;-webkit-text-size-adjust:100%!important}
 .cp-chat-send{width:38px!important;height:38px!important;flex:0 0 38px!important;border:0!important;border-radius:13px!important;background:linear-gradient(135deg,#8068ff,#604bd7)!important;color:#fff!important;display:grid!important;place-items:center!important;cursor:pointer!important;box-shadow:0 9px 22px rgba(96,75,215,.22)!important}
 .cp-chat-send:disabled{opacity:.38!important;box-shadow:none!important}
 .cp-chat-reply-bar{bottom:67px!important;left:12px!important;right:12px!important}
@@ -6812,7 +6812,7 @@ html.dark .cp-chat-list-row.has-unread .cp-chat-list-copy span{color:#f7f3fb!imp
   .cp-chat-messages{padding:15px 11px 20px!important}
   .cp-chat-composer{padding-left:8px!important;padding-right:8px!important;gap:5px!important}
   .cp-chat-composer>button:not(.cp-chat-send){width:32px!important;height:32px!important;flex-basis:32px!important}
-  .cp-chat-composer textarea{font-size:13px!important}
+  .cp-chat-composer textarea{font-size:16px!important;min-height:40px!important;line-height:1.35!important}
   .cp-chat-send{width:34px!important;height:34px!important;flex-basis:34px!important}
   .cp-chat-emoji{grid-template-columns:repeat(7,1fr)!important}
   .cp-gif-grid{grid-template-columns:repeat(3,1fr)!important}
