@@ -74,8 +74,8 @@ export function avatarDataUrl(seedValue: unknown, genderValue?: unknown): string
 
 function resolveAvatarSrc(src?: string | null): string | null {
   if (!src) return null;
-  if (src.startsWith('data:') || /^https?:\\/\\//i.test(src)) return src;
-  const apiOrigin = (import.meta.env.VITE_API_URL ?? 'https://cipherpay-api.onrender.com').trim().replace(/\\/+$/, '');
+  if (src.startsWith('data:') || /^https?:\/\//i.test(src)) return src;
+  const apiOrigin = (import.meta.env.VITE_API_URL ?? 'https://cipherpay-api.onrender.com').trim().replace(/\/+$/, '');
   return src.startsWith('/') ? `${apiOrigin}${src}` : `${apiOrigin}/${src}`;
 }
 
