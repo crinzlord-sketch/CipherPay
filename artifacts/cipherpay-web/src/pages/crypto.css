@@ -3,3 +3,9 @@
 /* Performance guardrails */
 @media (max-width: 700px){.cp-crypto-dashboard,.cp-crypto-glass,.cp-crypto-modal{backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}.cp-balance-ring{animation-duration:28s}.cp-balance-float{animation-duration:6s}}
 @media (prefers-reduced-motion: reduce){.cp-balance-ring,.cp-balance-float{animation:none!important}.cp-crypto-actions button,.cp-live-market{transition:none!important}}
+
+
+/* Crypto wallet hierarchy + currency control */
+.cp-crypto-balance-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin:0 0 20px;padding:20px 22px;border:1px solid rgba(255,255,255,.8);border-radius:24px;background:linear-gradient(135deg,rgba(255,255,255,.78),rgba(245,241,255,.52));box-shadow:0 18px 55px rgba(62,45,110,.08),inset 0 1px rgba(255,255,255,.95);backdrop-filter:blur(20px)}
+.cp-crypto-balance-hero>div{display:grid;gap:5px}.cp-crypto-balance-hero span,.cp-actions-label{font-size:8px;letter-spacing:.15em;font-weight:900;color:#88838f}.cp-crypto-balance-hero strong{font-size:42px;line-height:1;letter-spacing:-.065em}.cp-crypto-balance-hero small{font-size:9px;color:#85818d}.cp-currency-switch{display:flex;align-items:center;gap:7px;border:1px solid rgba(117,87,240,.18);background:rgba(255,255,255,.7);border-radius:999px;padding:7px 9px;cursor:pointer;color:#625d6b}.cp-currency-switch b{font-size:9px;color:#7557f0}.cp-currency-switch span{font-size:11px;color:#aaa}.cp-currency-switch em{font-style:normal;font-size:8px;font-weight:800}.cp-actions-label{grid-column:1/-1;margin-bottom:-2px}.cp-crypto-actions{display:grid!important;grid-template-columns:repeat(4,1fr);gap:9px!important}.cp-crypto-actions button{min-height:46px}.cp-crypto-actions button b{font-size:14px}
+@media(max-width:600px){.cp-crypto-balance-hero{padding:17px;align-items:center}.cp-crypto-balance-hero strong{font-size:34px}.cp-crypto-actions{grid-template-columns:repeat(2,1fr)!important}}
