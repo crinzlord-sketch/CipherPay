@@ -619,7 +619,12 @@
   right: 0;
   left: 0;
   max-height: 255px;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  scrollbar-gutter: stable;
   padding: 5px;
   border: 1px solid hsl(var(--border));
   border-radius: 12px;
