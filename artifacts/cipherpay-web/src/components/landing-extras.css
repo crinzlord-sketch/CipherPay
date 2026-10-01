@@ -3,3 +3,7 @@
 /* Performance guardrails */
 @media (max-width: 700px){.cp-landing-crypto-orbit{backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}.cp-orbit-line{animation-duration:30s}.cp-clean-coin{animation-duration:6s}}
 @media (prefers-reduced-motion: reduce){.cp-orbit-line,.cp-clean-coin,.cp-wallet-3d-chart i{animation:none!important}.cp-wallet-3d-face{transition:none!important}}
+
+
+/* Landing crypto balance — USD presentation */
+.cp-wallet-3d-balance strong{font-variant-numeric:tabular-nums;}
