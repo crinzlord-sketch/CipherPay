@@ -58,6 +58,7 @@ export default function ChatPage() {
   const [bg,setBg]=useState(BGS[0]);
   const endRef=useRef<HTMLDivElement>(null);
   const fileRef=useRef<HTMLInputElement>(null);
+  const latestMessageIdRef=useRef(0);
 
   const loadChats=async()=>{ try{const r=await apiRequest<any>('/api/chat/list');setChats(r.chats??[]);}catch{} };
   const loadChat=async(id:string)=>{
@@ -68,6 +69,8 @@ export default function ChatPage() {
       const visible = (r.messages ?? []).filter((m:any) => !String(m.body ?? '').startsWith('E2EE1.'));
       setChat(r.chat); setOther(r.other); setMessages(visible); setBg(r.background||BGS[0]); setBlockedState(Boolean(r.blocked));
       setDecrypted(visible.map(decodeChatMessage));
+      latestMessageIdRef.current = Math.max(0, ...visible.map((m:any) => Number(m.id) || 0));
+      void apiRequest('/api/chat/'+id+'/read',{method:'POST'}).catch(()=>{});
     }catch(e){
       setChat(null);
       setOther(null);
@@ -122,10 +125,15 @@ export default function ChatPage() {
       try{
         const r=await apiRequest<any>(`/api/chat/${params.id}`);
         const visible = (r.messages ?? []).filter((m:any) => !String(m.body ?? '').startsWith('E2EE1.'));
+        const newest = visible.length ? visible[visible.length - 1] : null;
+        const newestId = Number(newest?.id) || 0;
+        const hasNewIncoming = newest && newest.senderId !== currentUserId && newestId > latestMessageIdRef.current;
         setMessages(visible); setOther(r.other); setChat(r.chat); setBlockedState(Boolean(r.blocked));
         setDecrypted(visible.map(decodeChatMessage));
+        if (newestId > latestMessageIdRef.current) latestMessageIdRef.current = newestId;
+        if (hasNewIncoming) void apiRequest('/api/chat/'+params.id+'/read',{method:'POST'}).catch(()=>{});
       }catch{}
-    },800);
+    },2000);
     return()=>window.clearInterval(t);
   },[params?.id,currentUserId]);
 
