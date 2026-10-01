@@ -829,10 +829,11 @@ router.post("/sms/buy-number", async (req, res): Promise<void> => {
   }
   if (!offer) { res.status(400).json({ error: "Service or country not available right now" }); return; }
   const providerPrice = Math.ceil((offer.priceUsd * rate) / 10) * 10;
-  // The SMSPool account is the funded provider wallet. Charge the user the
-  // live displayed price only; do not require a second transfer from the
-  // user's payout wallet and do not add a hidden fee at checkout.
-  const price = providerPrice;
+  // CipherPay adds a fixed ₦400 profit to every SMS verification purchase.
+  // The provider account is already funded, so do not move money through the
+  // user's separate payout/source wallet before ordering.
+  const cipherPayProfit = 400;
+  const price = providerPrice + cipherPayProfit;
 
   let tx: any;
   try {
@@ -841,7 +842,7 @@ router.post("/sms/buy-number", async (req, res): Promise<void> => {
       country,
       provider: "SMSPool",
       providerPriceUsd: offer.priceUsd,
-      cipherPayProfit: 0,
+      cipherPayProfit,
       usdNgnRate: rate,
     }));
   } catch (e: any) {
