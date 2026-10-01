@@ -90,10 +90,10 @@ router.get("/chat/list", async (req, res): Promise<void> => {
   const otherIds = visible.map(c => c.userOneId === me ? c.userTwoId : c.userOneId);
   const people = otherIds.length ? await db.select({ id: usersTable.id, firstName: usersTable.firstName, lastName: usersTable.lastName, email: usersTable.email, avatarUrl: usersTable.avatarUrl, gender: usersTable.gender, userCode: usersTable.userCode }).from(usersTable).where(inArray(usersTable.id, otherIds)) : [];
   const byId = new Map(people.map(p => [p.id, p]));
+  await ensureReadStateTable();
   const rows = await Promise.all(visible.map(async c => {
     const otherId = c.userOneId === me ? c.userTwoId : c.userOneId;
     const [last] = await db.select().from(directMessagesTable).where(eq(directMessagesTable.chatId, c.id)).orderBy(desc(directMessagesTable.id)).limit(1);
-    await ensureReadStateTable();
     const unreadResult = await db.execute(sql`
       SELECT COUNT(*)::int AS count
       FROM direct_messages m
@@ -104,7 +104,8 @@ router.get("/chat/list", async (req, res): Promise<void> => {
           WHERE chat_id = ${c.id} AND user_id = ${me}
         ), 0)
     `);
-    const unreadCount = Number((unreadResult as any)?.rows?.[0]?.count ?? 0);
+    const unreadRows = (unreadResult as any)?.rows ?? (unreadResult as any);
+    const unreadCount = Number(unreadRows?.[0]?.count ?? 0);
     let lastPreview = '';
     if (last?.body) {
       try {
