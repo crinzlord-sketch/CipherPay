@@ -26,6 +26,11 @@ type CodeResult = { activationId: string; status: string; code?: string | null; 
 
 const naira = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 });
 const SMS_CANCEL_AFTER_MS = 15 * 60_000;
+const SMS_PROFIT_FEE = 400;
+
+function smsRetailPrice(providerPrice: number) {
+  return Math.max(Number(providerPrice) || 0, 0) + SMS_PROFIT_FEE;
+}
 
 const serviceAliases: Record<string, string[]> = {
   whatsapp: ['wa'],
@@ -210,7 +215,7 @@ export default function SmsVerification() {
             number: result.number,
             service: chosen?.name ?? service,
             country: countries.find((item) => item.code === country)?.name ?? country,
-            amount: chosen?.price ?? 0,
+            amount: chosen ? smsRetailPrice(chosen.price) : 0,
             status: result.status ?? 'pending',
             createdAt: result.createdAt ?? new Date().toISOString(),
           });
@@ -313,7 +318,7 @@ export default function SmsVerification() {
                     </div>
                   ) : servicesQuery.isLoading ? <div className="sms-picker-message"><LoaderCircle size={15} className="spin" /> Loading services…</div> : serviceMatches.length ? serviceMatches.map((item) => (
                     <button type="button" className={`sms-picker-option ${item.id === service ? 'selected' : ''}`} key={item.id} onMouseDown={(event) => event.preventDefault()} onClick={() => chooseService(item)} role="option" aria-selected={item.id === service}>
-                      <span className="sms-picker-option-copy"><span>{item.name}</span><small>{naira.format(item.price)}</small></span>
+                      <span className="sms-picker-option-copy"><span>{item.name}</span><small>{naira.format(smsRetailPrice(item.price))}</small></span>
                       {item.id === service ? <Check size={16} /> : null}
                     </button>
                   )) : <div className="sms-picker-message">No services match “{serviceSearch}”.</div>}
@@ -327,7 +332,7 @@ export default function SmsVerification() {
           {error && <div className="error-box" role="alert">{error}</div>}
           {success && <div className="success-box" role="status"><Check size={17} /><div><b>Refund completed</b><span>{success}</span></div></div>}
           <button className="btn btn-primary full-btn" type="submit" disabled={!country || !service || buyNumber.isPending || !selectedService} data-testid="button-buy-sms-number">
-            {buyNumber.isPending ? <><LoaderCircle size={17} className="spin" /> Getting your number…</> : <>Get a number <span>{selectedService ? naira.format(selectedService.price) : ''}</span></>}
+            {buyNumber.isPending ? <><LoaderCircle size={17} className="spin" /> Getting your number…</> : <>Get a number <span>{selectedService ? naira.format(smsRetailPrice(selectedService.price)) : ''}</span></>}
           </button>
           <p className="sms-footnote"><ShieldCheck size={15} /> The server checks the live price and charges your wallet before ordering.</p>
         </form>
