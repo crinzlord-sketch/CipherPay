@@ -80,5 +80,6 @@ function resolveAvatarSrc(src?: string | null): string | null {
 }
 
 export function CipherAvatar({ src, seed, gender, size = 44, alt = '' }: { src?: string | null; seed?: unknown; gender?: unknown; size?: number; alt?: string }) {
-  return <img src={resolveAvatarSrc(src) || avatarDataUrl(seed, gender)} alt={alt} width={size} height={size} className="cp-avatar-image" style={{ width: size, height: size }} />;
+  const fallback = avatarDataUrl(seed, gender);
+  return <img src={resolveAvatarSrc(src) || fallback} onError={(event) => { if (event.currentTarget.src !== fallback) event.currentTarget.src = fallback; }} alt={alt} width={size} height={size} className="cp-avatar-image" style={{ width: size, height: size }} />;
 }
