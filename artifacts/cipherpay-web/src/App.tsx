@@ -247,7 +247,7 @@ function Shell({ children }: { children: ReactNode }) {
       }
     };
     void loadUnreadChats();
-    const interval = window.setInterval(() => void loadUnreadChats(), 2000);
+    const interval = window.setInterval(() => void loadUnreadChats(), 10000);
     return () => {
       active = false;
       window.clearInterval(interval);
