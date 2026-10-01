@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import './landing-extras.css';
 
 const logo = (code: string) => 'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons/svg/color/' + code + '.svg';
@@ -7,7 +8,24 @@ const coins = [
 ];
 
 export default function LandingExtras() {
-  return <section className="cp-section cp-crypto-landing" id="crypto">
+  const sectionRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        section.classList.add('is-visible');
+        observer.disconnect();
+      }
+    }, { threshold: 0.14 });
+
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
+
+  return <section ref={sectionRef} className="cp-section cp-crypto-landing" id="crypto">
     <div className="cp-crypto-landing-head"><div><span className="cp-kicker">CIPHERPAY / CRYPTO</span><h2>Digital assets.<br/><span>Built beautifully.</span></h2><p>Live market visibility, a multi-asset wallet and simple actions — inside the same CipherPay experience.</p></div><span className="cp-crypto-head-badge"><i/> LIVE MARKETS</span></div>
     <div className="cp-landing-crypto-layout">
       <div className="cp-landing-wallet-3d">
