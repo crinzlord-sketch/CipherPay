@@ -41,6 +41,10 @@ export default function CryptoPage(){
   const openPanel=(next:'send'|'receive'|'swap'|'sell')=>{ setPanelClosing(false); setPanel(next); };
   const closePanel=()=>{ if(!panel || panelClosing) return; setPanelClosing(true); window.setTimeout(()=>{ setPanel(null); setPanelClosing(false); },220); };
   const [currency,setCurrency]=useState<'USD'|'NGN'>('USD');
+  const selectAsset=(symbol:string)=>{
+    setSelected(symbol);
+    window.requestAnimationFrame(()=>document.getElementById('cp-crypto-asset-details')?.scrollIntoView({behavior:'smooth',block:'start'}));
+  };
 
   // Keep action modals independent of the page layout and lock the page behind them.
   useEffect(()=>{
@@ -108,7 +112,7 @@ export default function CryptoPage(){
       <div className="cp-crypto-section-title"><div><span>LIVE MARKETS</span><b>Supported assets & real-time prices</b></div><small>Refreshes every 30 seconds</small></div>
       {marketError && <div className="cp-market-error">{marketError}</div>}
       <div className="cp-live-market-grid">
-        {topMarkets.map((item,index)=><button type="button" key={item.id} className={`cp-live-market ${selected===item.symbol?'selected':''}`} onClick={()=>setSelected(item.symbol)}>
+        {topMarkets.map((item,index)=><button type="button" key={item.id} className={`cp-live-market ${selected===item.symbol?'selected':''}`} onClick={()=>selectAsset(item.symbol)}>
           <span className="cp-market-rank">{String(index+1).padStart(2,'0')}</span><img src={icon(item.symbol.toLowerCase())} alt=""/><span className="cp-market-name"><b>{item.name}</b><small>{item.symbol} · {compact.format(currency==='USD'?item.marketCapUsd:item.marketCapNgn)} mcap</small></span><span className="cp-market-price"><b>{money(item.priceUsd,item.priceNgn)}</b><em className={item.change24h<0?'down':''}>{item.change24h>=0?'+':''}{item.change24h.toFixed(2)}%</em></span>
         </button>)}
         {marketLoading && !markets.length && <div className="cp-market-loading-grid">{Array.from({length:8}).map((_,i)=><div key={i}/>)}</div>}
@@ -122,7 +126,7 @@ export default function CryptoPage(){
       </article>
     </section>
 
-    <section className="cp-crypto-detail-grid">
+    <section id="cp-crypto-asset-details" className="cp-crypto-detail-grid">
       <article className="cp-crypto-glass cp-detail-card"><span className="cp-kicker">ASSET DETAILS</span><h2>{selectedMarket?.name ?? selected}</h2><div className="cp-detail-price">{selectedMarket?money(selectedMarket.priceUsd,selectedMarket.priceNgn):'—'}</div><div className="cp-detail-stats"><div><span>24h change</span><b>{selectedMarket ? `${selectedMarket.change24h>=0?'+':''}${selectedMarket.change24h.toFixed(2)}%` : '—'}</b></div><div><span>24h volume</span><b>{selectedMarket?compact.format(currency==='USD'?selectedMarket.volumeUsd:selectedMarket.volumeNgn):'—'}</b></div><div><span>Market cap</span><b>{selectedMarket?compact.format(currency==='USD'?selectedMarket.marketCapUsd:selectedMarket.marketCapNgn):'—'}</b></div></div></article>
       <article className="cp-crypto-glass cp-detail-card cp-security-card"><span className="cp-kicker">CIPHERPAY WALLET</span><h2>Built around your control.</h2><div className="cp-security-lines"><span><ShieldCheck/> One CipherPay KYC</span><span><CircleDollarSign/> User-paid blockchain gas</span><span><WalletCards/> Multi-asset wallet architecture</span></div></article>
     </section>
