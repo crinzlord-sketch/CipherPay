@@ -24,3 +24,123 @@
 
 .cp-crypto-modal-backdrop{animation:cpModalBackdropIn .24s ease-out both}.cp-crypto-modal{animation:cpModalIn .28s cubic-bezier(.22,1,.36,1) both;transform-origin:center}@keyframes cpModalBackdropIn{from{opacity:0}to{opacity:1}}@keyframes cpModalIn{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}@media(prefers-reduced-motion:reduce){.cp-crypto-modal-backdrop,.cp-crypto-modal{animation:none!important}}
 .cp-crypto-modal-backdrop.is-closing{animation:cpModalBackdropOut .2s ease-in both}.cp-crypto-modal.is-closing{animation:cpModalOut .2s cubic-bezier(.4,0,1,1) both}@keyframes cpModalBackdropOut{from{opacity:1}to{opacity:0}}@keyframes cpModalOut{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(12px) scale(.97)}}
+
+
+/* Crypto page — dark mode */
+html.dark .cp-crypto-back{color:rgba(247,243,251,.62)}
+html.dark .cp-crypto-live{
+  background:rgba(255,255,255,.07);
+  border-color:rgba(255,255,255,.12);
+  color:#f7f3fb;
+}
+html.dark .cp-crypto-dashboard{
+  border-color:rgba(255,255,255,.10);
+  background:linear-gradient(135deg,rgba(44,35,59,.92),rgba(31,25,43,.82));
+  box-shadow:0 35px 100px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.08);
+}
+html.dark .cp-crypto-dashboard-copy h1,
+html.dark .cp-crypto-dashboard-copy p,
+html.dark .cp-crypto-section-title b,
+html.dark .cp-crypto-section-title small,
+html.dark .cp-card-heading,
+html.dark .cp-real-balance strong,
+html.dark .cp-selected-market b,
+html.dark .cp-selected-market strong,
+html.dark .cp-market-name b,
+html.dark .cp-market-price b,
+html.dark .cp-detail-card h2,
+html.dark .cp-detail-price,
+html.dark .cp-balance-meta b,
+html.dark .cp-detail-stats b{
+  color:#f7f3fb;
+}
+html.dark .cp-crypto-dashboard-copy p,
+html.dark .cp-real-balance small,
+html.dark .cp-real-balance span,
+html.dark .cp-card-heading,
+html.dark .cp-balance-meta span,
+html.dark .cp-selected-market small,
+html.dark .cp-market-name small,
+html.dark .cp-market-rank,
+html.dark .cp-market-loading,
+html.dark .cp-detail-stats span,
+html.dark .cp-detail-card p{
+  color:rgba(247,243,251,.58);
+}
+html.dark .cp-crypto-glass{
+  border-color:rgba(255,255,255,.10);
+  background:rgba(39,31,52,.76);
+  box-shadow:0 25px 70px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.06);
+}
+html.dark .cp-crypto-balance-hero{
+  border-color:rgba(255,255,255,.10);
+  background:linear-gradient(135deg,rgba(48,38,64,.9),rgba(35,28,48,.78));
+}
+html.dark .cp-crypto-balance-hero span,
+html.dark .cp-actions-label{color:rgba(247,243,251,.62)}
+html.dark .cp-crypto-balance-hero strong{color:#fff}
+html.dark .cp-crypto-balance-hero small{color:rgba(247,243,251,.55)}
+html.dark .cp-currency-switch{
+  background:rgba(255,255,255,.07);
+  border-color:rgba(117,87,240,.35);
+  color:#f7f3fb;
+}
+html.dark .cp-currency-switch span{color:rgba(247,243,251,.45)}
+html.dark .cp-crypto-actions button{
+  color:#f7f3fb;
+  background:rgba(255,255,255,.07);
+  border-color:rgba(255,255,255,.12);
+}
+html.dark .cp-crypto-actions button:hover{background:rgba(255,255,255,.13)}
+html.dark .cp-balance-meta div,
+html.dark .cp-detail-stats div{
+  background:rgba(255,255,255,.055);
+  border-color:rgba(255,255,255,.09);
+}
+html.dark .cp-live-market{
+  background:rgba(255,255,255,.055);
+  border-color:rgba(255,255,255,.10);
+  color:#f7f3fb;
+}
+html.dark .cp-live-market:hover,
+html.dark .cp-live-market.selected{background:rgba(255,255,255,.10)}
+html.dark .cp-market-price em{color:#5fe0a4}
+html.dark .cp-market-price em.down{color:#ff7180}
+html.dark .cp-market-error{
+  background:rgba(220,80,95,.13);
+  border-color:rgba(255,110,125,.22);
+  color:#ff9da8;
+}
+html.dark .cp-selected-market em{color:#5fe0a4}
+html.dark .cp-selected-market em.down{color:#ff7180}
+html.dark .cp-detail-card{
+  color:#f7f3fb;
+}
+html.dark .cp-security-lines span{
+  background:rgba(255,255,255,.055);
+  color:#f7f3fb;
+}
+html.dark .cp-crypto-modal-backdrop{background:rgba(5,3,10,.68)}
+html.dark .cp-crypto-modal{
+  background:rgba(34,27,46,.96);
+  border-color:rgba(255,255,255,.12);
+  color:#f7f3fb;
+  box-shadow:0 35px 100px rgba(0,0,0,.5);
+}
+html.dark .cp-crypto-modal h2,
+html.dark .cp-modal-asset span,
+html.dark .cp-modal-field strong{color:#fff}
+html.dark .cp-crypto-close{
+  background:rgba(255,255,255,.08);
+  border-color:rgba(255,255,255,.12);
+  color:#f7f3fb;
+}
+html.dark .cp-modal-asset{
+  background:rgba(255,255,255,.055);
+  border-color:rgba(255,255,255,.10);
+}
+html.dark .cp-modal-asset small,
+html.dark .cp-modal-field{color:rgba(247,243,251,.58)}
+html.dark .cp-modal-field{
+  background:rgba(255,255,255,.055);
+}
