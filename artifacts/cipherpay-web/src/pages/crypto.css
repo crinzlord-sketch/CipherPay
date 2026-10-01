@@ -21,3 +21,5 @@
 .cp-crypto-market-card{width:100%}
 .cp-footer-quote{display:none}
 @media(max-width:700px){.cp-crypto-dashboard{padding:22px 16px}.cp-crypto-dashboard .cp-kicker{margin-top:10px}}
+
+.cp-crypto-modal-backdrop{animation:cpModalBackdropIn .24s ease-out both}.cp-crypto-modal{animation:cpModalIn .28s cubic-bezier(.22,1,.36,1) both;transform-origin:center}@keyframes cpModalBackdropIn{from{opacity:0}to{opacity:1}}@keyframes cpModalIn{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}@media(prefers-reduced-motion:reduce){.cp-crypto-modal-backdrop,.cp-crypto-modal{animation:none!important}}
