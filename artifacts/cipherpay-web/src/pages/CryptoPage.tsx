@@ -84,8 +84,6 @@ export default function CryptoPage(){
           <button onClick={()=>setPanel('sell')}><b>₦</b>Sell to NGN</button>
         </div>
       </div>
-SOL')!.priceNgn):'—'}</small></div>
-      </div>
     </section>
 
     <section className="cp-crypto-market-section">
