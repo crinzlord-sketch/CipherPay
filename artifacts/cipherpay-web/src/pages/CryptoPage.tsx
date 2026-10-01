@@ -1,5 +1,6 @@
 import { ArrowDownLeft, ArrowLeft, ArrowUpRight, BarChart3, CircleDollarSign, RefreshCw, ShieldCheck, WalletCards } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'wouter';
 import { useGetWallet } from '@workspace/api-client-react';
 import { apiUrl } from './page-api';
@@ -37,6 +38,20 @@ export default function CryptoPage(){
   const [marketError,setMarketError]=useState('');
   const [panel,setPanel]=useState<'send'|'receive'|'swap'|'sell'|null>(null);
   const [currency,setCurrency]=useState<'USD'|'NGN'>('USD');
+
+  // Keep action modals independent of the page layout and lock the page behind them.
+  useEffect(()=>{
+    if(!panel) return;
+    const previousOverflow=document.body.style.overflow;
+    const previousPaddingRight=document.body.style.paddingRight;
+    const scrollbarWidth=window.innerWidth-document.documentElement.clientWidth;
+    document.body.style.overflow='hidden';
+    if(scrollbarWidth>0) document.body.style.paddingRight=\`\${scrollbarWidth}px\`;
+    return()=>{
+      document.body.style.overflow=previousOverflow;
+      document.body.style.paddingRight=previousPaddingRight;
+    };
+  },[panel]);
 
   useEffect(()=>{
     let active=true;
@@ -110,6 +125,6 @@ export default function CryptoPage(){
       <article className="cp-crypto-glass cp-detail-card cp-security-card"><span className="cp-kicker">CIPHERPAY WALLET</span><h2>Built around your control.</h2><div className="cp-security-lines"><span><ShieldCheck/> One CipherPay KYC</span><span><CircleDollarSign/> User-paid blockchain gas</span><span><WalletCards/> Multi-asset wallet architecture</span></div></article>
     </section>
 
-    {panel&&<div className="cp-crypto-modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&setPanel(null)}><div className="cp-crypto-modal"><button className="cp-crypto-close" onClick={()=>setPanel(null)}>×</button><span className="cp-kicker">CRYPTO / {panel}</span><h2>{panel==='sell'?'Sell to NGN':panel==='swap'?'Swap crypto':panel==='send'?'Send crypto':'Receive crypto'}</h2><div className="cp-modal-asset"><img src={icon((selectedMarket?.symbol ?? selected).toLowerCase())} alt=""/><span><b>{selectedMarket?.name ?? selected}</b><small>{selectedMarket?.symbol ?? selected} · {assets.find(a=>a.symbol===(selectedMarket?.symbol??selected))?.network ?? 'Network'}</small></span></div><div className="cp-modal-field">Current market price <strong>{selectedMarket?money(selectedMarket.priceUsd,selectedMarket.priceNgn):'—'}</strong></div><button className="cp-modal-disabled">Coming soon</button></div></div>}
+    {panel&&typeof document!=='undefined'&&createPortal(<div className="cp-crypto-modal-backdrop" role="presentation" onMouseDown={e=>e.target===e.currentTarget&&setPanel(null)}><div className="cp-crypto-modal" role="dialog" aria-modal="true" aria-labelledby="cp-crypto-modal-title" onMouseDown={e=>e.stopPropagation()}><button type="button" className="cp-crypto-close" onClick={()=>setPanel(null)} aria-label="Close">×</button><span className="cp-kicker">CRYPTO / {panel}</span><h2 id="cp-crypto-modal-title">{panel==='sell'?'Sell to NGN':panel==='swap'?'Swap crypto':panel==='send'?'Send crypto':'Receive crypto'}</h2><div className="cp-modal-asset"><img src={icon((selectedMarket?.symbol ?? selected).toLowerCase())} alt=""/><span><b>{selectedMarket?.name ?? selected}</b><small>{selectedMarket?.symbol ?? selected} · {assets.find(a=>a.symbol===(selectedMarket?.symbol??selected))?.network ?? 'Network'}</small></span></div><div className="cp-modal-field">Current market price <strong>{selectedMarket?money(selectedMarket.priceUsd,selectedMarket.priceNgn):'—'}</strong></div><button type="button" className="cp-modal-disabled">Coming soon</button></div></div>,document.body)}
   </div>;
 }
