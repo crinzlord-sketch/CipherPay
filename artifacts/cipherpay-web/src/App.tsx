@@ -126,6 +126,7 @@ function Shell({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const [notificationReturnPath, setNotificationReturnPath] = useState<string>('/');
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadChats, setUnreadChats] = useState(0);
   const [serviceFeatures, setServiceFeatures] = useState<Record<string, boolean> | null>(null);
   const { confirm } = useAnimatedDialog();
   const me = useGetMe({ query: { enabled: !!useToken(), queryKey: ['/api/auth/me'] } });
@@ -230,6 +231,29 @@ function Shell({ children }: { children: ReactNode }) {
       window.clearInterval(interval);
     };
   }, [location]);
+  useEffect(() => {
+    let active = true;
+    const loadUnreadChats = async () => {
+      if (!useToken()) {
+        if (active) setUnreadChats(0);
+        return;
+      }
+      try {
+        const response = await apiRequest<{ chats?: Array<{ unreadCount?: number }> }>('/api/chat/list');
+        const total = (response.chats ?? []).reduce((sum, chat) => sum + Number(chat.unreadCount ?? 0), 0);
+        if (active) setUnreadChats(total);
+      } catch {
+        if (active) setUnreadChats(0);
+      }
+    };
+    void loadUnreadChats();
+    const interval = window.setInterval(() => void loadUnreadChats(), 2000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [location]);
+
   const logout = async () => {
     const confirmed = await confirm({
       title: 'Log out of CipherPay?',
@@ -242,11 +266,14 @@ function Shell({ children }: { children: ReactNode }) {
     queryClient.clear();
     setLocation('/');
   };
-  const linkList = (items: typeof nav) => items.map(({ href, label, icon: Icon }) => (
-    <Link key={href} href={href} onClick={() => setMobileOpen(false)} className={`nav-item ${location === href ? 'active' : ''}`} data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`}>
-      <Icon size={17} strokeWidth={1.8} /><span>{label}</span>
-    </Link>
-  ));
+  const linkList = (items: typeof nav) => items.map(({ href, label, icon: Icon }) => {
+    const badge = href === '/chat' ? unreadChats : href === '/notifications' ? unreadNotifications : 0;
+    return (
+      <Link key={href} href={href} onClick={() => setMobileOpen(false)} className={`nav-item ${location === href ? 'active' : ''}`} data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`}>
+        <Icon size={17} strokeWidth={1.8} /><span>{label}</span>{badge > 0 && <b className="nav-unread-badge">{badge > 99 ? '99+' : badge}</b>}
+      </Link>
+    );
+  });
   return <div className="app-shell">
     <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
       <div className="sidebar-top"><Logo compact /><button className="icon-btn mobile-close" onClick={() => setMobileOpen(false)} data-testid="button-close-menu" aria-label="Close navigation"><X size={19} /></button></div>
