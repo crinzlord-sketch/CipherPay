@@ -486,3 +486,7 @@
   .admin-transaction-filters .admin-search { grid-column: auto; }
   .admin-live-status { justify-content: flex-start; }
 }
+
+
+/* Premium animated service switches */
+.admin-service-toggle{appearance:none;border:0;background:transparent;padding:3px;margin:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.admin-service-toggle:disabled{cursor:wait;opacity:.6}.admin-service-toggle-track{position:relative;width:54px;height:31px;border-radius:999px;background:rgba(120,118,130,.2);border:1px solid rgba(120,118,130,.18);box-shadow:inset 0 2px 5px rgba(0,0,0,.08),0 5px 18px rgba(30,25,50,.06);transition:background .28s ease,box-shadow .28s ease,transform .18s ease}.admin-service-toggle:hover .admin-service-toggle-track{transform:scale(1.04)}.admin-service-toggle-thumb{position:absolute;left:3px;top:3px;width:23px;height:23px;border-radius:50%;background:#fff;box-shadow:0 3px 9px rgba(0,0,0,.22);transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s ease}.admin-service-toggle.is-on .admin-service-toggle-track{background:linear-gradient(135deg,#7659e8,#a27cff);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2),0 0 22px rgba(118,89,232,.2)}.admin-service-toggle.is-on .admin-service-toggle-thumb{transform:translateX(23px);box-shadow:0 3px 12px rgba(70,45,140,.28)}.admin-service-toggle:focus-visible .admin-service-toggle-track{outline:3px solid rgba(118,89,232,.22);outline-offset:3px}
