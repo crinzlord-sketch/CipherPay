@@ -44,7 +44,23 @@ export function ProfilePage() {
     try {
       const reader = new FileReader();
       const dataUrl = await new Promise<string>((resolve, reject) => { reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Could not read image.')); reader.onerror = () => reject(new Error('Could not read image.')); reader.readAsDataURL(file); });
-      const saved = await apiRequest<any>('/api/auth/avatar', { method: 'POST', body: { image: dataUrl } });
+      const compactAvatar = await new Promise<string>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => {
+          const size = 256;
+          const scale = Math.min(1, size / Math.max(image.naturalWidth || size, image.naturalHeight || size));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round((image.naturalWidth || size) * scale));
+          canvas.height = Math.max(1, Math.round((image.naturalHeight || size) * scale));
+          const context = canvas.getContext('2d');
+          if (!context) { reject(new Error('Could not prepare image.')); return; }
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/webp', 0.78));
+        };
+        image.onerror = () => reject(new Error('Could not prepare image.'));
+        image.src = dataUrl;
+      });
+      const saved = await apiRequest<any>('/api/auth/avatar', { method: 'POST', body: { image: compactAvatar } });
       queryClient.setQueryData(['/api/auth/me'], saved);
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       setNotice({ text: 'Profile picture updated.', tone: 'success' });
