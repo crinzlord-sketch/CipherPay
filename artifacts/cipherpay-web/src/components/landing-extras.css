@@ -7,3 +7,35 @@
 
 /* Landing crypto balance — USD presentation */
 .cp-wallet-3d-balance strong{font-variant-numeric:tabular-nums;}
+
+
+/* Scroll entrance reveal */
+.cp-crypto-landing .cp-crypto-landing-head,
+.cp-crypto-landing .cp-landing-wallet-3d,
+.cp-crypto-landing .cp-landing-crypto-orbit,
+.cp-crypto-landing .cp-landing-asset-strip{
+  opacity:0;
+  transform:translateY(42px);
+  transition:opacity .75s cubic-bezier(.22,1,.36,1),transform .85s cubic-bezier(.22,1,.36,1);
+}
+.cp-crypto-landing .cp-crypto-landing-head{transform:translateY(28px)}
+.cp-crypto-landing .cp-landing-wallet-3d{transition-delay:.08s}
+.cp-crypto-landing .cp-landing-crypto-orbit{transition-delay:.18s}
+.cp-crypto-landing .cp-landing-asset-strip{transition-delay:.28s}
+.cp-crypto-landing.is-visible .cp-crypto-landing-head,
+.cp-crypto-landing.is-visible .cp-landing-wallet-3d,
+.cp-crypto-landing.is-visible .cp-landing-crypto-orbit,
+.cp-crypto-landing.is-visible .cp-landing-asset-strip{
+  opacity:1;
+  transform:translateY(0);
+}
+@media (prefers-reduced-motion: reduce){
+  .cp-crypto-landing .cp-crypto-landing-head,
+  .cp-crypto-landing .cp-landing-wallet-3d,
+  .cp-crypto-landing .cp-landing-crypto-orbit,
+  .cp-crypto-landing .cp-landing-asset-strip{
+    opacity:1;
+    transform:none;
+    transition:none;
+  }
+}
