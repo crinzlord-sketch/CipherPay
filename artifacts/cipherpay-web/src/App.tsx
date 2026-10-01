@@ -488,7 +488,17 @@ function LandingPage() {
       <div className="cp-3d-cta-prism" aria-hidden="true"><span/><span/><span/><span/></div>
       <div className="cp-scatter cp-scatter-cta" aria-hidden="true"><div className="cp-mockup scatter-j"><div className="mock-screen"><b>Services</b><strong>Everything</strong><span>In one place</span><i>Explore</i></div></div></div>
       <span className="cp-kicker">CIPHERPAY</span><h2>Make everyday feel simpler.</h2><p>One place for the things you do often, with an interface that gets out of your way.</p><div className="cp-hero-actions"><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={17}/></button><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button></div></div></section>
-    <footer className="cp-footer"><span>© 2026 CipherPay</span><span>Payments · Digital services · Communication</span></footer>
+    <footer className="cp-footer cp-footer-premium">
+      <div className="cp-footer-glow cp-footer-glow-a" /><div className="cp-footer-glow cp-footer-glow-b" />
+      <div className="cp-footer-top">
+        <div className="cp-footer-brand"><Logo /><p>One secure place for payments, transfers, digital services and your next move.</p><span className="cp-footer-status"><i /> Systems designed to stay moving</span></div>
+        <div className="cp-footer-col"><span>PRODUCT</span><a href="#experience">Everything</a><a href="#crypto">Crypto</a><a href="#bills">Bills</a><a href="#transfer">Transfers</a></div>
+        <div className="cp-footer-col"><span>COMPANY</span><a href="#home">Home</a><a href="/login">Sign in</a><a href="/register">Create account</a><button type="button" onClick={() => setSupportOpen(true)}>Support</button></div>
+        <div className="cp-footer-quote"><b>Move money.<br/><em>Move forward.</em></b><small>Built for the way digital life moves.</small></div>
+      </div>
+      <div className="cp-footer-orbit"><span /><span /><span /><b>CP</b></div>
+      <div className="cp-footer-bottom"><span>© 2026 CipherPay. All rights reserved.</span><span>Secure payments · Digital services · Communication</span><span>Privacy · Terms</span></div>
+    </footer>
     {authNavigating && <div className="cp-auth-transition" aria-hidden="true"><div className="cp-auth-transition-mark"><span className="brand-mark"><span /></span><b>Cipher<span className="brand-orange">Pay</span></b></div><div className="cp-auth-transition-line" /><span>{authNavigating === 'login' ? 'Opening your account' : 'Setting things up'}</span></div>}
     {supportOpen && createPortal(<div className="cp-support-overlay" role="dialog" aria-modal="true" aria-labelledby="guest-support-title">
       <div className="cp-support-modal"><button className="cp-support-close" type="button" onClick={() => setSupportOpen(false)} aria-label="Close support form"><X size={19}/></button>
