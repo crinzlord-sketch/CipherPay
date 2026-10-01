@@ -272,7 +272,7 @@ export default function SmsVerification() {
               {countryOpen ? (
                 <div className="sms-picker-menu" id="sms-country-options" role="listbox">
                   {countriesQuery.isLoading ? <div className="sms-picker-message"><LoaderCircle size={15} className="spin" /> Loading countries…</div> : countryMatches.length ? countryMatches.map((item) => (
-                    <button type="button" className={`sms-picker-option ${item.code === country ? 'selected' : ''}`} key={item.code} onClick={() => chooseCountry(item)} role="option" aria-selected={item.code === country}>
+                    <button type="button" className={`sms-picker-option ${item.code === country ? 'selected' : ''}`} key={item.code} onMouseDown={(event) => event.preventDefault()} onClick={() => chooseCountry(item)} role="option" aria-selected={item.code === country}>
                       <span className="sms-picker-option-copy"><span>{item.flag ? `${item.flag} ` : ''}{item.name}</span><small>{item.code}</small></span>
                       {item.code === country ? <Check size={16} /> : null}
                     </button>
@@ -312,7 +312,7 @@ export default function SmsVerification() {
                       <button type="button" className="text-link" onClick={() => void servicesQuery.refetch()}>Try again</button>
                     </div>
                   ) : servicesQuery.isLoading ? <div className="sms-picker-message"><LoaderCircle size={15} className="spin" /> Loading services…</div> : serviceMatches.length ? serviceMatches.map((item) => (
-                    <button type="button" className={`sms-picker-option ${item.id === service ? 'selected' : ''}`} key={item.id} onClick={() => chooseService(item)} role="option" aria-selected={item.id === service}>
+                    <button type="button" className={`sms-picker-option ${item.id === service ? 'selected' : ''}`} key={item.id} onMouseDown={(event) => event.preventDefault()} onClick={() => chooseService(item)} role="option" aria-selected={item.id === service}>
                       <span className="sms-picker-option-copy"><span>{item.name}</span><small>{naira.format(item.price)}</small></span>
                       {item.id === service ? <Check size={16} /> : null}
                     </button>
