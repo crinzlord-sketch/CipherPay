@@ -1021,10 +1021,10 @@ function Dashboard() {
         <div className="quick-actions"><div className="section-head"><h2>Move money</h2><span>Quick actions</span></div>
           <div className="action-row">
             <Link href="/crypto" className="action-tile" data-testid="link-quick-crypto">
-              <Coins size={15} /><b>Crypto</b>
+              <span className="action-icon purple"><Coins size={19} /></span><b>Crypto</b><small>Manage your crypto</small>
             </Link>
-            <Link href="/fund" className="action-tile" data-testid="link-quick-fund"><ArrowDownLeft size={15} /><b>Fund wallet</b></Link>
-            <Link href="/airtime" className="action-tile" data-testid="link-quick-airtime"><Smartphone size={15} /><b>Buy airtime</b></Link>
+            <Link href="/fund" className="action-tile" data-testid="link-quick-fund"><span className="action-icon orange"><ArrowDownLeft size={19} /></span><b>Fund wallet</b><small>Card or transfer</small></Link>
+            <Link href="/airtime" className="action-tile" data-testid="link-quick-airtime"><span className="action-icon green"><Smartphone size={19} /></span><b>Buy airtime</b><small>Stay connected</small></Link>
           </div>
         </div>
       </section>
