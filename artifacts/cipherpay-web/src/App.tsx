@@ -491,7 +491,7 @@ function LandingPage() {
     <footer className="cp-footer cp-footer-premium">
       <div className="cp-footer-glow cp-footer-glow-a" /><div className="cp-footer-glow cp-footer-glow-b" />
       <div className="cp-footer-top">
-        <div className="cp-footer-brand"><Logo /><p>One secure place for payments, transfers, digital services and your next move.</p><span className="cp-footer-status"><i /> Systems designed to stay moving</span></div>
+        <div className="cp-footer-brand"><Logo /><p>One secure place for payments, transfers, digital services and your next move.</p></div>
         <div className="cp-footer-col"><span>PRODUCT</span><a href="#experience">Everything</a><a href="#crypto">Crypto</a><a href="#bills">Bills</a><a href="#transfer">Transfers</a></div>
         <div className="cp-footer-col"><span>COMPANY</span><a href="#home">Home</a><a href="/login">Sign in</a><a href="/register">Create account</a><button type="button" onClick={() => setSupportOpen(true)}>Support</button></div>
         <div className="cp-footer-quote"><b>Move money.<br/><em>Move forward.</em></b><small>Built for the way digital life moves.</small></div>
