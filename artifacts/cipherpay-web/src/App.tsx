@@ -2017,7 +2017,7 @@ function AdminOnly({ children }: { children: ReactNode }) {
   const me = useGetMe({ query: { enabled: !!useToken(), queryKey: ['/api/auth/me'] } });
   const user = me.data as any;
   useEffect(() => {
-    if (!me.isLoading && !user?.isAdmin) setLocation('/');
+    if (!me.isLoading && !user?.isAdmin) window.location.replace('/');
   }, [me.isLoading, user, setLocation]);
   return me.isLoading || !user?.isAdmin ? <LoadingPage title="Checking access" /> : <>{children}</>;
 }
