@@ -72,6 +72,13 @@ export function avatarDataUrl(seedValue: unknown, genderValue?: unknown): string
   return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
 }
 
+function resolveAvatarSrc(src?: string | null): string | null {
+  if (!src) return null;
+  if (src.startsWith('data:') || /^https?:\\/\\//i.test(src)) return src;
+  const apiOrigin = (import.meta.env.VITE_API_URL ?? 'https://cipherpay-api.onrender.com').trim().replace(/\\/+$/, '');
+  return src.startsWith('/') ? `${apiOrigin}${src}` : `${apiOrigin}/${src}`;
+}
+
 export function CipherAvatar({ src, seed, gender, size = 44, alt = '' }: { src?: string | null; seed?: unknown; gender?: unknown; size?: number; alt?: string }) {
-  return <img src={src || avatarDataUrl(seed, gender)} alt={alt} width={size} height={size} className="cp-avatar-image" style={{ width: size, height: size }} />;
+  return <img src={resolveAvatarSrc(src) || avatarDataUrl(seed, gender)} alt={alt} width={size} height={size} className="cp-avatar-image" style={{ width: size, height: size }} />;
 }
