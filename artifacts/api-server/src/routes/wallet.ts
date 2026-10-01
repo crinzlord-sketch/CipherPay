@@ -21,25 +21,39 @@ router.get("/crypto/markets", async (_req, res): Promise<void> => {
       res.json({ data: cached.data, updatedAt: new Date(cached.at).toISOString() });
       return;
     }
-    const response = await fetch("https://api.coingecko.com/api/v3/coins/markets?vs_currencies=usd%2Cngn&ids=" + ids + "&order=market_cap_desc&per_page=12&page=1&sparkline=false&price_change_percentage=24h");
-    if (!response.ok) {
-      res.status(response.status === 429 ? 429 : 502).json({ error: "Live market provider unavailable." });
+    // CoinGecko's /coins/markets endpoint accepts one vs_currency per request.
+    // Fetch USD and NGN in parallel, then merge the same asset rows.
+    const base = "https://api.coingecko.com/api/v3/coins/markets?ids=" + ids + "&order=market_cap_desc&per_page=12&page=1&sparkline=false&price_change_percentage=24h";
+    const [usdResponse, ngnResponse] = await Promise.all([
+      fetch(base + "&vs_currency=usd"),
+      fetch(base + "&vs_currency=ngn"),
+    ]);
+    if (!usdResponse.ok || !ngnResponse.ok) {
+      const status = usdResponse.status === 429 || ngnResponse.status === 429 ? 429 : 502;
+      res.status(status).json({ error: "Live market provider unavailable." });
       return;
     }
-    const rows = await response.json() as any[];
-    const data = rows.map((row) => ({
-      id: row.id,
-      symbol: String(row.symbol ?? "").toUpperCase(),
-      name: row.name,
-      image: row.image,
-      priceNgn: Number(row.current_price?.ngn ?? 0),
-      priceUsd: Number(row.current_price?.usd ?? 0),
-      change24h: Number(row.price_change_percentage_24h ?? 0),
-      marketCapNgn: Number(row.market_cap?.ngn ?? 0),
-      marketCapUsd: Number(row.market_cap?.usd ?? 0),
-      volumeNgn: Number(row.total_volume?.ngn ?? 0),
-      volumeUsd: Number(row.total_volume?.usd ?? 0),
-    }));
+    const [usdRows, ngnRows] = await Promise.all([
+      usdResponse.json() as Promise<any[]>,
+      ngnResponse.json() as Promise<any[]>,
+    ]);
+    const ngnById = new Map(ngnRows.map((row) => [row.id, row]));
+    const data = usdRows.map((row) => {
+      const ngnRow = ngnById.get(row.id) ?? {};
+      return {
+        id: row.id,
+        symbol: String(row.symbol ?? "").toUpperCase(),
+        name: row.name,
+        image: row.image,
+        priceNgn: Number(ngnRow.current_price ?? 0),
+        priceUsd: Number(row.current_price ?? 0),
+        change24h: Number(row.price_change_percentage_24h ?? 0),
+        marketCapNgn: Number(ngnRow.market_cap ?? 0),
+        marketCapUsd: Number(row.market_cap ?? 0),
+        volumeNgn: Number(ngnRow.total_volume ?? 0),
+        volumeUsd: Number(row.total_volume ?? 0),
+      };
+    });
     (globalThis as any).__cipherPayCryptoMarkets = { at: now, data };
     res.setHeader("Cache-Control", "public, max-age=20");
     res.json({ data, updatedAt: new Date(now).toISOString() });
