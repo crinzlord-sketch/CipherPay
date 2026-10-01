@@ -68,7 +68,18 @@ export default function ChatPage() {
     }catch(e){setError(e instanceof Error?e.message:'Could not open chat.');}
   };
   useEffect(()=>{void loadChats(); void (async()=>{try{const me=await apiRequest<any>('/api/auth/me');if(me?.user?.id)setCurrentUserId(Number(me.user.id));}catch{}})();},[]);
-  useEffect(()=>{if(params?.id) void loadChat(params.id); else {setChat(null);setOther(null);setMessages([]);}},[params?.id]);
+  useEffect(()=>{
+    if(params?.id) {
+      void loadChat(params.id);
+    } else {
+      setChat(null);setOther(null);setMessages([]);
+    }
+  },[params?.id]);
+  useEffect(()=>{
+    if(params?.id) return;
+    const timer=window.setInterval(()=>void loadChats(),1500);
+    return()=>window.clearInterval(timer);
+  },[params?.id]);
   const messagesRef=useRef<HTMLElement>(null);
   const shouldAutoScrollRef=useRef(true);
   const lastMessageCountRef=useRef(0);
@@ -100,7 +111,7 @@ export default function ChatPage() {
         setMessages(visible); setOther(r.other); setChat(r.chat); setBlockedState(Boolean(r.blocked));
         setDecrypted(visible.map(decodeChatMessage));
       }catch{}
-    },2500);
+    },800);
     return()=>window.clearInterval(t);
   },[params?.id,currentUserId]);
 
@@ -117,11 +128,20 @@ export default function ChatPage() {
     setSending(true);setError('');
     try{
       const plainBody=JSON.stringify(payload);
+      const optimisticId = -Date.now();
+      const optimisticMessage = { id: optimisticId, senderId: currentUserId ?? 0, body: plainBody, createdAt: new Date().toISOString() };
+      setMessages(m=>[...m,optimisticMessage]);
+      setDecrypted(m=>[...m,{...optimisticMessage,decrypted:payload,optimistic:true}]);
+      setText('');setReplyTo(null);setShowEmoji(false);setShowGif(false);
       const r=await apiRequest<any>(`/api/chat/${params.id}/message`,{method:'POST',body:{body:plainBody}});
-      setMessages(m=>[...m,r.message]);
-      setDecrypted(m=>[...m,{...r.message,decrypted:payload}]);
-      setText('');setReplyTo(null);setShowEmoji(false);setShowGif(false);void loadChats();
-    }catch(e){setError(e instanceof Error?e.message:'Could not send message.');}finally{setSending(false);}
+      setMessages(m=>m.map(item=>item.id===optimisticId?r.message:item));
+      setDecrypted(m=>m.map(item=>item.id===optimisticId?{...r.message,decrypted:payload}:item));
+      void loadChats();
+    }catch(e){
+      setMessages(m=>m.filter(item=>item.id!==optimisticId));
+      setDecrypted(m=>m.filter(item=>item.id!==optimisticId));
+      setError(e instanceof Error?e.message:'Could not send message.');
+    }finally{setSending(false);}
   };
   const pickImage=async(file?:File)=>{
     if(!file)return;
@@ -142,14 +162,18 @@ export default function ChatPage() {
       </section>
       <section className="cp-card cp-card-pad cp-chat-code-card"><span className="cp-kicker">YOUR CODE</span><h2>Share your code.</h2><p>Your unique code lets other CipherPay users find you without exposing extra personal details.</p><div className="cp-your-code">{/* populated from profile in a lightweight call */}<YourCode/></div></section>
     </div>
-    <section className="cp-card cp-card-pad cp-chat-list-card"><div className="cp-card-head"><div><span className="cp-kicker">MESSAGES</span><h2>Your conversations</h2></div></div>{chats.length===0?<div className="cp-chat-empty"><MessageCircle size={28}/><strong>No conversations yet</strong><span>Find someone above to start your first chat.</span></div>:<div className="cp-chat-list">{chats.map((item:any)=><button key={item.id} className="cp-chat-list-row" onClick={()=>setLocation('/chat/'+item.id)}><CipherAvatar src={item.other.avatarUrl} seed={item.other.id||item.other.email} gender={item.other.gender} size={50} alt=""/><div><strong>{item.other.firstName} {item.other.lastName}</strong><span>{item.lastMessage?.body ? 'Message' : 'Start a conversation'}</span></div><small>{item.lastMessageAt?new Date(item.lastMessageAt).toLocaleDateString('en-NG',{day:'numeric',month:'short'}):''}</small></button>)}</div>}</section>
+    <section className="cp-card cp-card-pad cp-chat-list-card"><div className="cp-card-head"><div><span className="cp-kicker">MESSAGES</span><h2>Your conversations</h2></div></div>{chats.length===0?<div className="cp-chat-empty"><MessageCircle size={28}/><strong>No conversations yet</strong><span>Find someone above to start your first chat.</span></div>:<div className="cp-chat-list">{chats.map((item:any)=><button key={item.id} className={`cp-chat-list-row ${item.unreadCount>0?'has-unread':''}`} onClick={()=>setLocation('/chat/'+item.id)}>
+  <CipherAvatar src={item.other.avatarUrl} seed={item.other.id||item.other.email} gender={item.other.gender} size={50} alt=""/>
+  <div className="cp-chat-list-copy"><strong>{item.other.firstName} {item.other.lastName}</strong><span>{item.lastMessagePreview || 'Start a conversation'}</span></div>
+  <div className="cp-chat-list-meta"><small>{item.lastMessageAt?new Date(item.lastMessageAt).toLocaleDateString('en-NG',{day:'numeric',month:'short'}):''}</small>{item.unreadCount>0&&<b className="cp-chat-unread-badge">{item.unreadCount>99?'99+':item.unreadCount}</b>}</div>
+</button>)}</div>}</section>
   </div>;
 
   if(!chat||!other)return <div className="cp-page"><LoadingState label="Opening conversation" /></div>;
   return <div className="cp-page cp-chat-page">
     <style>{`.cp-chat-image{max-width:min(100%,360px)!important;max-height:360px!important;object-fit:contain;cursor:pointer}.cp-chat-gif{width:min(210px,100%)!important;max-width:210px!important;max-height:190px!important;object-fit:contain;border-radius:10px!important}.cp-chat-reply-preview{display:grid;gap:3px;width:100%;padding:7px 9px;border:0;border-left:3px solid #7c5cff;border-radius:7px;background:rgba(20,20,30,.07);color:inherit;text-align:left;cursor:pointer}.cp-chat-reply-preview span{font-size:9px;font-weight:800;opacity:.62}.cp-chat-reply-preview b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:600;opacity:.72}.cp-chat-reply-action{justify-self:start;padding:0;border:0;background:transparent;color:#7c5cff;font-size:9px;font-weight:700;cursor:pointer;opacity:.72}.cp-chat-reply-bar{position:absolute;left:10px;right:10px;bottom:70px;display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:#151722;color:#fff;z-index:8;box-shadow:0 10px 30px rgba(0,0,0,.28)}.cp-chat-reply-bar>div{display:grid;gap:2px;min-width:0;flex:1}.cp-chat-reply-bar span{font-size:9px;opacity:.6}.cp-chat-reply-bar b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}.cp-chat-reply-bar button{width:28px;height:28px;border:0;border-radius:8px;background:rgba(255,255,255,.08);color:#fff;display:grid;place-items:center;cursor:pointer}.cp-chat-bg-picker{background:#151722!important;border-color:rgba(255,255,255,.12)!important;box-shadow:0 14px 35px rgba(0,0,0,.32)}.cp-chat-bg-picker button{box-shadow:0 0 0 1px rgba(255,255,255,.14) inset}`}</style>
     <div className="cp-chat-shell">
-      <header className="cp-chat-header"><button className="cp-chat-back" onClick={()=>setLocation('/chat')}><ArrowLeft size={18}/></button><CipherAvatar src={other.avatarUrl} seed={other.id||other.email} gender={other.gender} size={44} alt=""/><div className="cp-chat-person"><strong>{other.firstName} {other.lastName}</strong><span>{other.userCode}</span></div><div className="cp-chat-head-actions"><button onClick={()=>setShowBg(v=>!v)} title="Chat background"><Palette size={18}/></button><button onClick={()=>setShowMenu(v=>!v)} title="More"><MoreVertical size={18}/></button></div>{showMenu&&<div className="cp-chat-menu"><button onClick={async()=>{setShowMenu(false);try{if(blockedState){await apiRequest('/api/chat/'+chat.id+'/unblock',{method:'POST'});setBlockedState(false);setError('');}else{await apiRequest('/api/chat/'+chat.id+'/block',{method:'POST'});setBlockedState(true);setError('');}}catch(e){setError(e instanceof Error?e.message:'Could not update block status.');}}}><Ban size={15}/> {blockedState?'Unblock user':'Block user'}</button><button onClick={()=>{setShowMenu(false);void apiRequest('/api/chat/'+chat.id,{method:'DELETE'}).then(()=>setLocation('/chat'));}}><Trash2 size={15}/> Delete chat</button></div>}</header>
+      <header className="cp-chat-header"><button className="cp-chat-back" onClick={()=>setLocation('/chat')}><ArrowLeft size={18}/></button><CipherAvatar src={other.avatarUrl} seed={other.id||other.email} gender={other.gender} size={44} alt=""/><div className="cp-chat-person"><strong>{other.firstName} {other.lastName}</strong><span><i className="cp-chat-online-dot"/>CipherPay user · private chat</span></div><div className="cp-chat-head-actions"><button onClick={()=>setShowBg(v=>!v)} title="Chat background"><Palette size={18}/></button><button onClick={()=>setShowMenu(v=>!v)} title="More"><MoreVertical size={18}/></button></div>{showMenu&&<div className="cp-chat-menu"><button onClick={async()=>{setShowMenu(false);try{if(blockedState){await apiRequest('/api/chat/'+chat.id+'/unblock',{method:'POST'});setBlockedState(false);setError('');}else{await apiRequest('/api/chat/'+chat.id+'/block',{method:'POST'});setBlockedState(true);setError('');}}catch(e){setError(e instanceof Error?e.message:'Could not update block status.');}}}><Ban size={15}/> {blockedState?'Unblock user':'Block user'}</button><button onClick={()=>{setShowMenu(false);void apiRequest('/api/chat/'+chat.id,{method:'DELETE'}).then(()=>setLocation('/chat'));}}><Trash2 size={15}/> Delete chat</button></div>}</header>
       {showBg&&<div className="cp-chat-bg-picker">{BGS.map((v,i)=><button key={i} style={{background:v}} onClick={()=>void chooseBg(v)} aria-label={'Background '+(i+1)}/>)}</div>}
       <main ref={messagesRef} className="cp-chat-messages" onScroll={(e)=>{const el=e.currentTarget;shouldAutoScrollRef.current=el.scrollHeight-el.scrollTop-el.clientHeight<120;}} style={{background:bg, backgroundImage:'none'}}>{decrypted.map((m:any)=>{
         const d=m.decrypted||{};
