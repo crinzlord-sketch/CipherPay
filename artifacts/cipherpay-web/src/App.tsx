@@ -19,7 +19,6 @@ import SocialBoostPage from './pages/SocialBoostPage';
 import EmailProPage from './pages/EmailProPage';
 import ChatPage from './pages/ChatPage';
 import CryptoPage from './pages/CryptoPage';
-import CryptoPage from './pages/CryptoPage';
 import BillsPage from './pages/BillsPage';
 import { apiRequest, apiUrl } from './pages/page-api';
 import { CipherAvatar } from './components/CipherAvatar';
@@ -38,7 +37,7 @@ import {
   Activity, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Banknote, BarChart3, CalendarDays,
   Bell, Bolt, Check, CircleHelp, Copy, CreditCard, FileText,
   Fingerprint, Globe2, Home, Landmark, LockKeyhole, LogOut, Menu, MessageSquare,
-  Layers3, MoreHorizontal, Coins, Coins, Network as NetworkIcon, Plus, Receipt, RefreshCw, Send as SendIcon,
+  Layers3, MoreHorizontal, Coins, Network as NetworkIcon, Plus, Receipt, RefreshCw, Send as SendIcon,
   Settings, ShieldCheck, Smartphone, Target, Tv, UserRound, WalletCards, Wifi, X, Eye, EyeOff, Gift,
 } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
@@ -66,7 +65,6 @@ const nav = [
   { href: '/sms', label: 'SMS verification', icon: MessageSquare },
   { href: '/temporary-email', label: 'Temporary email', icon: Globe2 },
   { href: '/services', label: 'Services', icon: Layers3 },
-  { href: '/crypto', label: 'Crypto', icon: Coins },
   { href: '/crypto', label: 'Crypto', icon: Coins },
   { href: '/transactions', label: 'Transactions', icon: Activity },
   { href: '/referrals', label: 'Refer & earn', icon: Gift },
