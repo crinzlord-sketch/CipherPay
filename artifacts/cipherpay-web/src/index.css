@@ -6891,3 +6891,30 @@ html.dark .cp-chat-list-row.has-unread .cp-chat-list-copy span{color:#f7f3fb!imp
     padding: 8px 11px !important;
   }
 }
+
+
+/* Desktop service ambient glow */
+@media (min-width: 901px) {
+  .main-area {
+    position: relative;
+  }
+
+  .main-area:has(.sms-layout, .social-boost-layout, .bills-command, .email-pro-page, .temp-start-grid)::before {
+    content: "";
+    position: fixed;
+    z-index: 0;
+    top: 90px;
+    right: -150px;
+    width: 520px;
+    height: 520px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(115, 92, 255, .13) 0%, rgba(115, 92, 255, .07) 32%, transparent 70%);
+    filter: blur(6px);
+    pointer-events: none;
+  }
+
+  .main-area:has(.sms-layout, .social-boost-layout, .bills-command, .email-pro-page, .temp-start-grid) > .content {
+    position: relative;
+    z-index: 1;
+  }
+}
