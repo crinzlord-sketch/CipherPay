@@ -16,7 +16,7 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 // ---------------------------------------------------------------------------
 
 let _baseUrl: string | null = null;
-let _authTokenGetter: AuthTokenGetter | null = null;
+let _authTokenGetter: AuthTokenGetter | null =\n  typeof window !== "undefined"\n    ? () => window.localStorage.getItem("cipherpay_token")\n    : null;
 
 /**
  * Set a base URL that is prepended to every relative request URL
