@@ -7,7 +7,7 @@ import './crypto.css';
 
 type Market = {
   id: string; symbol: string; name: string; image: string;
-  priceNgn: number; priceUsd: number; change24h: number; marketCap: number; volume24h: number;
+  priceNgn: number; priceUsd: number; change24h: number; marketCapNgn: number; marketCapUsd: number; volumeNgn: number; volumeUsd: number;
 };
 
 const assets = [
@@ -60,8 +60,10 @@ export default function CryptoPage(){
   },[]);
 
   const selectedMarket=markets.find(item=>item.symbol===selected);
-  const money=(value:number)=>currency==='USD'?usd.format(value):ngn.format(value);
-  const formatCash=(value:number)=>currency==='USD' ? (selectedMarket?.priceUsd ? usd.format(value / (Number((markets.find(x=>x.symbol==='BTC')?.priceNgn ?? 0)) / Number((markets.find(x=>x.symbol==='BTC')?.priceUsd ?? 1)))) : '—') : ngn.format(value);
+  const btcMarket=markets.find(item=>item.symbol==='BTC');
+  const ngnPerUsd=btcMarket?.priceUsd ? btcMarket.priceNgn / btcMarket.priceUsd : 0;
+  const money=(valueUsd:number,valueNgn:number)=>currency==='USD'?usd.format(valueUsd):ngn.format(valueNgn);
+  const formatCash=(valueNgn:number)=>currency==='USD' && ngnPerUsd>0 ? usd.format(valueNgn/ngnPerUsd) : ngn.format(valueNgn);
   const cashBalance=Number((wallet.data as any)?.balance ?? 0);
   const topMarkets=useMemo(()=>markets.slice(0,12),[markets]);
 
@@ -71,7 +73,7 @@ export default function CryptoPage(){
     <section className="cp-crypto-dashboard">
       <div className="cp-crypto-dashboard-copy">
         <div className="cp-crypto-balance-hero">
-          <div><span>YOUR CRYPTO BALANCE</span><strong>$0.00</strong><small>0 assets held · Your wallet balance will appear here</small></div>
+          <div><span>YOUR CRYPTO BALANCE</span><strong>{currency==='USD'?'$0.00':'₦0.00'}</strong><small>0 assets held · Your wallet balance will appear here</small></div>
           <button type="button" className="cp-currency-switch" onClick={()=>setCurrency(currency==='USD'?'NGN':'USD')}><b>{currency}</b><span>⇄</span><em>{currency==='USD'?'NGN':'USD'}</em></button>
         </div>
         <span className="cp-kicker">CIPHERPAY / CRYPTO WALLET</span>
@@ -87,9 +89,9 @@ export default function CryptoPage(){
       <div className="cp-crypto-3d-balance" aria-hidden="true">
         <div className="cp-balance-ring ring-one"/><div className="cp-balance-ring ring-two"/>
         <div className="cp-balance-orb"><small>CRYPTO PORTFOLIO</small><strong>$0.00</strong><span>0 assets held</span><i>LIVE</i></div>
-        <div className="cp-balance-float float-btc"><img src={icon('btc')}/><b>BTC</b><small>{selectedMarket?money(selectedMarket.priceUsd):'—'}</small></div>
-        <div className="cp-balance-float float-eth"><img src={icon('eth')}/><b>ETH</b><small>{markets.find(x=>x.symbol==='ETH')?money(markets.find(x=>x.symbol==='ETH')!.priceUsd):'—'}</small></div>
-        <div className="cp-balance-float float-sol"><img src={icon('sol')}/><b>SOL</b><small>{markets.find(x=>x.symbol==='SOL')?money(markets.find(x=>x.symbol==='SOL')!.priceUsd):'—'}</small></div>
+        <div className="cp-balance-float float-btc"><img src={icon('btc')}/><b>BTC</b><small>{selectedMarket?money(selectedMarket.priceUsd,selectedMarket.priceNgn):'—'}</small></div>
+        <div className="cp-balance-float float-eth"><img src={icon('eth')}/><b>ETH</b><small>{markets.find(x=>x.symbol==='ETH')?money(markets.find(x=>x.symbol==='ETH')!.priceUsd,markets.find(x=>x.symbol==='ETH')!.priceNgn):'—'}</small></div>
+        <div className="cp-balance-float float-sol"><img src={icon('sol')}/><b>SOL</b><small>{markets.find(x=>x.symbol==='SOL')?money(markets.find(x=>x.symbol==='SOL')!.priceUsd,markets.find(x=>x.symbol==='SOL')!.priceNgn):'—'}</small></div>
       </div>
     </section>
 
@@ -101,7 +103,7 @@ export default function CryptoPage(){
       </article>
       <article className="cp-crypto-glass cp-crypto-market-card">
         <div className="cp-card-heading"><span><BarChart3 size={16}/> MARKET SNAPSHOT</span><b>{markets.length || 12} ASSETS</b></div>
-        {selectedMarket ? <div className="cp-selected-market"><img src={icon(selectedMarket.symbol.toLowerCase())}/><div><b>{selectedMarket.name} · {selectedMarket.symbol}</b><small>Live {currency} price</small></div><strong>{money(selectedMarket.priceUsd)}</strong><em className={selectedMarket.change24h<0?'down':''}>{selectedMarket.change24h>=0?'+':''}{selectedMarket.change24h.toFixed(2)}%</em></div> : <div className="cp-market-loading">{marketLoading?'Loading live prices…':'Select an asset below.'}</div>}
+        {selectedMarket ? <div className="cp-selected-market"><img src={icon(selectedMarket.symbol.toLowerCase())}/><div><b>{selectedMarket.name} · {selectedMarket.symbol}</b><small>Live {currency} price</small></div><strong>{money(selectedMarket.priceUsd,selectedMarket.priceNgn)}</strong><em className={selectedMarket.change24h<0?'down':''}>{selectedMarket.change24h>=0?'+':''}{selectedMarket.change24h.toFixed(2)}%</em></div> : <div className="cp-market-loading">{marketLoading?'Loading live prices…':'Select an asset below.'}</div>}
       </article>
     </section>
 
@@ -110,14 +112,14 @@ export default function CryptoPage(){
       {marketError && <div className="cp-market-error">{marketError}</div>}
       <div className="cp-live-market-grid">
         {topMarkets.map((item,index)=><button type="button" key={item.id} className={`cp-live-market ${selected===item.symbol?'selected':''}`} onClick={()=>setSelected(item.symbol)}>
-          <span className="cp-market-rank">{String(index+1).padStart(2,'0')}</span><img src={icon(item.symbol.toLowerCase())} alt=""/><span className="cp-market-name"><b>{item.name}</b><small>{item.symbol} · {compact.format(item.marketCap)} mcap</small></span><span className="cp-market-price"><b>{money(item.priceUsd)}</b><em className={item.change24h<0?'down':''}>{item.change24h>=0?'+':''}{item.change24h.toFixed(2)}%</em></span>
+          <span className="cp-market-rank">{String(index+1).padStart(2,'0')}</span><img src={icon(item.symbol.toLowerCase())} alt=""/><span className="cp-market-name"><b>{item.name}</b><small>{item.symbol} · {compact.format(currency==='USD'?item.marketCapUsd:item.marketCapNgn)} mcap</small></span><span className="cp-market-price"><b>{money(item.priceUsd,item.priceNgn)}</b><em className={item.change24h<0?'down':''}>{item.change24h>=0?'+':''}{item.change24h.toFixed(2)}%</em></span>
         </button>)}
         {marketLoading && !markets.length && <div className="cp-market-loading-grid">{Array.from({length:8}).map((_,i)=><div key={i}/>)}</div>}
       </div>
     </section>
 
     <section className="cp-crypto-detail-grid">
-      <article className="cp-crypto-glass cp-detail-card"><span className="cp-kicker">ASSET DETAILS</span><h2>{selectedMarket?.name ?? selected}</h2><div className="cp-detail-price">{selectedMarket?money(selectedMarket.priceUsd):'—'}</div><div className="cp-detail-stats"><div><span>24h change</span><b>{selectedMarket ? `${selectedMarket.change24h>=0?'+':''}${selectedMarket.change24h.toFixed(2)}%` : '—'}</b></div><div><span>24h volume</span><b>{selectedMarket?compact.format(selectedMarket.volume24h):'—'}</b></div><div><span>Market cap</span><b>{selectedMarket?compact.format(selectedMarket.marketCap):'—'}</b></div></div></article>
+      <article className="cp-crypto-glass cp-detail-card"><span className="cp-kicker">ASSET DETAILS</span><h2>{selectedMarket?.name ?? selected}</h2><div className="cp-detail-price">{selectedMarket?money(selectedMarket.priceUsd):'—'}</div><div className="cp-detail-stats"><div><span>24h change</span><b>{selectedMarket ? `${selectedMarket.change24h>=0?'+':''}${selectedMarket.change24h.toFixed(2)}%` : '—'}</b></div><div><span>24h volume</span><b>{selectedMarket?compact.format(currency==='USD'?selectedMarket.volumeUsd:selectedMarket.volumeNgn):'—'}</b></div><div><span>Market cap</span><b>{selectedMarket?compact.format(currency==='USD'?selectedMarket.marketCapUsd:selectedMarket.marketCapNgn):'—'}</b></div></div></article>
       <article className="cp-crypto-glass cp-detail-card cp-security-card"><span className="cp-kicker">CIPHERPAY WALLET</span><h2>Built around your control.</h2><div className="cp-security-lines"><span><ShieldCheck/> One CipherPay KYC</span><span><CircleDollarSign/> User-paid blockchain gas</span><span><WalletCards/> Multi-asset wallet architecture</span></div></article>
     </section>
 
