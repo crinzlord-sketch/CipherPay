@@ -15,10 +15,7 @@ export default function LandingExtras() {
     if (!section) return;
 
     const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        section.classList.add('is-visible');
-        observer.disconnect();
-      }
+      section.classList.toggle('is-visible', entry.isIntersecting);
     }, { threshold: 0.14 });
 
     observer.observe(section);
