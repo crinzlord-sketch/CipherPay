@@ -1024,7 +1024,7 @@ function Dashboard() {
               <span className="action-icon purple"><Coins size={19} /></span><b>Crypto</b><small>Manage your crypto</small>
             </Link>
             <Link href="/fund" className="action-tile" data-testid="link-quick-fund"><span className="action-icon orange"><ArrowDownLeft size={19} /></span><b>Fund wallet</b><small>Card or transfer</small></Link>
-            <Link href="/airtime" className="action-tile" data-testid="link-quick-airtime"><span className="action-icon green"><Smartphone size={19} /></span><b>Buy airtime</b><small>Stay connected</small></Link>
+            <Link href="/sms" className="action-tile" data-testid="link-quick-sms"><span className="action-icon green"><MessageSquare size={19} /></span><b>SMS verification</b><small>Get a verification number</small></Link>
           </div>
         </div>
       </section>
