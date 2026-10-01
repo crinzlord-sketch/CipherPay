@@ -993,7 +993,6 @@ function Register() {
 }
 
 function Dashboard() {
-  const [moreOpen, setMoreOpen] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(() => {
     if (typeof window === 'undefined') return true;
     return window.localStorage.getItem(BALANCE_VISIBILITY_STORAGE_KEY) !== 'false';
@@ -1021,19 +1020,9 @@ function Dashboard() {
          <div className="balance-card"><div className="balance-top"><span>Available balance</span><button type="button" className="balance-visibility" onClick={() => setBalanceVisible((visible) => !visible)} aria-label={balanceVisible ? 'Hide balance' : 'Show balance'} aria-pressed={!balanceVisible} title={balanceVisible ? 'Hide balance' : 'Show balance'} data-testid="button-toggle-balance">{balanceVisible ? <Eye size={16} /> : <EyeOff size={16} />}</button></div><div className="balance-value" data-testid="text-wallet-balance">{displayBalance(w?.balance)}</div><div className="balance-bottom"><span>Ledger balance <b>{displayBalance(w?.ledgerBalance)}</b></span><span className="mono">{w?.currency ?? 'NGN'}</span></div><div className="balance-shine" /></div>
         <div className="quick-actions"><div className="section-head"><h2>Move money</h2><span>Quick actions</span></div>
           <div className="action-row">
-            <div className="more-action-wrap">
-              <button type="button" className="action-tile more-action-tile" aria-expanded={moreOpen} aria-haspopup="menu" onClick={() => setMoreOpen((open) => !open)} data-testid="button-quick-more">
-                <span className="action-icon purple"><MoreHorizontal size={19} /></span><b>More</b><small>Other services</small>
-              </button>
-              {moreOpen && <div className="more-menu" role="menu" aria-label="More quick actions">
-                <Link href="/send" role="menuitem" onClick={() => setMoreOpen(false)}><ArrowUpRight size={16} /><span><b>Send money</b><small>Transfer to a CipherPay user</small></span></Link>
-                <Link href="/bills" role="menuitem" onClick={() => setMoreOpen(false)}><Receipt size={16} /><span><b>Pay bills</b><small>Electricity, cable and more</small></span></Link>
-                <Link href="/sms" role="menuitem" onClick={() => setMoreOpen(false)}><MessageSquare size={16} /><span><b>SMS verification</b><small>Rent a number and receive a code</small></span></Link>
-                <Link href="/temporary-email" role="menuitem" onClick={() => setMoreOpen(false)}><Globe2 size={16} /><span><b>Temporary email</b><small>Create a disposable inbox</small></span></Link>
-                <Link href="/services" role="menuitem" onClick={() => setMoreOpen(false)}><Layers3 size={16} /><span><b>Services</b><small>Social Boost and Email Pro</small></span></Link>
-                <Link href="/transactions" role="menuitem" onClick={() => setMoreOpen(false)}><Activity size={16} /><span><b>Transactions</b><small>Review your wallet activity</small></span></Link>
-              </div>}
-            </div>
+            <Link href="/crypto" className="action-tile" data-testid="link-quick-crypto">
+              <span className="action-icon purple"><Coins size={19} /></span><b>Crypto</b><small>Manage your crypto</small>
+            </Link>
             <Link href="/fund" className="action-tile" data-testid="link-quick-fund"><span className="action-icon orange"><ArrowDownLeft size={19} /></span><b>Fund wallet</b><small>Card or transfer</small></Link>
             <Link href="/airtime" className="action-tile" data-testid="link-quick-airtime"><span className="action-icon green"><Smartphone size={19} /></span><b>Buy airtime</b><small>Stay connected</small></Link>
           </div>
