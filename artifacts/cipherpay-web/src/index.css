@@ -1493,8 +1493,8 @@ a {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 15% 18%, rgba(124, 92, 255, .20), transparent 32%),
-    radial-gradient(circle at 85% 72%, rgba(124, 92, 255, .11), transparent 36%);
+    radial-gradient(circle at 15% 18%, rgba(124, 92, 255, .27), transparent 34%),
+    radial-gradient(circle at 85% 72%, rgba(124, 92, 255, .15), transparent 38%);
   opacity: .9;
 }
 
@@ -6142,8 +6142,8 @@ html.dark .topbar{
 }
 html.dark .sidebar{
   background:
-    radial-gradient(circle at 15% 18%, rgba(124,92,255,.23), transparent 34%),
-    radial-gradient(circle at 85% 72%, rgba(124,92,255,.13), transparent 38%),
+    radial-gradient(circle at 15% 18%, rgba(124,92,255,.30), transparent 36%),
+    radial-gradient(circle at 85% 72%, rgba(124,92,255,.17), transparent 40%),
     rgba(13,10,18,.97)!important;
   border-right-color:rgba(255,255,255,.08)!important;
 }
