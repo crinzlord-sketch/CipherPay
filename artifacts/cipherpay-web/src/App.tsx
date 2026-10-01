@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
 import './landing.css';
+import LandingExtras from './components/LandingExtras';
 
 const queryClient = new QueryClient();
 setBaseUrl((import.meta.env.VITE_API_URL ?? '').trim() || null);
@@ -510,6 +511,7 @@ function LandingPage() {
       </div>
       <div className="cp-about-metrics"><div><b>01</b><span>Wallet & payments</span></div><div><b>02</b><span>Digital services</span></div><div><b>03</b><span>Communication</span></div><div><b>04</b><span>Digital assets</span></div></div>
     </section>
+    <LandingExtras />
     {authNavigating && <div className="cp-auth-transition" aria-hidden="true"><div className="cp-auth-transition-mark"><span className="brand-mark"><span /></span><b>Cipher<span className="brand-orange">Pay</span></b></div><div className="cp-auth-transition-line" /><span>{authNavigating === 'login' ? 'Opening your account' : 'Setting things up'}</span></div>}
     {supportOpen && createPortal(<div className="cp-support-overlay" role="dialog" aria-modal="true" aria-labelledby="guest-support-title">
       <div className="cp-support-modal"><button className="cp-support-close" type="button" onClick={() => setSupportOpen(false)} aria-label="Close support form"><X size={19}/></button>
