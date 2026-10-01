@@ -22,16 +22,12 @@ const AVATAR_PUBLIC_BASE = "/api/uploads/avatar";
 async function saveAvatarDataUrl(userId: number, dataUrl: string): Promise<string> {
   const m = /^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/i.exec(dataUrl);
   if (!m) throw new Error("Image must be a JPG, PNG, or WebP data URL");
-  const ext = (m[1] ?? "jpg").toLowerCase().replace("jpeg", "jpg");
   const buf = Buffer.from(m[2] ?? "", "base64");
   if (!buf.length) throw new Error("Image is empty");
   if (buf.length > 4 * 1024 * 1024) throw new Error("Image too large (max 4MB)");
-  await fs.mkdir(AVATAR_DIR, { recursive: true });
-  const filename = `u${userId}-${Date.now()}.${ext}`;
-  await fs.writeFile(path.join(AVATAR_DIR, filename), buf);
-  return `${AVATAR_PUBLIC_BASE}/${filename}`;
+  // Store the compact avatar in Postgres so it survives Render deploys and restarts.
+  return dataUrl;
 }
-
 const router: IRouter = Router();
 const OTP_RESEND_COOLDOWN_MS = 30 * 1000;
 // Login OTP is controlled by the runtime flag so the second factor can be
