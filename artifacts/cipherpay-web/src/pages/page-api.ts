@@ -31,15 +31,28 @@ export function userFacingApiError(payload: unknown, status: number): string {
 
 export async function apiRequest<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const token = typeof window !== 'undefined' ? window.localStorage.getItem('cipherpay_token') : null;
-  const response = await fetch(apiUrl(path), {
-    method: options.method ?? 'GET',
-    headers: {
-      ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    credentials: 'include',
-  });
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeout = typeof window !== 'undefined' ? window.setTimeout(() => controller?.abort(), 15000) : null;
+  let response: Response;
+  try {
+    response = await fetch(apiUrl(path), {
+      method: options.method ?? 'GET',
+      headers: {
+        ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      credentials: 'include',
+      signal: controller?.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('The server took too long to respond. Please try again.');
+    }
+    throw error;
+  } finally {
+    if (timeout !== null) window.clearTimeout(timeout);
+  }
   const payload = await response.json().catch(() => null);
   if (!response.ok) throw new Error(userFacingApiError(payload, response.status));
   return payload as T;
