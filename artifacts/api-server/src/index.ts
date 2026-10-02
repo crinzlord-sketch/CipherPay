@@ -10,6 +10,7 @@ import { isEmailConfigured, verifyEmailTransport } from "./lib/email";
 import { startPayoutFundingPoller } from "./lib/payout-funding-poller";
 import { renewDueEmailProSubscriptions } from "./lib/email-pro-subscription";
 import { sendWeeklyUserEmails } from "./lib/user-email-job";
+import { startKlipHubLocalEngine } from "./lib/kliphub-local-engine";
 
 function normalizeProxyUrl(raw: string | undefined): string | undefined {
   if (!raw?.trim()) return undefined;
@@ -82,6 +83,8 @@ const start = async () => {
     project_id integer REFERENCES kliphub_projects(id) ON DELETE CASCADE,
     name text NOT NULL, type text NOT NULL, url text, created_at timestamptz NOT NULL DEFAULT now()
   )`);
+
+  startKlipHubLocalEngine();
 
   await db.execute(sql`CREATE TABLE IF NOT EXISTS direct_chats (
     id serial PRIMARY KEY, user_one_id integer NOT NULL, user_two_id integer NOT NULL,
