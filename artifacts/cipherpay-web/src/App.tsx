@@ -299,7 +299,7 @@ function Shell({ children }: { children: ReactNode }) {
     </aside>
     <button className={`scrim ${mobileOpen ? "open" : ""}`} onClick={() => setMobileOpen(false)} aria-label="Close navigation" data-testid="button-scrim" />
     <main className="main-area">
-       <header className="topbar"><button className={`icon-btn menu-toggle ${mobileOpen ? "is-open" : ""}`} onClick={() => setMobileOpen((open) => !open)} aria-expanded={mobileOpen} aria-label={mobileOpen ? "Close navigation" : "Open navigation"} data-testid="button-open-menu"><span className="cp-menu-icon"><Menu size={21} /><X size={21} /></span></button><div className="mobile-logo"><Logo /></div><div className="topbar-spacer" /><button type="button" className="kh-launch-btn" onClick={() => setLocation('/kliphub')}><span>KH</span> KlipHub <ArrowRight size={13}/></button><button type="button" className="icon-btn notification-button" onClick={() => {
+       <header className="topbar"><button className={`icon-btn menu-toggle ${mobileOpen ? "is-open" : ""}`} onClick={() => setMobileOpen((open) => !open)} aria-expanded={mobileOpen} aria-label={mobileOpen ? "Close navigation" : "Open navigation"} data-testid="button-open-menu"><span className="cp-menu-icon"><Menu size={21} /><X size={21} /></span></button><div className="mobile-logo"><Logo /></div><div className="topbar-spacer" /><button type="button" className="icon-btn notification-button" onClick={() => {
         if (location === '/notifications') {
           setLocation(notificationReturnPath || '/');
         } else {
