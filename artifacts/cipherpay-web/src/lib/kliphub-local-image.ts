@@ -1,5 +1,4 @@
-import { Txt2ImgWorkerClient } from "web-txt2img";
-
+type Txt2ImgWorkerClient = any;
 let client: Txt2ImgWorkerClient | null = null;
 let loaded = false;
 
@@ -12,7 +11,7 @@ export type LocalImageProgress = {
 };
 
 async function getClient() {
-  if (!client) client = Txt2ImgWorkerClient.createDefault();
+  if (!client) { const mod: any = await import(/* @vite-ignore */ "https://cdn.jsdelivr.net/npm/web-txt2img@0.3.1/dist/index.js"); client = mod.Txt2ImgWorkerClient.createDefault(); }
   return client;
 }
 
