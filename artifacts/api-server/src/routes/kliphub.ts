@@ -114,7 +114,24 @@ router.get("/kliphub/internal-test-video", async (req, res): Promise<void> => {
       "1280:720",
     );
     const startedAt = new Date().toISOString();
-    res.status(202).json({ ok: true, taskId: task.id, startedAt, message: "CipherPay API accepted the KlipHub global video test." });
+    for (let attempt = 0; attempt < 24; attempt++) {
+      const status = await getRunwayTask(String(task.id));
+      const state = String(status?.status || "").toUpperCase();
+      if (state === "SUCCEEDED" && Array.isArray(status.output) && status.output[0]) {
+        const response = await fetch(String(status.output[0]));
+        if (!response.ok) throw new Error("Generated video could not be downloaded.");
+        const dir = path.join(MEDIA_ROOT, "videos");
+        await fs.promises.mkdir(dir, { recursive: true });
+        await fs.promises.writeFile(path.join(dir, "kliphub-global-test.mp4"), Buffer.from(await response.arrayBuffer()));
+        res.status(200).json({ ok: true, taskId: task.id, status: "succeeded", url: "/api/kliphub/generated/videos/kliphub-global-test.mp4", startedAt });
+        return;
+      }
+      if (["FAILED", "CANCELED"].includes(state)) {
+        throw new Error(String(status?.failure || status?.error || "Runway video generation failed."));
+      }
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+    res.status(202).json({ ok: true, taskId: task.id, status: "processing", message: "Video is still rendering. Refresh KlipHub after it finishes." });
   } catch (error: any) {
     res.status(502).json({ ok: false, error: String(error?.message || error).slice(0, 2000) });
   }
