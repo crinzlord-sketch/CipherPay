@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, CalendarDays, Check, Clapperboard, Film, FolderOpen, Gauge, Layers3, Link2, Play, Plus, Radio, RefreshCw, Sparkles, WandSparkles, Zap } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, Clapperboard, Film, FolderOpen, Gauge, ImageIcon, Layers3, Link2, Play, Plus, Radio, RefreshCw, Sparkles, WandSparkles, Zap } from "lucide-react";
 import { apiRequest } from "./page-api";
 
 type Project={id:number;title:string;prompt:string|null;status:string;durationSec:number;createdAt:string;updatedAt:string};
