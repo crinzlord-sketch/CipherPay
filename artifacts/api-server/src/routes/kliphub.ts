@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import path from "node:path";
 import fs from "node:fs";
-import { kliphubGeneratedPath, startKlipHubLocalEngine } from "../lib/kliphub-local-engine";
+import { kliphubGeneratedPath } from "../lib/kliphub-local-engine";
 import { and, desc, eq, count } from "drizzle-orm";
 import {
   db,
@@ -26,7 +26,6 @@ router.get("/kliphub/generated/*splat", (req, res): void => {
   res.sendFile(path.resolve(filePath));
 });
 
-startKlipHubLocalEngine();
 
 function getUserId(req: any): number | null {
   const raw = req.headers["x-user-id"];
