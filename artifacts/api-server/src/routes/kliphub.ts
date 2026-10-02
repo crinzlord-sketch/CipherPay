@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import path from "node:path";
 import fs from "node:fs";
 import { and, desc, eq, count, inArray } from "drizzle-orm";
+import { createRunwayImage, createRunwayImageToVideo, getRunwayTask, downloadRunwayOutput } from "../lib/kliphub-providers";
 import {
   db,
   kliphubAssetsTable,
@@ -33,6 +34,55 @@ function getUserId(req: any): number | null {
   return Number.isFinite(id) ? id : null;
 }
 
+const runwaySyncing = new Set<number>();
+
+async function syncRunwayJob(job: any): Promise<void> {
+  if (job.provider !== "runway" || !job.providerJobId || ["succeeded", "failed", "canceled"].includes(String(job.status).toLowerCase())) return;
+  if (runwaySyncing.has(job.id)) return;
+  runwaySyncing.add(job.id);
+  try {
+    const task = await getRunwayTask(String(job.providerJobId));
+    const status = String(task?.status || "PENDING").toLowerCase();
+    if (status === "succeeded" && Array.isArray(task.output) && task.output[0]) {
+      const output = await downloadRunwayOutput(
+        String(task.output[0]),
+        path.join(MEDIA_ROOT, "images"),
+        `kliphub-job-${job.id}`,
+      );
+      const isVideo = output.type === "video";
+      const mediaDir = isVideo ? "videos" : "images";
+      const publicUrl = output.url.replace("/images/", `/${mediaDir}/`);
+      const outputJson = JSON.stringify({ provider: "runway", taskId: job.providerJobId, output: publicUrl, type: output.type });
+      await db.update(kliphubJobsTable).set({
+        status: "succeeded", progress: 100, outputJson, finishedAt: new Date(),
+      }).where(eq(kliphubJobsTable.id, job.id));
+      await db.insert(kliphubAssetsTable).values({
+        userId: job.userId,
+        projectId: job.projectId,
+        name: `KlipHub ${output.type} ${job.id}`,
+        type: output.type,
+        url: publicUrl,
+      });
+      if (isVideo && job.sceneId) {
+        await db.update(kliphubScenesTable).set({ videoUrl: publicUrl, status: "completed" })
+          .where(eq(kliphubScenesTable.id, job.sceneId));
+      }
+    } else if (["failed", "canceled"].includes(status)) {
+      const error = task?.failure || task?.error || `Runway task ${status}.`;
+      await db.update(kliphubJobsTable).set({
+        status, error: String(error).slice(0, 2000), finishedAt: new Date(),
+      }).where(eq(kliphubJobsTable.id, job.id));
+    } else {
+      const progress = Number.isFinite(Number(task?.progress)) ? Math.max(1, Math.min(99, Number(task.progress))) : Math.min(95, Math.max(5, Number(job.progress || 5) + 5));
+      await db.update(kliphubJobsTable).set({ status: "processing", progress }).where(eq(kliphubJobsTable.id, job.id));
+    }
+  } catch (error: any) {
+    await db.update(kliphubJobsTable).set({ error: String(error?.message || error).slice(0, 2000) }).where(eq(kliphubJobsTable.id, job.id));
+  } finally {
+    runwaySyncing.delete(job.id);
+  }
+}
+
 function planScenes(durationSec: number, prompt: string) {
   const templates = [
     ["Opening hook", "Wide cinematic establishing shot. "],
@@ -59,6 +109,10 @@ router.get("/kliphub/overview", async (req, res): Promise<void> => {
   const projects = await db.select().from(kliphubProjectsTable)
     .where(eq(kliphubProjectsTable.userId, userId))
     .orderBy(desc(kliphubProjectsTable.updatedAt)).limit(50);
+  const pendingJobs = await db.select().from(kliphubJobsTable)
+    .where(and(eq(kliphubJobsTable.userId, userId), eq(kliphubJobsTable.provider, "runway")))
+    .orderBy(desc(kliphubJobsTable.createdAt)).limit(20);
+  await Promise.all(pendingJobs.map((job) => syncRunwayJob(job)));
   const jobs = await db.select().from(kliphubJobsTable)
     .where(eq(kliphubJobsTable.userId, userId))
     .orderBy(desc(kliphubJobsTable.createdAt)).limit(20);
@@ -146,23 +200,54 @@ router.post("/kliphub/projects/:id/jobs", async (req, res): Promise<void> => {
   const userId = getUserId(req);
   const projectId = Number(req.params.id);
   if (!userId || !Number.isFinite(projectId)) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const [project] = await db.select({ id: kliphubProjectsTable.id }).from(kliphubProjectsTable)
+  const [project] = await db.select().from(kliphubProjectsTable)
     .where(and(eq(kliphubProjectsTable.id, projectId), eq(kliphubProjectsTable.userId, userId))).limit(1);
-  if (!project) { res.status(404).json({ error: "Project not found" }); return; }
+  if (!project) { res.status(404).json({ error: "Project not found." }); return; }
+
   const sceneId = req.body?.sceneId ? Number(req.body.sceneId) : null;
   if (sceneId) {
     const [scene] = await db.select({ id: kliphubScenesTable.id }).from(kliphubScenesTable)
       .where(and(eq(kliphubScenesTable.id, sceneId), eq(kliphubScenesTable.projectId, projectId))).limit(1);
     if (!scene) { res.status(400).json({ error: "Scene does not belong to this project." }); return; }
   }
-  const type = String(req.body?.type ?? "scene_video").slice(0, 40);
-  const [job] = await db.insert(kliphubJobsTable).values({
-    userId, projectId, sceneId, type, provider: "browser-webgpu", status: "queued", progress: 0,
-    inputJson: JSON.stringify(req.body ?? {}),
-  }).returning();
-  res.status(201).json({ jobId: job.id, status: job.status });
-});
 
+  const type = String(req.body?.type ?? "image").slice(0, 40);
+  const prompt = String(req.body?.prompt ?? project.prompt ?? project.title).trim().slice(0, 32000);
+  const input = { ...req.body, prompt, projectId, sceneId };
+
+  try {
+    let task: any;
+    if (type === "video") {
+      const promptImage = String(req.body?.promptImage ?? "").trim();
+      if (!promptImage.startsWith("https://")) {
+        res.status(400).json({ error: "Video generation requires an HTTPS source image." }); return;
+      }
+      task = await createRunwayImageToVideo(
+        promptImage,
+        prompt,
+        Number(req.body?.duration ?? 5),
+        String(req.body?.ratio ?? "1280:720"),
+      );
+    } else {
+      task = await createRunwayImage(prompt, String(req.body?.ratio ?? "16:9"));
+    }
+
+    const [job] = await db.insert(kliphubJobsTable).values({
+      userId, projectId, sceneId, type, provider: "runway", status: "processing", progress: 5,
+      inputJson: JSON.stringify(input), outputJson: JSON.stringify({ taskId: task.id }), 
+      startedAt: new Date(),
+    }).returning();
+
+    res.status(201).json({ jobId: job.id, provider: "runway", providerJobId: task.id, status: job.status });
+  } catch (error: any) {
+    const message = String(error?.message || error).slice(0, 2000);
+    const [job] = await db.insert(kliphubJobsTable).values({
+      userId, projectId, sceneId, type, provider: "runway", status: "failed", progress: 0,
+      inputJson: JSON.stringify(input), error: message, finishedAt: new Date(),
+    }).returning();
+    res.status(502).json({ error: message, jobId: job.id });
+  }
+});
 router.get("/kliphub/projects/:id/jobs", async (req, res): Promise<void> => {
   const userId = getUserId(req);
   const projectId = Number(req.params.id);
