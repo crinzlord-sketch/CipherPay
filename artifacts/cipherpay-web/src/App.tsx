@@ -20,6 +20,7 @@ import EmailProPage from './pages/EmailProPage';
 import ChatPage from './pages/ChatPage';
 import CryptoPage from './pages/CryptoPage';
 import BillsPage from './pages/BillsPage';
+import KlipHubPage from './pages/KlipHubPage';
 import { apiRequest, apiUrl } from './pages/page-api';
 import { CipherAvatar } from './components/CipherAvatar';
 import {
@@ -42,6 +43,7 @@ import {
 } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
 import './landing.css';
+import './kliphub.css';
 import LandingExtras from './components/LandingExtras';
 
 const queryClient = new QueryClient();
@@ -297,7 +299,7 @@ function Shell({ children }: { children: ReactNode }) {
     </aside>
     <button className={`scrim ${mobileOpen ? "open" : ""}`} onClick={() => setMobileOpen(false)} aria-label="Close navigation" data-testid="button-scrim" />
     <main className="main-area">
-       <header className="topbar"><button className={`icon-btn menu-toggle ${mobileOpen ? "is-open" : ""}`} onClick={() => setMobileOpen((open) => !open)} aria-expanded={mobileOpen} aria-label={mobileOpen ? "Close navigation" : "Open navigation"} data-testid="button-open-menu"><span className="cp-menu-icon"><Menu size={21} /><X size={21} /></span></button><div className="mobile-logo"><Logo /></div><div className="topbar-spacer" /><button type="button" className="icon-btn notification-button" onClick={() => {
+       <header className="topbar"><button className={`icon-btn menu-toggle ${mobileOpen ? "is-open" : ""}`} onClick={() => setMobileOpen((open) => !open)} aria-expanded={mobileOpen} aria-label={mobileOpen ? "Close navigation" : "Open navigation"} data-testid="button-open-menu"><span className="cp-menu-icon"><Menu size={21} /><X size={21} /></span></button><div className="mobile-logo"><Logo /></div><div className="topbar-spacer" /><button type="button" className="kh-launch-btn" onClick={() => setLocation('/kliphub')}><span>KH</span> KlipHub <ArrowRight size={13}/></button><button type="button" className="icon-btn notification-button" onClick={() => {
         if (location === '/notifications') {
           setLocation(notificationReturnPath || '/');
         } else {
@@ -1971,6 +1973,7 @@ function App() {
             <Route path="/verify-email"><VerifyEmail /></Route>
             <Route path="/reset-password"><ResetPassword /></Route>
             <Route path="/dashboard"><ProtectedArea><Dashboard /></ProtectedArea></Route>
+            <Route path="/kliphub"><ProtectedArea><KlipHubPage /></ProtectedArea></Route>
             <Route path="/"><HomeRoute /></Route>
             <Route path="/fund"><ProtectedArea><Fund /></ProtectedArea></Route>
             <Route path="/send"><ProtectedArea><Send /></ProtectedArea></Route>
