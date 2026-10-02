@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import path from "node:path";
 import fs from "node:fs";
-import { kliphubGeneratedPath } from "../lib/kliphub-local-engine";
+import { kliphubGeneratedPath, runKlipHubGenerationJob } from "../lib/kliphub-local-engine";
 import { and, desc, eq, count } from "drizzle-orm";
 import {
   db,
@@ -137,7 +137,7 @@ router.post("/kliphub/projects/:id/jobs", async (req, res): Promise<void> => {
     userId, projectId, sceneId, type, provider: "kliphub-local-cpu", status: "queued", progress: 0,
     inputJson: JSON.stringify(req.body ?? {}),
   }).returning();
-  res.status(201).json({ jobId: job.id, status: job.status });
+  void runKlipHubGenerationJob(job.id);\n  res.status(201).json({ jobId: job.id, status: "processing" });
 });
 
 router.get("/kliphub/projects/:id/jobs", async (req, res): Promise<void> => {
