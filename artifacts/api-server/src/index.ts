@@ -36,6 +36,53 @@ const start = async () => {
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS chat_public_key text`);
   await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS users_user_code_unique ON users(user_code)`);
   await db.execute(sql`UPDATE users SET user_code = 'CP-' || upper(substr(md5(id::text), 1, 10)) WHERE user_code IS NULL`);
+  // KlipHub uses the same CipherPay database and account identity. These tables are additive
+  // and are created idempotently so the shared free Postgres can host both products.
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS kliphub_projects (
+    id serial PRIMARY KEY, user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title text NOT NULL, prompt text, status text NOT NULL DEFAULT 'draft',
+    duration_sec integer NOT NULL DEFAULT 30, created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS kliphub_projects_user_updated_idx ON kliphub_projects(user_id, updated_at DESC)`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS kliphub_scenes (
+    id serial PRIMARY KEY, project_id integer NOT NULL REFERENCES kliphub_projects(id) ON DELETE CASCADE,
+    position integer NOT NULL, title text NOT NULL, prompt text NOT NULL,
+    duration_sec integer NOT NULL DEFAULT 5, video_url text, status text NOT NULL DEFAULT 'queued',
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS kliphub_jobs (
+    id serial PRIMARY KEY, user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    project_id integer NOT NULL REFERENCES kliphub_projects(id) ON DELETE CASCADE,
+    scene_id integer REFERENCES kliphub_scenes(id) ON DELETE CASCADE, type text NOT NULL,
+    provider text, status text NOT NULL DEFAULT 'queued', progress integer NOT NULL DEFAULT 0,
+    input_json text, output_json text, error text, created_at timestamptz NOT NULL DEFAULT now(),
+    started_at timestamptz, finished_at timestamptz
+  )`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS kliphub_jobs_user_status_idx ON kliphub_jobs(user_id, status)`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS kliphub_credits (
+    id serial PRIMARY KEY, user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type text NOT NULL, amount integer NOT NULL, balance_after integer NOT NULL,
+    reason text NOT NULL, job_id integer REFERENCES kliphub_jobs(id) ON DELETE SET NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS kliphub_channels (
+    id serial PRIMARY KEY, user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    platform text NOT NULL, name text NOT NULL, handle text, status text NOT NULL DEFAULT 'connected',
+    created_at timestamptz NOT NULL DEFAULT now()
+  )`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS kliphub_schedules (
+    id serial PRIMARY KEY, user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    project_id integer REFERENCES kliphub_projects(id) ON DELETE CASCADE,
+    channel_id integer REFERENCES kliphub_channels(id) ON DELETE CASCADE,
+    scheduled_for timestamptz NOT NULL, status text NOT NULL DEFAULT 'scheduled'
+  )`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS kliphub_assets (
+    id serial PRIMARY KEY, user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    project_id integer REFERENCES kliphub_projects(id) ON DELETE CASCADE,
+    name text NOT NULL, type text NOT NULL, url text, created_at timestamptz NOT NULL DEFAULT now()
+  `);
+
   await db.execute(sql`CREATE TABLE IF NOT EXISTS direct_chats (
     id serial PRIMARY KEY, user_one_id integer NOT NULL, user_two_id integer NOT NULL,
     background_one text, background_two text, deleted_one boolean NOT NULL DEFAULT false,
