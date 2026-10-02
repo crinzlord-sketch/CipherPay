@@ -39,7 +39,7 @@ import {
   Bell, Bolt, Check, CircleHelp, Copy, CreditCard, FileText,
   Fingerprint, Globe2, Home, Landmark, LockKeyhole, LogOut, Menu, MessageSquare,
   Layers3, MoreHorizontal, Coins, Network as NetworkIcon, Plus, Receipt, RefreshCw, Send as SendIcon,
-  Settings, ShieldCheck, Smartphone, Target, Tv, UserRound, WalletCards, Wifi, X, Eye, EyeOff, Gift,
+  Settings, ShieldCheck, Smartphone, Target, Tv, UserRound, WalletCards, Wifi, X, Eye, EyeOff, Gift, Sparkles,
 } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
 import './landing.css';
