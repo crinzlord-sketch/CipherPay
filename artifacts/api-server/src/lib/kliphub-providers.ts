@@ -65,11 +65,12 @@ export async function downloadRunwayOutput(url: string, directory: string, basen
   const contentType = response.headers.get("content-type") || "application/octet-stream";
   const type = contentType.startsWith("video/") ? "video" : "image";
   const ext = type === "video" ? (contentType.includes("webm") ? "webm" : "mp4") : (contentType.includes("jpeg") ? "jpg" : "png");
-  await fs.promises.mkdir(directory, { recursive: true });
+  const actualDirectory = path.join(path.dirname(directory), type === "video" ? "videos" : "images");
+  await fs.promises.mkdir(actualDirectory, { recursive: true });
   const safe = basename.replace(/[^a-zA-Z0-9._-]/g, "-").slice(0, 100);
   const filename = `${Date.now()}-${safe}.${ext}`;
   const buffer = Buffer.from(await response.arrayBuffer());
-  await fs.promises.writeFile(path.join(directory, filename), buffer);
+  await fs.promises.writeFile(path.join(actualDirectory, filename), buffer);
   return {
     url: `/api/kliphub/generated/${type === "video" ? "videos" : "images"}/${filename}`,
     type,
