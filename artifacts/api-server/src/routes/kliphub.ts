@@ -37,11 +37,12 @@ function getUserId(req: any): number | null {
 const runwaySyncing = new Set<number>();
 
 async function syncRunwayJob(job: any): Promise<void> {
-  if (job.provider !== "runway" || !job.providerJobId || ["succeeded", "failed", "canceled"].includes(String(job.status).toLowerCase())) return;
+  const storedTaskId = (() => { try { return JSON.parse(String(job.outputJson || "{}"))?.taskId; } catch { return null; } })();
+  if (job.provider !== "runway" || !storedTaskId || ["succeeded", "failed", "canceled"].includes(String(job.status).toLowerCase())) return;
   if (runwaySyncing.has(job.id)) return;
   runwaySyncing.add(job.id);
   try {
-    const task = await getRunwayTask(String(job.providerJobId));
+    const task = await getRunwayTask(String(storedTaskId));
     const status = String(task?.status || "PENDING").toLowerCase();
     if (status === "succeeded" && Array.isArray(task.output) && task.output[0]) {
       const output = await downloadRunwayOutput(
@@ -52,7 +53,7 @@ async function syncRunwayJob(job: any): Promise<void> {
       const isVideo = output.type === "video";
       const mediaDir = isVideo ? "videos" : "images";
       const publicUrl = output.url.replace("/images/", `/${mediaDir}/`);
-      const outputJson = JSON.stringify({ provider: "runway", taskId: job.providerJobId, output: publicUrl, type: output.type });
+      const outputJson = JSON.stringify({ provider: "runway", taskId: storedTaskId, output: publicUrl, type: output.type });
       await db.update(kliphubJobsTable).set({
         status: "succeeded", progress: 100, outputJson, finishedAt: new Date(),
       }).where(eq(kliphubJobsTable.id, job.id));
@@ -234,11 +235,11 @@ router.post("/kliphub/projects/:id/jobs", async (req, res): Promise<void> => {
 
     const [job] = await db.insert(kliphubJobsTable).values({
       userId, projectId, sceneId, type, provider: "runway", status: "processing", progress: 5,
-      inputJson: JSON.stringify(input), outputJson: JSON.stringify({ taskId: task.id }), 
+      inputJson: JSON.stringify(input), outputJson: JSON.stringify({ taskId: task.id }),
       startedAt: new Date(),
     }).returning();
 
-    res.status(201).json({ jobId: job.id, provider: "runway", providerJobId: task.id, status: job.status });
+    res.status(201).json({ jobId: job.id, provider: "runway", status: job.status });
   } catch (error: any) {
     const message = String(error?.message || error).slice(0, 2000);
     const [job] = await db.insert(kliphubJobsTable).values({
