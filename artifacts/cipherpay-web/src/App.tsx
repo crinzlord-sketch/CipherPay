@@ -67,6 +67,7 @@ const nav = [
   { href: '/sms', label: 'SMS verification', icon: MessageSquare },
   { href: '/temporary-email', label: 'Temporary email', icon: Globe2 },
   { href: '/services', label: 'Services', icon: Layers3 },
+  { href: '/kliphub', label: 'KlipHub', icon: Sparkles },
   { href: '/crypto', label: 'Crypto', icon: Coins },
   { href: '/transactions', label: 'Transactions', icon: Activity },
   { href: '/referrals', label: 'Refer & earn', icon: Gift },
