@@ -102,11 +102,12 @@ async function generateVideo(prompt: string, id: number) {
 }
 
 export async function runKlipHubGenerationJob(jobId: number) {
-  const [job] = await db.select().from(kliphubJobsTable).where(eq(kliphubJobsTable.id, jobId)).limit(1);
-  if (!job || job.status === "completed" || job.status === "processing") return;
+  const [job] = await db.update(kliphubJobsTable).set({
+    status: "processing", progress: 5, provider: "kliphub-local-cpu", startedAt: new Date(), error: null,
+  }).where(and(eq(kliphubJobsTable.id, jobId), eq(kliphubJobsTable.status, "queued"))).returning();
+  if (!job) return;
   running = true;
   try {
-    await db.update(kliphubJobsTable).set({ status: "processing", progress: 5, provider: "kliphub-local-cpu", startedAt: new Date(), error: null }).where(eq(kliphubJobsTable.id, jobId));
     const [scene] = job.sceneId
       ? await db.select().from(kliphubScenesTable).where(and(eq(kliphubScenesTable.id, job.sceneId), eq(kliphubScenesTable.projectId, job.projectId))).limit(1)
       : [];
