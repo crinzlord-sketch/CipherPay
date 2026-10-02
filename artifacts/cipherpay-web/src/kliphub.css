@@ -1,4 +1,4 @@
-/* KlipHub — CipherPay visual language: editorial, light, glass, purple/orange accents */
+.service-card-kliphub{position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(111,76,255,.08),rgba(255,255,255,.82) 58%,rgba(242,123,67,.07))!important;border-color:rgba(111,76,255,.16)!important}.service-card-kliphub:after{content:"";position:absolute;width:180px;height:180px;right:-80px;top:-90px;border-radius:50%;background:rgba(111,76,255,.12);filter:blur(24px);pointer-events:none}.service-card-icon-kliphub{background:#eee9f7!important;color:#6f4cff!important}.kh-loading{min-height:42vh;display:grid;place-items:center;align-content:center;gap:12px;color:#817a88;font-size:11px}/* KlipHub — CipherPay visual language: editorial, light, glass, purple/orange accents */
 .kh-workspace{--kh-ink:#17121f;--kh-muted:#756f7d;--kh-purple:#6f4cff;--kh-orange:#f27b43;--kh-line:rgba(29,20,45,.11);color:var(--kh-ink);font-family:inherit}
 .kh-topline{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:20px}
 .kh-topline h1{font-size:clamp(30px,3.8vw,48px);line-height:.95;letter-spacing:-.065em;margin:9px 0 0;font-weight:850}
