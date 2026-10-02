@@ -268,7 +268,7 @@ router.post("/kliphub/projects/:id/jobs", async (req, res): Promise<void> => {
         String(req.body?.ratio ?? "1280:720"),
       );
     } else {
-      task = await createRunwayImage(prompt, String(req.body?.ratio ?? "16:9"));
+      task = await createRunwayImage(prompt, String(req.body?.ratio ?? "1920:1080"));
     }
 
     const [job] = await db.insert(kliphubJobsTable).values({
