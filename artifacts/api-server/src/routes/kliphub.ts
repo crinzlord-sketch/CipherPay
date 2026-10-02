@@ -1,4 +1,7 @@
 import { Router, type IRouter } from "express";
+import path from "node:path";
+import fs from "node:fs";
+import { kliphubGeneratedPath, startKlipHubLocalEngine } from "../lib/kliphub-local-engine";
 import { and, desc, eq, count } from "drizzle-orm";
 import {
   db,
@@ -12,6 +15,18 @@ import {
 } from "@workspace/db";
 
 const router: IRouter = Router();
+
+// Generated media is served from the local engine output directory. This is intentionally
+// public for the first CPU prototype so browser previews work without signed URLs.
+router.get("/kliphub/generated/*splat", (req, res): void => {
+  const splat = Array.isArray((req.params as any).splat) ? (req.params as any).splat : [String((req.params as any).splat ?? "")];
+  const filePath = kliphubGeneratedPath(splat);
+  if (!filePath || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) { res.status(404).end(); return; }
+  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  res.sendFile(path.resolve(filePath));
+});
+
+startKlipHubLocalEngine();
 
 function getUserId(req: any): number | null {
   const raw = req.headers["x-user-id"];
@@ -120,7 +135,7 @@ router.post("/kliphub/projects/:id/jobs", async (req, res): Promise<void> => {
   }
   const type = String(req.body?.type ?? "scene_video").slice(0, 40);
   const [job] = await db.insert(kliphubJobsTable).values({
-    userId, projectId, sceneId, type, provider: "configured", status: "queued", progress: 0,
+    userId, projectId, sceneId, type, provider: "kliphub-local-cpu", status: "queued", progress: 0,
     inputJson: JSON.stringify(req.body ?? {}),
   }).returning();
   res.status(201).json({ jobId: job.id, status: job.status });
