@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import path from "node:path";
 import fs from "node:fs";
 import { kliphubGeneratedPath, runKlipHubGenerationJob } from "../lib/kliphub-local-engine";
-import { and, desc, eq, count } from "drizzle-orm";
+import { and, desc, eq, count, inArray } from "drizzle-orm";
 import {
   db,
   kliphubAssetsTable,
@@ -85,6 +85,37 @@ router.get("/kliphub/overview", async (req, res): Promise<void> => {
       assets: assets.length,
     },
   });
+});
+
+router.delete("/kliphub/reset", async (req, res): Promise<void> => {
+  const userId = getUserId(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const projects = await db.select({ id: kliphubProjectsTable.id })
+    .from(kliphubProjectsTable).where(eq(kliphubProjectsTable.userId, userId));
+  const projectIds = projects.map(p => p.id);
+
+  if (projectIds.length) {
+    const assets = await db.select({ url: kliphubAssetsTable.url })
+      .from(kliphubAssetsTable).where(and(eq(kliphubAssetsTable.userId, userId), inArray(kliphubAssetsTable.projectId, projectIds)));
+    for (const asset of assets) {
+      try {
+        const raw = String(asset.url || "");
+        const prefix = "/api/kliphub/generated/";
+        if (raw.startsWith(prefix)) {
+          const filePath = kliphubGeneratedPath(raw.slice(prefix.length).split("/"));
+          if (filePath && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) await fs.promises.unlink(filePath);
+        }
+      } catch {}
+    }
+    await db.delete(kliphubAssetsTable).where(and(eq(kliphubAssetsTable.userId, userId), inArray(kliphubAssetsTable.projectId, projectIds)));
+    await db.delete(kliphubJobsTable).where(and(eq(kliphubJobsTable.userId, userId), inArray(kliphubJobsTable.projectId, projectIds)));
+    await db.delete(kliphubScenesTable).where(inArray(kliphubScenesTable.projectId, projectIds));
+    await db.delete(kliphubSchedulesTable).where(and(eq(kliphubSchedulesTable.userId, userId), inArray(kliphubSchedulesTable.projectId, projectIds)));
+    await db.delete(kliphubProjectsTable).where(and(eq(kliphubProjectsTable.userId, userId), inArray(kliphubProjectsTable.id, projectIds)));
+  }
+
+  res.json({ deletedProjects: projectIds.length });
 });
 
 router.post("/kliphub/projects", async (req, res): Promise<void> => {
