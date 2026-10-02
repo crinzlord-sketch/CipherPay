@@ -30,7 +30,7 @@ async function runway(pathname: string, init: RequestInit = {}): Promise<any> {
   return body;
 }
 
-export async function createRunwayImage(prompt: string, ratio = "16:9") {
+export async function createRunwayImage(prompt: string, ratio = "1920:1080") {
   return runway("/text_to_image", {
     method: "POST",
     body: JSON.stringify({
