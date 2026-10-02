@@ -40,3 +40,6 @@
 @keyframes khspin{to{transform:rotate(360deg)}}.kh-spin{animation:khspin 1s linear infinite}
 @media(max-width:900px){.kh-hero{grid-template-columns:1fr;padding:38px}.kh-visual{min-height:310px}.kh-project-grid,.kh-project-grid-large{grid-template-columns:repeat(2,1fr)}.kh-studio{grid-template-columns:1fr}.kh-studio-preview{min-height:420px}.kh-stat-grid{grid-template-columns:repeat(2,1fr)}.kh-stat{border-bottom:1px solid var(--kh-line)}}
 @media(max-width:650px){.kh-topline{display:block}.kh-actions{margin-top:16px}.kh-topline h1{font-size:32px}.kh-tabs{overflow:auto;flex-wrap:nowrap}.kh-tabs button{white-space:nowrap}.kh-hero{padding:28px;min-height:560px}.kh-hero h2{font-size:54px}.kh-visual{height:260px;min-height:260px}.kh-video-card{width:245px;height:170px}.kh-orbit-one{width:280px;height:190px}.kh-orbit-two{width:220px;height:220px}.kh-project-grid,.kh-project-grid-large{grid-template-columns:1fr}.kh-project-inspector{display:block}.kh-project-inspector>div:last-child{margin-top:18px;white-space:normal}.kh-panel{padding:22px}.kh-studio-intro h2{font-size:36px}.kh-credit-hero{display:block!important}.kh-credit-orb{margin-top:22px}}
+
+
+.kh-inspector-actions{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}.kh-inspector-actions button{white-space:nowrap}
