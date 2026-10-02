@@ -103,6 +103,23 @@ function planScenes(durationSec: number, prompt: string) {
   }));
 }
 
+router.get("/kliphub/internal-test-video", async (req, res): Promise<void> => {
+  if (String(req.query?.token ?? "") !== "KH_TEST_20261002") { res.status(404).end(); return; }
+  try {
+    const source = "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1280&q=85";
+    const task = await createRunwayImageToVideo(
+      source,
+      "Create a polished cinematic 5-second establishing video: a futuristic luxury city at blue hour, subtle forward camera movement, realistic lights and reflections, premium commercial-film look, smooth motion, natural atmosphere, no text.",
+      5,
+      "1280:720",
+    );
+    const startedAt = new Date().toISOString();
+    res.status(202).json({ ok: true, taskId: task.id, startedAt, message: "CipherPay API accepted the KlipHub global video test." });
+  } catch (error: any) {
+    res.status(502).json({ ok: false, error: String(error?.message || error).slice(0, 2000) });
+  }
+});
+
 router.get("/kliphub/overview", async (req, res): Promise<void> => {
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -121,6 +138,10 @@ router.get("/kliphub/overview", async (req, res): Promise<void> => {
   const schedules = await db.select().from(kliphubSchedulesTable)
     .where(and(eq(kliphubSchedulesTable.userId, userId), eq(kliphubSchedulesTable.status, "scheduled")));
   const assets = await db.select().from(kliphubAssetsTable).where(eq(kliphubAssetsTable.userId, userId)).limit(50);
+  const globalTestUrl = "/api/kliphub/generated/videos/kliphub-global-test.mp4";
+  if (fs.existsSync(path.join(MEDIA_ROOT, "videos", "kliphub-global-test.mp4"))) {
+    assets.unshift({ id: -1, userId: 0, projectId: 0, name: "KlipHub Global Test Video", type: "video", url: globalTestUrl });
+  }
   const [credit] = await db.select({ balance: kliphubCreditsTable.balanceAfter })
     .from(kliphubCreditsTable).where(eq(kliphubCreditsTable.userId, userId))
     .orderBy(desc(kliphubCreditsTable.createdAt)).limit(1);
