@@ -137,7 +137,8 @@ router.post("/kliphub/projects/:id/jobs", async (req, res): Promise<void> => {
     userId, projectId, sceneId, type, provider: "kliphub-local-cpu", status: "queued", progress: 0,
     inputJson: JSON.stringify(req.body ?? {}),
   }).returning();
-  void runKlipHubGenerationJob(job.id);\n  res.status(201).json({ jobId: job.id, status: "processing" });
+  void runKlipHubGenerationJob(job.id);
+  res.status(201).json({ jobId: job.id, status: "processing" });
 });
 
 router.get("/kliphub/projects/:id/jobs", async (req, res): Promise<void> => {
