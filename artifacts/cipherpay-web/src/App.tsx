@@ -15,6 +15,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
 import AdminConsole from './pages/AdminConsole';
 import ServicesPage from './pages/ServicesPage';
+import DataBundlesPage from './pages/DataBundlesPage';
 import SocialBoostPage from './pages/SocialBoostPage';
 import EmailProPage from './pages/EmailProPage';
 import ChatPage from './pages/ChatPage';
@@ -59,6 +60,7 @@ const nav = [
   { href: '/', label: 'Overview', icon: Home },
   { href: '/fund', label: 'Fund wallet', icon: Plus },
   { href: '/chat', label: 'Find & chat', icon: MessageSquare },
+  { href: '/data', label: 'Data bundles', icon: Wifi },
   { href: '/sms', label: 'SMS verification', icon: MessageSquare },
   { href: '/temporary-email', label: 'Temporary email', icon: Globe2 },
   { href: '/services', label: 'Services', icon: Layers3 },
@@ -77,6 +79,7 @@ const utilityNav = [
 
 const serviceFeatureForPath = (path: string) => {
   if (path === '/fund' || path.startsWith('/fund/')) return 'wallet_funding';
+  if (path === '/data' || path.startsWith('/data/')) return 'data';
   if (path === '/sms' || path.startsWith('/sms/')) return 'sms';
   if (path === '/temporary-email' || path.startsWith('/temporary-email/')) return 'temporary_email';
   if (path === '/social-boost' || path.startsWith('/social-boost/')) return 'social_boost';
@@ -1971,6 +1974,7 @@ function App() {
             <Route path="/bills/:category/:provider"><ProtectedArea><BillsPage /></ProtectedArea></Route>
             <Route path="/bills/:category"><ProtectedArea><BillsPage /></ProtectedArea></Route>
             <Route path="/bills/:category/:provider"><ProtectedArea><BillProviderPage /></ProtectedArea></Route>
+            <Route path="/data"><ProtectedArea><DataBundlesPage /></ProtectedArea></Route>
             <Route path="/sms"><ProtectedArea><SmsVerification /></ProtectedArea></Route>
             <Route path="/temporary-email"><ProtectedArea><TemporaryEmail /></ProtectedArea></Route>
             <Route path="/services"><ProtectedArea><ServicesPage /></ProtectedArea></Route>
