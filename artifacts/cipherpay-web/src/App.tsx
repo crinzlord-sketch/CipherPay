@@ -58,10 +58,7 @@ const parseGroupedDigits = (value: string) => Number(value.replace(/,/g, '')) ||
 const nav = [
   { href: '/', label: 'Overview', icon: Home },
   { href: '/fund', label: 'Fund wallet', icon: Plus },
-  { href: '/send', label: 'Send money', icon: SendIcon },
   { href: '/chat', label: 'Find & chat', icon: MessageSquare },
-  { href: '/airtime', label: 'Airtime & data', icon: Smartphone },
-  { href: '/bills', label: 'Pay bills', icon: Receipt },
   { href: '/sms', label: 'SMS verification', icon: MessageSquare },
   { href: '/temporary-email', label: 'Temporary email', icon: Globe2 },
   { href: '/services', label: 'Services', icon: Layers3 },
@@ -79,10 +76,7 @@ const utilityNav = [
 ];
 
 const serviceFeatureForPath = (path: string) => {
-  if (path === '/send' || path.startsWith('/send/')) return 'transfers';
   if (path === '/fund' || path.startsWith('/fund/')) return 'wallet_funding';
-  if (path === '/airtime' || path.startsWith('/airtime/')) return 'airtime';
-  if (path === '/bills' || path.startsWith('/bills/')) return 'bills';
   if (path === '/sms' || path.startsWith('/sms/')) return 'sms';
   if (path === '/temporary-email' || path.startsWith('/temporary-email/')) return 'temporary_email';
   if (path === '/social-boost' || path.startsWith('/social-boost/')) return 'social_boost';
@@ -1974,10 +1968,8 @@ function App() {
             <Route path="/"><HomeRoute /></Route>
             <Route path="/fund"><ProtectedArea><Fund /></ProtectedArea></Route>
             <Route path="/send"><ProtectedArea><Send /></ProtectedArea></Route>
-            <Route path="/airtime"><ProtectedArea><Airtime /></ProtectedArea></Route>
             <Route path="/bills/:category/:provider"><ProtectedArea><BillsPage /></ProtectedArea></Route>
             <Route path="/bills/:category"><ProtectedArea><BillsPage /></ProtectedArea></Route>
-            <Route path="/bills"><ProtectedArea><BillsPage /></ProtectedArea></Route>
             <Route path="/bills/:category/:provider"><ProtectedArea><BillProviderPage /></ProtectedArea></Route>
             <Route path="/sms"><ProtectedArea><SmsVerification /></ProtectedArea></Route>
             <Route path="/temporary-email"><ProtectedArea><TemporaryEmail /></ProtectedArea></Route>
