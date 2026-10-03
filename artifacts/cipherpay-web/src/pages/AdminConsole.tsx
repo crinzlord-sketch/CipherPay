@@ -334,7 +334,7 @@ export default function AdminConsole() {
     }
     if (action === 'email') { setDetailAction({ kind: 'email', user }); return; }
     if (action === 'activity') {
-      if (!await confirm({ title: 'Reset this user’s activity?', description: 'This removes their transactions, purchases, notifications, and wallet balance. This cannot be undone.', confirmLabel: 'Reset activity', destructive: true })) return;
+      if (!await confirm({ title: 'Reset this user’s activity?', description: 'This removes their transactions, purchases, and notifications. Their wallet balance will not be affected. This cannot be undone.', confirmLabel: 'Reset activity', destructive: true })) return;
       await run(`/api/admin/users/${user.id}/reset-activity`, { method: 'POST' }, 'User activity reset.');
     }
     if (action === 'delete') {
