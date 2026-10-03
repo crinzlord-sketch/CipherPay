@@ -433,6 +433,14 @@ router.post("/wallet/fund/verify", async (req, res): Promise<void> => {
   }
 });
 
+// Transfers and withdrawals are intentionally disabled for users.
+// CipherPay is currently deposit + spend only; balances cannot be sent to another
+// CipherPay account or withdrawn to a bank account.
+router.post("/wallet/transfer", (_req, res) => { res.status(403).json({ error: "Transfers are currently disabled." }); });
+router.post("/wallet/transfer/p2p", (_req, res) => { res.status(403).json({ error: "Transfers are currently disabled." }); });
+router.post("/wallet/withdraw", (_req, res) => { res.status(403).json({ error: "Withdrawals are currently disabled." }); });
+router.post("/wallet/withdraw/refresh/:id", (_req, res) => { res.status(403).json({ error: "Withdrawals are currently disabled." }); });
+
 router.post("/wallet/transfer", async (req, res): Promise<void> => {
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
