@@ -13,55 +13,88 @@ import { checkDepositLimit, checkPerTxLimitSync, getDepositFlagReason } from "..
 const router: IRouter = Router();
 router.get("/crypto/markets", async (_req, res): Promise<void> => {
   const ids = "bitcoin,ethereum,solana,tether,usd-coin,binancecoin,ripple,dogecoin,cardano,avalanche-2,tron,stellar";
+  const cacheKey = "__cipherPayCryptoMarkets";
+  const now = Date.now();
+  const cached = (globalThis as any)[cacheKey] as { at: number; data: unknown } | undefined;
+
+  // One request returns both USD and NGN values. This is deliberately cached so
+  // every CipherPay user does not create a separate provider request.
+  if (cached && now - cached.at < 60_000) {
+    res.setHeader("Cache-Control", "public, max-age=30");
+    res.json({ data: cached.data, updatedAt: new Date(cached.at).toISOString(), stale: false });
+    return;
+  }
+
   try {
-    const now = Date.now();
-    const cached = (globalThis as any).__cipherPayCryptoMarkets as { at: number; data: unknown } | undefined;
-    if (cached && now - cached.at < 20_000) {
-      res.setHeader("Cache-Control", "public, max-age=20");
-      res.json({ data: cached.data, updatedAt: new Date(cached.at).toISOString() });
-      return;
-    }
-    // CoinGecko's /coins/markets endpoint accepts one vs_currency per request.
-    // Fetch USD and NGN in parallel, then merge the same asset rows.
-    const base = "https://api.coingecko.com/api/v3/coins/markets?ids=" + ids + "&order=market_cap_desc&per_page=12&page=1&sparkline=false&price_change_percentage=24h";
-    const [usdResponse, ngnResponse] = await Promise.all([
-      fetch(base + "&vs_currency=usd"),
-      fetch(base + "&vs_currency=ngn"),
-    ]);
-    if (!usdResponse.ok || !ngnResponse.ok) {
-      const status = usdResponse.status === 429 || ngnResponse.status === 429 ? 429 : 502;
-      res.status(status).json({ error: "Live market provider unavailable." });
-      return;
-    }
-    const [usdRows, ngnRows] = await Promise.all([
-      usdResponse.json() as Promise<any[]>,
-      ngnResponse.json() as Promise<any[]>,
-    ]);
-    const ngnById = new Map(ngnRows.map((row) => [row.id, row]));
-    const data = usdRows.map((row) => {
-      const ngnRow = ngnById.get(row.id) ?? {};
-      return {
-        id: row.id,
-        symbol: String(row.symbol ?? "").toUpperCase(),
-        name: row.name,
-        image: row.image,
-        priceNgn: Number(ngnRow.current_price ?? 0),
-        priceUsd: Number(row.current_price ?? 0),
-        change24h: Number(row.price_change_percentage_24h ?? 0),
-        marketCapNgn: Number(ngnRow.market_cap ?? 0),
-        marketCapUsd: Number(row.market_cap ?? 0),
-        volumeNgn: Number(ngnRow.total_volume ?? 0),
-        volumeUsd: Number(row.total_volume ?? 0),
-      };
+    const params = new URLSearchParams({
+      ids,
+      vs_currencies: "usd,ngn",
+      include_market_cap: "true",
+      include_24hr_vol: "true",
+      include_24hr_change: "true",
+      include_last_updated_at: "true",
     });
-    (globalThis as any).__cipherPayCryptoMarkets = { at: now, data };
-    res.setHeader("Cache-Control", "public, max-age=20");
-    res.json({ data, updatedAt: new Date(now).toISOString() });
-  } catch {
+    const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?${params.toString()}`, {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(10_000),
+    });
+
+    if (!response.ok) {
+      throw new Error(`CoinGecko returned ${response.status}`);
+    }
+
+    const rows = await response.json() as Record<string, any>;
+    const names: Record<string, { symbol: string; name: string }> = {
+      bitcoin: { symbol: "BTC", name: "Bitcoin" },
+      ethereum: { symbol: "ETH", name: "Ethereum" },
+      solana: { symbol: "SOL", name: "Solana" },
+      tether: { symbol: "USDT", name: "Tether" },
+      "usd-coin": { symbol: "USDC", name: "USD Coin" },
+      binancecoin: { symbol: "BNB", name: "BNB" },
+      ripple: { symbol: "XRP", name: "XRP" },
+      dogecoin: { symbol: "DOGE", name: "Dogecoin" },
+      cardano: { symbol: "ADA", name: "Cardano" },
+      "avalanche-2": { symbol: "AVAX", name: "Avalanche" },
+      tron: { symbol: "TRX", name: "TRON" },
+      stellar: { symbol: "XLM", name: "Stellar" },
+    };
+
+    const data = ids.split(",").map((id) => {
+      const row = rows[id] ?? {};
+      const meta = names[id];
+      return {
+        id,
+        symbol: meta.symbol,
+        name: meta.name,
+        image: `https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons/svg/color/${meta.symbol.toLowerCase()}.svg`,
+        priceNgn: Number(row.ngn ?? 0),
+        priceUsd: Number(row.usd ?? 0),
+        change24h: Number(row.usd_24h_change ?? 0),
+        marketCapNgn: Number(row.ngn_market_cap ?? 0),
+        marketCapUsd: Number(row.usd_market_cap ?? 0),
+        volumeNgn: Number(row.ngn_24h_vol ?? 0),
+        volumeUsd: Number(row.usd_24h_vol ?? 0),
+      };
+    }).filter((item) => item.priceUsd > 0);
+
+    if (!data.length) throw new Error("CoinGecko returned no usable market rows");
+
+    (globalThis as any)[cacheKey] = { at: now, data };
+    res.setHeader("Cache-Control", "public, max-age=30");
+    res.json({ data, updatedAt: new Date(now).toISOString(), stale: false });
+  } catch (error: any) {
+    // Keep the last good prices visible during a provider timeout/rate-limit.
+    // The UI should not suddenly become an empty crypto page because a market
+    // provider had a temporary network problem.
+    req.log?.warn?.({ err: error?.message }, "crypto market provider request failed");
+    if (cached?.data) {
+      res.setHeader("Cache-Control", "no-store");
+      res.json({ data: cached.data, updatedAt: new Date(cached.at).toISOString(), stale: true });
+      return;
+    }
     res.status(502).json({ error: "Live market provider unavailable." });
   }
 });
-
 
 // Tiered withdrawal processing fee (NGN). Charged on top of the amount the
 // user wants delivered. Kept here next to the route that consumes it so the
