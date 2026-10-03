@@ -2,15 +2,11 @@ import { Router, type IRouter } from "express";
 import { and, eq, lt, notInArray } from "drizzle-orm";
 import { db, smsActivationsTable, socialOrdersTable, transactionsTable, usersTable } from "@workspace/db";
 import {
-  BuyAirtimeBody, BuyDataBody, PayBillBody, ValidateBillBody,
   PlaceSocialOrderBody, BuySmsNumberBody,
 } from "@workspace/api-zod";
 import { creditWallet, debitWallet, formatTransaction } from "../lib/wallet";
 import {
-  flwReference, buyAirtime as flwBuyAirtime, movePayoutWalletToMerchant, moveMerchantToPayoutWallet, fetchPayoutWalletBalance, findTransferByReference, verifyTransferById,
-  dataPlans as flwDataPlans, buyData as flwBuyData,
-  electricityPlans as flwElecPlans,
-  FLW_ELECTRICITY, validateBill as flwValidateBill, payBill as flwPayBill, verifyBill as flwVerifyBill,
+  flwReference,
 } from "../lib/flutterwave";
 import {
   listCountries as listSmsPoolCountries,
@@ -21,10 +17,12 @@ import {
   checkOrder as checkSmsPoolOrder,
   cancelOrder as cancelSmsPoolOrder,
 } from "../lib/smspool";
-import { smmFindService, smmAddOrder, smmOrderStatus } from "../lib/socially";
+import {
+  smmFindService, smmAddOrder, smmOrderStatus,
+  dataProviders as sociallyDataProviders, dataPackages as sociallyDataPackages, buyDataBundle as sociallyBuyDataBundle,
+} from "../lib/socially";
 import { logoPath } from "../lib/logos";
 import { checkPerTxLimitSync, getUserKycLevel } from "../lib/kycLimits";
-import { ensureUserPayoutWallet } from "../lib/payout-wallet";
 
 const router: IRouter = Router();
 
@@ -126,358 +124,120 @@ async function safePersist(req: any, txId: number, fn: () => Promise<void>) {
   }
 }
 
-// ── NETWORKS ──────────────────────────────────────────────────────────────
-const NETWORKS = [
-  { id: "mtn", name: "MTN Nigeria", code: "mtn", logo: logoPath("mtn") },
-  { id: "glo", name: "Glo Mobile", code: "glo", logo: logoPath("glo") },
-  { id: "airtel", name: "Airtel Nigeria", code: "airtel", logo: logoPath("airtel") },
-  { id: "9mobile", name: "9Mobile", code: "9mobile", logo: logoPath("9mobile") },
-];
+// ── DATA BUNDLES — powered by Socially.ng ─────────────────────────────────
+// Flutterwave is intentionally NOT used for airtime, data or bills anymore.
+// Data catalog + delivery come directly from the Socially provider account.
 
-router.get("/airtime/networks", (_req, res) => { res.json(NETWORKS); });
+const DATA_TTL_MS = 10 * 60 * 1000;
+let sociallyDataProviderCache: { at: number; providers: Awaited<ReturnType<typeof sociallyDataProviders>> } | null = null;
+const sociallyDataPackageCache = new Map<string, { at: number; packages: Awaited<ReturnType<typeof sociallyDataPackages>> }>();
 
-
-// Airtime and data are sold at the provider price. CipherPay does not add a
-// service/profit fee to either VAS purchase.
-const VAS_PROFIT_FEE = 0;
-
-function dataRetailPrice(wholesaleAmount: number, _sizeStr: string): number {
-  return Math.max(Number(wholesaleAmount) || 0, 0);
+async function getSociallyDataProviders(force = false) {
+  if (!force && sociallyDataProviderCache && Date.now() - sociallyDataProviderCache.at < DATA_TTL_MS) return sociallyDataProviderCache.providers;
+  const providers = await sociallyDataProviders();
+  if (providers.length) sociallyDataProviderCache = { at: Date.now(), providers };
+  return providers;
 }
 
-router.post("/airtime/buy", async (req, res): Promise<void> => {
-  const userId = getUserId(req);
-  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const parsed = BuyAirtimeBody.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("; ") }); return; }
+async function getSociallyDataPackages(providerCode: string) {
+  const cached = sociallyDataPackageCache.get(providerCode);
+  if (cached && Date.now() - cached.at < DATA_TTL_MS) return cached.packages;
+  const packages = await sociallyDataPackages(providerCode);
+  if (packages.length) sociallyDataPackageCache.set(providerCode, { at: Date.now(), packages });
+  return packages;
+}
 
-  const { network, phone: rawPhone, amount } = parsed.data;
-  const phone = normalizeNgPhone(rawPhone);
-  const networkObj = NETWORKS.find(n => n.id === network);
-  const charge = amount;
-
-  const kycLevel = await getUserKycLevel(userId);
-  const airtimeLimitError = checkPerTxLimitSync(kycLevel, charge);
-  if (airtimeLimitError) { res.status(400).json({ error: airtimeLimitError }); return; }
-
-  let tx: any;
+router.get("/data/providers", async (_req, res): Promise<void> => {
   try {
-    ({ tx } = await debitWallet(userId, charge, `${networkObj?.name ?? network} airtime - ${phone}`, "airtime", { network, phone, amount, fee: 0 }));
+    res.json(await getSociallyDataProviders());
   } catch (e: any) {
-    res.status(400).json({ error: e.message }); return;
-  }
-
-  try {
-    // Flutterwave bill payments debit the merchant's already-funded bill-payment
-    // source balance directly. Do not transfer each user's purchase into that
-    // source wallet first; doing so can create an unnecessary async transfer
-    // failure even when the bill-payment source is funded.
-    const reference = flwReference(`AIR${tx.id}`);
-    const result = await flwBuyAirtime({ phone, amount, reference, network });
-    req.log.info({ flwStatus: result.raw?.status, flwMessage: result.raw?.message, flwData: result.raw?.data, reference, processing: result.pending === true }, "Flutterwave airtime response");
-    if (!result.success) {
-      await refundFailed(userId, tx.id, charge, `Airtime delivery failed: ${result.message}`, "airtime");
-      res.status(502).json({
-        error: `Airtime delivery failed. You have been refunded.`,
-        details: result.message,
-        providerResponse: { status: result.raw?.status, message: result.raw?.message, data: result.raw?.data ?? null },
-      });
-      return;
-    }
-    await safePersist(req, tx.id, async () => {
-      await db.update(transactionsTable).set({
-        status: result.pending ? "pending" : "success",
-        metadata: JSON.stringify({ network, phone, amount, providerRef: result.flwRef ?? result.reference, providerStatus: result.message }),
-      }).where(eq(transactionsTable.id, tx.id));
-    });
-    res.json({
-      success: true,
-      processing: result.pending === true,
-      message: result.pending
-        ? "Airtime purchase is still processing. You have not been charged any extra fee."
-        : "Airtime delivered successfully",
-      reference,
-      transaction: formatTransaction({ ...tx, status: result.pending ? "pending" : "success" }),
-    });
-  } catch (e: any) {
-    await refundFailed(userId, tx.id, charge, `Provider error: ${e.message ?? "unknown"}`, "airtime");
-    res.status(502).json({ error: "Provider error. You have been refunded.", details: e.message });
+    res.status(502).json({ error: "Data providers are temporarily unavailable.", details: e?.message });
   }
 });
 
-// ── DATA PLANS — powered by Flutterwave (cached 1h) ───────────────────────
-// Plans catalog uses GET /bill-categories?data_bundle=1 (no IP whitelist).
-// Purchase uses POST /v3/bills (requires Flutterwave IP whitelist — same as
-// airtime/electricity). Plans are fetched once per hour and filtered per network.
-
-const DATA_TTL_MS = 60 * 60 * 1000;
-let rawDataCache: { at: number; plans: Awaited<ReturnType<typeof flwDataPlans>> } | null = null;
-
-// ── Electricity catalog cache (1h TTL) ───────────────────────────────────────
-let rawElecCache: { at: number; plans: Awaited<ReturnType<typeof flwElecPlans>> } | null = null;
-
-async function getElecBillerName(billerCode: string, itemCode: string): Promise<string | null> {
-  if (!rawElecCache || Date.now() - rawElecCache.at >= DATA_TTL_MS) {
-    try {
-      const plans = await flwElecPlans();
-      if (plans.length > 0) rawElecCache = { at: Date.now(), plans };
-    } catch { /* leave cache stale */ }
-  }
-  if (!rawElecCache) return null;
-  const match = rawElecCache.plans.find(p => p.billerCode === billerCode && p.itemCode === itemCode);
-  return match?.billerName ?? null;
-}
-
-function parsePlanMeta(name: string): { size: string; validity: string } {
-  const sizeMatch = name.match(/(\d+(?:\.\d+)?\s*(?:MB|GB|TB))/i);
-  const validityMatch = name.match(/(\d+\s*(?:Day|Days|Week|Weeks|Month|Months|Hour|Hours|Year|Years))/i)
-    ?? name.match(/(Daily|Weekly|Monthly|Yearly)/i);
-  return { size: sizeMatch?.[1]?.toUpperCase().replace(/\s+/g, "") ?? "", validity: validityMatch?.[1] ?? "" };
-}
-
-type DataPlan = { id: string; name: string; size: string; validity: string; price: number; wholesalePrice: number; network: string; billerName: string; billerCode: string };
-
-async function getAllDataPlansRaw(): Promise<Awaited<ReturnType<typeof flwDataPlans>>> {
-  if (rawDataCache && Date.now() - rawDataCache.at < DATA_TTL_MS) return rawDataCache.plans;
-  let raw: Awaited<ReturnType<typeof flwDataPlans>> = [];
-  try { raw = await flwDataPlans(); } catch { raw = []; }
-  if (raw.length > 0) rawDataCache = { at: Date.now(), plans: raw };
-  return raw;
-}
-
-async function getDataPlans(network: string): Promise<DataPlan[]> {
-  const raw = await getAllDataPlansRaw();
-  return raw
-    .filter(p => p.network === network && p.amount > 0)
-    .map(p => {
-      const meta = parsePlanMeta(p.name);
-      return {
-        id: p.itemCode,            // Flutterwave item_code — used as planId in /data/buy
-        name: p.name,
-        size: meta.size,
-        validity: meta.validity,
-        price: dataRetailPrice(p.amount, meta.size),
-        wholesalePrice: p.amount,  // charged to Flutterwave; user pays the retail price
-        network,
-        billerName: p.billerName,
-        billerCode: p.billerCode,
-      };
-    });
-}
-
 router.get("/data/plans", async (req, res): Promise<void> => {
-  const network = (req.query.network as string) ?? "";
-  if (network && NETWORKS.some(n => n.id === network)) {
-    res.json(await getDataPlans(network));
-    return;
+  try {
+    const requested = String(req.query.provider ?? req.query.network ?? "").trim();
+    const providers = await getSociallyDataProviders();
+    const selected = requested
+      ? providers.find((p) => p.provider_code.toLowerCase() === requested.toLowerCase() || p.provider_name.toLowerCase() === requested.toLowerCase())
+      : null;
+    const targets = selected ? [selected] : providers;
+    const groups = await Promise.all(targets.map(async (provider) => ({
+      provider: provider.provider_code,
+      providerName: provider.provider_name,
+      packages: await getSociallyDataPackages(provider.provider_code),
+    })));
+    res.json(groups.flatMap((group) => group.packages.map((pkg) => ({
+      id: pkg.package_code,
+      name: pkg.package_name,
+      size: pkg.package_name.match(/\\d+(?:\\.\\d+)?\\s*(?:MB|GB|TB)/i)?.[0] ?? pkg.package_name,
+      validity: pkg.package_name.match(/\\d+\\s*(?:day|days|week|weeks|month|months)/i)?.[0] ?? "",
+      price: pkg.amount,
+      provider: group.provider,
+      providerName: group.providerName,
+      packageCode: pkg.package_code,
+    }))));
+  } catch (e: any) {
+    res.status(502).json({ error: "Data plans are temporarily unavailable.", details: e?.message });
   }
-  const all = await Promise.all(NETWORKS.map(n => getDataPlans(n.id)));
-  res.json(all.flat());
 });
 
 router.post("/data/buy", async (req, res): Promise<void> => {
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const parsed = BuyDataBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("; ") });
+  const providerCode = String(req.body?.provider ?? req.body?.network ?? "").trim();
+  const packageCode = String(req.body?.packageCode ?? req.body?.planId ?? "").trim();
+  const phone = normalizeNgPhone(String(req.body?.phone ?? ""));
+  if (!providerCode || !packageCode || !phone) { res.status(400).json({ error: "Choose a provider, data bundle and valid phone number." }); return; }
+
+  let pkg: any;
+  try {
+    const packages = await getSociallyDataPackages(providerCode);
+    pkg = packages.find((item) => item.package_code === packageCode);
+  } catch (e: any) {
+    res.status(502).json({ error: "Data plans are temporarily unavailable.", details: e?.message });
     return;
   }
+  if (!pkg) { res.status(400).json({ error: "Data bundle not found or no longer available." }); return; }
 
-  const { network, phone: rawPhone, planId } = parsed.data;
-  const phone = normalizeNgPhone(rawPhone);
-  const plans = await getDataPlans(network);
-  const plan = plans.find(p => p.id === planId);
-  if (!plan) { res.status(400).json({ error: "Plan not found or no longer available" }); return; }
-
-  const kycLevel = await getUserKycLevel(userId);
-  const limitError = checkPerTxLimitSync(kycLevel, plan.price);
+  const amount = Number(pkg.amount);
+  const limitError = checkPerTxLimitSync(await getUserKycLevel(userId), amount);
   if (limitError) { res.status(400).json({ error: limitError }); return; }
 
   let tx: any;
   try {
-    ({ tx } = await debitWallet(userId, plan.price, `${plan.name} data for ${phone}`, "data", { network, phone, planId, plan }));
+    ({ tx } = await debitWallet(userId, amount, `${pkg.package_name} data for ${phone}`, "data", { provider: providerCode, phone, packageCode, package: pkg }));
   } catch (e: any) {
     res.status(400).json({ error: e.message }); return;
   }
 
-  let sourceFunded = false;
   try {
-    await fundBillSourceFromUser(userId, plan.price, tx.id);
-    sourceFunded = true;
-    const reference = flwReference(`DAT${tx.id}`);
-    const result = await flwBuyData({ phone, amount: plan.wholesalePrice, itemCode: planId, billerName: plan.billerName, billerCode: plan.billerCode, reference });
-    req.log.info({ flwStatus: result.raw?.status, flwMessage: result.raw?.message, flwData: result.raw?.data, reference, planId }, "Flutterwave data response");
-    if (!result.success) {
-      if (sourceFunded) await refundBillSourceToUser(userId, plan.price, tx.id);
-      await refundFailed(userId, tx.id, plan.price, `Data delivery failed: ${result.message || "provider declined"}`, "data");
-      res.status(502).json({
-        error: "Data delivery failed. You have been refunded.",
-        details: result.message,
-        providerResponse: { status: result.raw?.status, message: result.raw?.message, data: result.raw?.data ?? null },
-      });
+    const reference = flwReference(`DATA${tx.id}`);
+    const result = await sociallyBuyDataBundle({ providerCode, recipient: phone, packageCode, reference });
+    if (!result.ok) {
+      await refundFailed(userId, tx.id, amount, `Data delivery failed: ${result.message || "provider declined"}`, "data");
+      res.status(502).json({ error: "Data delivery failed. You have been refunded.", details: result.message });
       return;
     }
     await safePersist(req, tx.id, async () => {
       await db.update(transactionsTable).set({
-        status: result.pending ? "pending" : "success",
-        metadata: JSON.stringify({ network, phone, planId, plan, providerRef: result.flwRef ?? result.reference, providerStatus: result.message }),
+        status: /pending|process/i.test(String(result.status ?? "")) ? "pending" : "success",
+        metadata: JSON.stringify({ provider: providerCode, phone, packageCode, providerReference: result.reference, providerStatus: result.status }),
       }).where(eq(transactionsTable.id, tx.id));
     });
-    res.json({
-      success: true,
-      processing: result.pending === true,
-      message: result.pending
-        ? "Data purchase is still processing. You have not been charged any extra fee."
-        : "Data delivered successfully",
-      reference,
-      transaction: formatTransaction({ ...tx, status: result.pending ? "pending" : "success" }),
-    });
+    res.json({ success: true, processing: /pending|process/i.test(String(result.status ?? "")), message: result.message || "Data bundle ordered successfully.", reference, transaction: formatTransaction({ ...tx, status: /pending|process/i.test(String(result.status ?? "")) ? "pending" : "success" }) });
   } catch (e: any) {
-    if (sourceFunded) await refundBillSourceToUser(userId, plan.price, tx.id);
-    await refundFailed(userId, tx.id, plan.price, `Provider error: ${e.message ?? "unknown"}`, "data");
-    res.status(502).json({ error: "Provider error. You have been refunded.", details: e.message });
+    await refundFailed(userId, tx.id, amount, `Provider error: ${e?.message ?? "unknown"}`, "data");
+    res.status(502).json({ error: "Data provider error. You have been refunded.", details: e?.message });
   }
 });
 
-// ── BILLS ──────────────────────────────────────────────────────────────────
-const BILL_CATEGORIES = [
-  { id: "electricity", name: "Electricity", icon: "zap", description: "Prepaid & postpaid meter top-up across Nigeria" },
-];
-
-const BILL_PROVIDERS: Record<string, Array<{ id: string; name: string; code: string; category: string; minimumAmount: number | null; maximumAmount: number | null; description?: string }>> = {
-  electricity: [
-    { id: "ekedc", name: "Eko Electric (EKEDC)", code: "ekedc", category: "electricity", minimumAmount: 1000, maximumAmount: 500000, description: "Lagos Island, Ajah, Lekki, Apapa" },
-    { id: "ikedc", name: "Ikeja Electric (IKEDC)", code: "ikedc", category: "electricity", minimumAmount: 1000, maximumAmount: 500000, description: "Ikeja, Agege, Oshodi, Shomolu" },
-    { id: "aedc", name: "Abuja Electric (AEDC)", code: "aedc", category: "electricity", minimumAmount: 1000, maximumAmount: 500000, description: "FCT, Niger, Kogi, Nasarawa" },
-    { id: "phedc", name: "Port Harcourt Electric (PHED)", code: "phedc", category: "electricity", minimumAmount: 1000, maximumAmount: 500000, description: "Rivers, Bayelsa, Cross River, Akwa Ibom" },
-    { id: "kedco", name: "Kano Electric (KEDCO)", code: "kedco", category: "electricity", minimumAmount: 1000, maximumAmount: 500000, description: "Kano, Katsina, Jigawa" },
-    { id: "enedco", name: "Enugu Electric (EEDC)", code: "enedco", category: "electricity", minimumAmount: 1000, maximumAmount: 500000, description: "Enugu, Abia, Anambra, Ebonyi, Imo" },
-    { id: "ibedc", name: "Ibadan Electric (IBEDC)", code: "ibedc", category: "electricity", minimumAmount: 1000, maximumAmount: 500000, description: "Oyo, Ogun, Osun, Kwara" },
-    { id: "jedc", name: "Jos Electric (JED)", code: "jedc", category: "electricity", minimumAmount: 1000, maximumAmount: 500000, description: "Plateau, Bauchi, Benue, Gombe" },
-    { id: "kaedc", name: "Kaduna Electric (KAEDCO)", code: "kaedc", category: "electricity", minimumAmount: 1000, maximumAmount: 500000, description: "Kaduna, Kebbi, Sokoto, Zamfara" },
-    { id: "yedc", name: "Yola Electric (YEDC)", code: "yedc", category: "electricity", minimumAmount: 1000, maximumAmount: 500000, description: "Adamawa, Borno, Taraba, Yobe" },
-    { id: "bedc", name: "Benin Electric (BEDC)", code: "bedc", category: "electricity", minimumAmount: 1000, maximumAmount: 500000, description: "Edo, Delta, Ondo, Ekiti" },
-  ],
-};
-
-router.get("/bills/categories", (_req, res) => { res.json(BILL_CATEGORIES); });
-
-router.get("/bills/providers", (req, res) => {
-  const category = (req.query.category as string) ?? "";
-  const providers = BILL_PROVIDERS[category] ?? [];
-  res.json(providers.map(p => ({ ...p, logo: logoPath(p.id) })));
-});
-
-router.post("/bills/validate", async (req, res): Promise<void> => {
-  const parsed = ValidateBillBody.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("; ") }); return; }
-
-  const { provider, customerId, type } = parsed.data;
-  const meterType: "prepaid" | "postpaid" = type === "postpaid" ? "postpaid" : "prepaid";
-
-  // Electricity → Flutterwave (all 11 discos, prepaid/postpaid meter lookup).
-  const flwElec = FLW_ELECTRICITY[provider];
-  if (flwElec) {
-    const item = flwElec[meterType];
-    try {
-      const result = await flwValidateBill({ biller: flwElec.biller, item, customer: customerId });
-      if (!result.name) {
-        res.status(400).json({ error: "Customer not found or invalid meter number" });
-        return;
-      }
-      res.json({ name: result.name, customerId, provider, address: result.address ?? null, amount: null });
-    } catch (e: any) {
-      res.status(502).json({ error: "Verification failed", details: e.message });
-    }
-    return;
-  }
-
-  res.status(400).json({ error: "Provider not supported" });
-});
-
-router.post("/bills/pay", async (req, res): Promise<void> => {
-  const userId = getUserId(req);
-  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const parsed = PayBillBody.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("; ") }); return; }
-
-  const { provider, customerId, amount, customerName } = parsed.data;
-  const rawMeterType = (req.body as any).meterType;
-  const meterType: "prepaid" | "postpaid" = rawMeterType === "postpaid" ? "postpaid" : "prepaid";
-  const flwElec = FLW_ELECTRICITY[provider];
-  if (!flwElec) { res.status(400).json({ error: "Provider not supported" }); return; }
-
-  let tx: any;
-  try {
-    ({ tx } = await debitWallet(userId, amount, `Bill payment - ${provider} (${customerId})${customerName ? ` - ${customerName}` : ""}`, "bill", { provider, customerId, amount, meterType }));
-  } catch (e: any) {
-    res.status(400).json({ error: e.message }); return;
-  }
-
-  // Electricity → Flutterwave (amount-based, prepaid or postpaid).
-  if (flwElec) {
-    const item = flwElec[meterType];
-    let sourceFunded = false;
-    try {
-      await fundBillSourceFromUser(userId, amount, tx.id);
-      sourceFunded = true;
-      const reference = flwReference(`BIL${tx.id}`);
-      // Look up the live biller_name — POST /v3/bills requires `type` = biller_name, not biller code
-      const billerName = await getElecBillerName(flwElec.biller, item);
-      if (!billerName) {
-        if (sourceFunded) await refundBillSourceToUser(userId, amount, tx.id);
-        await refundFailed(userId, tx.id, amount, "Electricity biller not found in Flutterwave catalog", "bill");
-        req.log.warn({ provider, biller: flwElec.biller, item }, "Electricity biller not found in catalog — cannot pay");
-        res.status(502).json({ error: "Bill payment failed. You have been refunded.", details: "Biller not found in catalog" });
-        return;
-      }
-      const result = await flwPayBill({ billerName, billerCode: flwElec.biller, item, customer: customerId, amount, reference });
-      req.log.info({ flwStatus: result.raw?.status, flwMessage: result.raw?.message, flwRef: result.flwRef, reference, provider, item, billerName }, "Flutterwave electricity bill response");
-      if (!result.success) {
-        if (sourceFunded) await refundBillSourceToUser(userId, amount, tx.id);
-        await refundFailed(userId, tx.id, amount, `Bill payment failed: ${result.message}`, "bill");
-        // Surface actionable Flutterwave messages (min/max amount) directly; genericise the rest
-        const rawMsg = result.message ?? "";
-        const userMsg = /minimum amount|maximum amount|min.*amount|max.*amount/i.test(rawMsg)
-          ? `${rawMsg}. You have been refunded.`
-          : `Bill payment failed. You have been refunded.`;
-        res.status(502).json({ error: userMsg, details: rawMsg, providerResponse: { status: result.raw?.status, message: result.raw?.message, data: result.raw?.data ?? null } });
-        return;
-      }
-      // Poll Flutterwave for the prepaid token — bill status starts "pending" and
-      // the token populates within a few seconds. Poll up to 4x with 2s gaps (≤8s total).
-      let token: string | null = null;
-      for (let attempt = 0; attempt < 4 && !token; attempt++) {
-        if (attempt > 0) await new Promise<void>((r) => setTimeout(r, 2000));
-        try {
-          const v = await flwVerifyBill(reference);
-          token = v.raw?.data?.token ?? v.raw?.data?.extra ?? null;
-        } catch { /* ignore — token may arrive via disco SMS instead */ }
-      }
-      const tokenPending = !token;
-      await safePersist(req, tx.id, async () => {
-        await db.update(transactionsTable).set({
-          metadata: JSON.stringify({ provider, customerId, amount, token, tokenPending, providerRef: result.flwRef ?? result.reference }),
-        }).where(eq(transactionsTable.id, tx.id));
-      });
-      res.json({
-        success: true,
-        message: token ? "Bill paid successfully. Your token is ready." : "Bill paid successfully. Your token will appear in the app shortly.",
-        transaction: formatTransaction(tx),
-        token,
-        tokenPending,
-        units: null,
-      });
-    } catch (e: any) {
-      if (sourceFunded) await refundBillSourceToUser(userId, amount, tx.id);
-      await refundFailed(userId, tx.id, amount, `Provider error: ${e.message ?? "unknown"}`, "bill");
-      res.status(502).json({ error: "Provider error. You have been refunded.", details: e.message });
-    }
-    return;
-  }
-
-});
+// Bills are intentionally disabled until a non-Flutterwave provider is connected.
+router.get("/bills/categories", (_req, res) => { res.status(410).json({ error: "Bill payments are temporarily unavailable." }); });
+router.get("/bills/providers", (_req, res) => { res.status(410).json({ error: "Bill payments are temporarily unavailable." }); });
+router.post("/bills/validate", (_req, res) => { res.status(410).json({ error: "Bill payments are temporarily unavailable." }); });
+router.post("/bills/pay", (_req, res) => { res.status(410).json({ error: "Bill payments are temporarily unavailable." }); });
 
 // ── SOCIAL ─────────────────────────────────────────────────────────────────
 // Catalog mirrors the broad shape of what JAP exposes. The `keywords` on
@@ -651,13 +411,9 @@ router.post("/social/order", async (req, res): Promise<void> => {
     res.status(400).json({ error: e.message }); return;
   }
 
-  let sourceFunded = false;
   try {
-    await fundBillSourceFromUser(userId, amount, tx.id);
-    sourceFunded = true;
     const sociallyService = await smmFindService(service.keywords, quantity);
     if (!sociallyService) {
-      if (sourceFunded) await refundBillSourceToUser(userId, amount, tx.id);
       await refundFailed(userId, tx.id, amount, `No socially.ng service matches "${service.keywords.join(" ")}" for quantity ${quantity}`, "social");
       res.status(502).json({ error: "No matching provider service available right now. You have been refunded." });
       return;
@@ -689,7 +445,6 @@ router.post("/social/order", async (req, res): Promise<void> => {
         : { externalOrderId: String(result.orderId), status: "processing", amount, quantity, link, serviceId, transactionId: tx.id },
     });
   } catch (e: any) {
-    if (sourceFunded) await refundBillSourceToUser(userId, amount, tx.id);
     await refundFailed(userId, tx.id, amount, `Provider error: ${e.message ?? "unknown"}`, "social");
     res.status(502).json({ error: "Provider error. You have been refunded.", details: e.message });
   }
