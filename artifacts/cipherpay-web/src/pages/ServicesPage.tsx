@@ -19,6 +19,15 @@ export default function ServicesPage() {
         </span>
         <span className="service-card-link">Open service <ArrowRight size={16} /></span>
       </Link>
+      <Link href="/data" className="service-card service-card-featured">
+        <span className="service-card-icon service-card-icon-violet"><Wifi size={22} /></span>
+        <span className="service-card-copy">
+          <span className="eyebrow">DATA BUNDLES</span>
+          <strong>Buy mobile data</strong>
+          <small>Live Nigerian data plans delivered through our Socially provider rail.</small>
+        </span>
+        <span className="service-card-link">Open service <ArrowRight size={16} /></span>
+      </Link>
       <Link href="/email-pro" className="service-card service-card-featured service-card-email">
         <span className="service-card-icon service-card-icon-violet"><Mail size={22} /></span>
         <span className="service-card-copy">
