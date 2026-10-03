@@ -1,5 +1,4 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { directFetch } from "../lib/direct-fetch";
 
 const router: IRouter = Router();
 
@@ -15,7 +14,7 @@ const numberOrZero = (value: unknown) => { const n = Number(value); return Numbe
 
 async function getFxRate(): Promise<number> {
   try {
-    const response = await directFetch("https://open.er-api.com/v6/latest/USD", { headers:{ accept:"application/json" }, signal:AbortSignal.timeout(8000) });
+    const response = await fetch("https://open.er-api.com/v6/latest/USD", { headers:{ accept:"application/json" }, signal:AbortSignal.timeout(8000) });
     if (response.ok) {
       const body = await response.json() as { rates?: { NGN?: number } };
       const rate = numberOrZero(body.rates?.NGN);
@@ -27,7 +26,7 @@ async function getFxRate(): Promise<number> {
 
 async function getBinanceMarkets(): Promise<Market[]> {
   const symbols = COINS.map(([, symbol]) => symbol).filter(symbol => symbol !== "USDT" && symbol !== "USDC").map(symbol => symbol + "USDT");
-  const response = await directFetch("https://api.binance.com/api/v3/ticker/24hr?symbols=" + encodeURIComponent(JSON.stringify(symbols)), { headers:{ accept:"application/json" }, signal:AbortSignal.timeout(10000) });
+  const response = await fetch("https://data-api.binance.vision/api/v3/ticker/24hr?symbols=" + encodeURIComponent(JSON.stringify(symbols)), { headers:{ accept:"application/json" }, signal:AbortSignal.timeout(10000) });
   if (!response.ok) throw new Error("Binance returned " + response.status);
   const rows = await response.json() as Array<{ symbol:string; lastPrice:string; priceChangePercent:string; quoteVolume:string }>;
   const bySymbol = new Map(rows.map(row => [row.symbol, row]));
@@ -51,7 +50,7 @@ router.get("/crypto/markets", async (_req: Request, res: Response): Promise<void
     const host = key && process.env.COINGECKO_API_PLAN === "pro" ? "https://pro-api.coingecko.com/api/v3" : "https://api.coingecko.com/api/v3";
     const headers: Record<string,string> = { accept:"application/json" };
     if (key) headers[process.env.COINGECKO_API_PLAN === "pro" ? "x-cg-pro-api-key" : "x-cg-demo-api-key"] = key;
-    const marketResponse = await directFetch(host + "/coins/markets?vs_currency=usd&ids=" + encodeURIComponent(ids) + "&order=market_cap_desc&per_page=" + COINS.length + "&page=1&sparkline=false&price_change_percentage=24h", { headers, signal:AbortSignal.timeout(10000) });
+    const marketResponse = await fetch(host + "/coins/markets?vs_currency=usd&ids=" + encodeURIComponent(ids) + "&order=market_cap_desc&per_page=" + COINS.length + "&page=1&sparkline=false&price_change_percentage=24h", { headers, signal:AbortSignal.timeout(10000) });
     if (marketResponse.ok) {
       const marketData = await marketResponse.json() as Array<{id:string;image:string;current_price:number|null;market_cap:number|null;total_volume:number|null;price_change_percentage_24h:number|null}>;
       const fx = await getFxRate();
