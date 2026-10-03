@@ -14,7 +14,6 @@ import temporaryEmailRouter from "./temporary-email";
 import emailRouter from "./email";
 import chatRouter from "./chat";
 import referralsRouter from "./referrals";
-import klipHubRouter from "./kliphub";
 
 const router: IRouter = Router();
 
@@ -33,6 +32,5 @@ router.use(temporaryEmailRouter);
 router.use(emailRouter);
 router.use(chatRouter);
 router.use(referralsRouter);
-router.use(klipHubRouter);
 
 export default router;
