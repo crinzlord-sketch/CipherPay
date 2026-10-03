@@ -117,6 +117,20 @@ async function flwBillPayment<T = any>(billerCode: string, itemCode: string, pay
   return { status: res.status, body };
 }
 
+export const FLW_ELECTRICITY: Record<string, { biller: string; prepaid: string; postpaid: string }> = {
+  ekedc:  { biller: "BIL112", prepaid: "UB157", postpaid: "UB158" },
+  ikedc:  { biller: "BIL113", prepaid: "UB159", postpaid: "UB160" },
+  aedc:   { biller: "BIL204", prepaid: "UB584", postpaid: "UB585" },
+  phedc:  { biller: "BIL116", prepaid: "UB633", postpaid: "UB165" },
+  kedco:  { biller: "BIL120", prepaid: "UB169", postpaid: "UB170" },
+  enedco: { biller: "BIL115", prepaid: "UB163", postpaid: "UB164" },
+  ibedc:  { biller: "BIL114", prepaid: "UB161", postpaid: "UB162" },
+  jedc:   { biller: "BIL215", prepaid: "UB676", postpaid: "UB677" },
+  kaedc:  { biller: "BIL119", prepaid: "UB602", postpaid: "UB603" },
+  yedc:   { biller: "BIL118", prepaid: "UB168", postpaid: "UB168" },
+  bedc:   { biller: "BIL117", prepaid: "UB167", postpaid: "UB166" },
+};
+
 type AirtimeConfig = { billerCode: string; itemCode: string };
 let airtimeConfigCache: { at: number; config: AirtimeConfig } | null = null;
 
