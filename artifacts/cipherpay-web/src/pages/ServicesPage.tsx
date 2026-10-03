@@ -1,4 +1,4 @@
-import { ArrowRight, Mail, Megaphone, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Mail, Megaphone, Wifi } from 'lucide-react';
 import { Link } from 'wouter';
 import { PageHeading } from './PagePieces';
 
