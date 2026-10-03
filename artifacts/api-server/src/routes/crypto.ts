@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import https from "node:https";
 
 const router: IRouter = Router();
 
@@ -11,12 +12,31 @@ const COINS = [
 
 type Market = { id:string; symbol:string; name:string; image:string; priceUsd:number; priceNgn:number; change24h:number; marketCapUsd:number; marketCapNgn:number; volumeUsd:number; volumeNgn:number };
 const numberOrZero = (value: unknown) => { const n = Number(value); return Number.isFinite(n) ? n : 0; };
+function httpsJson<T>(url: string, timeoutMs = 10000): Promise<{ status: number; body: T }> {
+  return new Promise((resolve, reject) => {
+    const request = https.get(url, { headers: { accept: "application/json", "user-agent": "CipherPay/1.0" } }, response => {
+      let raw = "";
+      response.setEncoding("utf8");
+      response.on("data", chunk => { raw += chunk; });
+      response.on("end", () => {
+        try {
+          resolve({ status: response.statusCode ?? 0, body: JSON.parse(raw) as T });
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+    request.setTimeout(timeoutMs, () => request.destroy(new Error("request timeout")));
+    request.on("error", reject);
+  });
+}
+
 
 async function getFxRate(): Promise<number> {
   try {
-    const response = await fetch("https://open.er-api.com/v6/latest/USD", { headers:{ accept:"application/json" }, signal:AbortSignal.timeout(8000) });
-    if (response.ok) {
-      const body = await response.json() as { rates?: { NGN?: number } };
+    const response = await httpsJson<{ rates?: { NGN?: number } }>("https://open.er-api.com/v6/latest/USD", 8000);
+    if (response.status >= 200 && response.status < 300) {
+      const body = response.body;
       const rate = numberOrZero(body.rates?.NGN);
       if (rate > 0) return rate;
     }
@@ -26,9 +46,9 @@ async function getFxRate(): Promise<number> {
 
 async function getBinanceMarkets(): Promise<Market[]> {
   const symbols = COINS.map(([, symbol]) => symbol).filter(symbol => symbol !== "USDT" && symbol !== "USDC").map(symbol => symbol + "USDT");
-  const response = await fetch("https://data-api.binance.vision/api/v3/ticker/24hr?symbols=" + encodeURIComponent(JSON.stringify(symbols)), { headers:{ accept:"application/json" }, signal:AbortSignal.timeout(10000) });
-  if (!response.ok) throw new Error("Binance returned " + response.status);
-  const rows = await response.json() as Array<{ symbol:string; lastPrice:string; priceChangePercent:string; quoteVolume:string }>;
+  const response = await httpsJson<Array<{ symbol:string; lastPrice:string; priceChangePercent:string; quoteVolume:string }>>("https://data-api.binance.vision/api/v3/ticker/24hr?symbols=" + encodeURIComponent(JSON.stringify(symbols)), 10000);
+  if (response.status < 200 || response.status >= 300) throw new Error("Binance returned " + response.status);
+  const rows = response.body;
   const bySymbol = new Map(rows.map(row => [row.symbol, row]));
   const stable: Record<string, number> = { USDT:1, USDC:1 };
   const fx = await getFxRate();
@@ -50,9 +70,9 @@ router.get("/crypto/markets", async (_req: Request, res: Response): Promise<void
     const host = key && process.env.COINGECKO_API_PLAN === "pro" ? "https://pro-api.coingecko.com/api/v3" : "https://api.coingecko.com/api/v3";
     const headers: Record<string,string> = { accept:"application/json" };
     if (key) headers[process.env.COINGECKO_API_PLAN === "pro" ? "x-cg-pro-api-key" : "x-cg-demo-api-key"] = key;
-    const marketResponse = await fetch(host + "/coins/markets?vs_currency=usd&ids=" + encodeURIComponent(ids) + "&order=market_cap_desc&per_page=" + COINS.length + "&page=1&sparkline=false&price_change_percentage=24h", { headers, signal:AbortSignal.timeout(10000) });
-    if (marketResponse.ok) {
-      const marketData = await marketResponse.json() as Array<{id:string;image:string;current_price:number|null;market_cap:number|null;total_volume:number|null;price_change_percentage_24h:number|null}>;
+    const marketResponse = await httpsJson<Array<{id:string;image:string;current_price:number|null;market_cap:number|null;total_volume:number|null;price_change_percentage_24h:number|null}>>(host + "/coins/markets?vs_currency=usd&ids=" + encodeURIComponent(ids) + "&order=market_cap_desc&per_page=" + COINS.length + "&page=1&sparkline=false&price_change_percentage=24h", 10000);
+    if (marketResponse.status >= 200 && marketResponse.status < 300) {
+      const marketData = marketResponse.body;
       const fx = await getFxRate();
       if (fx && Array.isArray(marketData)) {
         const byId = new Map(marketData.map(item => [item.id,item]));
