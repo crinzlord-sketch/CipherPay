@@ -20,7 +20,6 @@ import EmailProPage from './pages/EmailProPage';
 import ChatPage from './pages/ChatPage';
 import CryptoPage from './pages/CryptoPage';
 import BillsPage from './pages/BillsPage';
-import KlipHubPage from './pages/KlipHubPage';
 import { apiRequest, apiUrl } from './pages/page-api';
 import { CipherAvatar } from './components/CipherAvatar';
 import {
@@ -39,11 +38,10 @@ import {
   Bell, Bolt, Check, CircleHelp, Copy, CreditCard, FileText,
   Fingerprint, Globe2, Home, Landmark, LockKeyhole, LogOut, Menu, MessageSquare,
   Layers3, MoreHorizontal, Coins, Network as NetworkIcon, Plus, Receipt, RefreshCw, Send as SendIcon,
-  Settings, ShieldCheck, Smartphone, Target, Tv, UserRound, WalletCards, Wifi, X, Eye, EyeOff, Gift, Sparkles,
+  Settings, ShieldCheck, Smartphone, Target, Tv, UserRound, WalletCards, Wifi, X, Eye, EyeOff, Gift,
 } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
 import './landing.css';
-import './kliphub.css';
 import LandingExtras from './components/LandingExtras';
 
 const queryClient = new QueryClient();
@@ -67,7 +65,6 @@ const nav = [
   { href: '/sms', label: 'SMS verification', icon: MessageSquare },
   { href: '/temporary-email', label: 'Temporary email', icon: Globe2 },
   { href: '/services', label: 'Services', icon: Layers3 },
-  { href: '/kliphub', label: 'KlipHub', icon: Sparkles },
   { href: '/crypto', label: 'Crypto', icon: Coins },
   { href: '/transactions', label: 'Transactions', icon: Activity },
   { href: '/referrals', label: 'Refer & earn', icon: Gift },
@@ -1974,7 +1971,6 @@ function App() {
             <Route path="/verify-email"><VerifyEmail /></Route>
             <Route path="/reset-password"><ResetPassword /></Route>
             <Route path="/dashboard"><ProtectedArea><Dashboard /></ProtectedArea></Route>
-            <Route path="/kliphub"><ProtectedArea><KlipHubPage /></ProtectedArea></Route>
             <Route path="/"><HomeRoute /></Route>
             <Route path="/fund"><ProtectedArea><Fund /></ProtectedArea></Route>
             <Route path="/send"><ProtectedArea><Send /></ProtectedArea></Route>
