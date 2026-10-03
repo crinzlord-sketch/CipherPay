@@ -14,6 +14,7 @@ import temporaryEmailRouter from "./temporary-email";
 import emailRouter from "./email";
 import chatRouter from "./chat";
 import referralsRouter from "./referrals";
+import cryptoRouter from "./crypto";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(temporaryEmailRouter);
 router.use(emailRouter);
 router.use(chatRouter);
 router.use(referralsRouter);
+router.use(cryptoRouter);
 
 export default router;
