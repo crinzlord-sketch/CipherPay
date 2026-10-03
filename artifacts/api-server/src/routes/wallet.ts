@@ -86,7 +86,7 @@ router.get("/crypto/markets", async (_req, res): Promise<void> => {
     // Keep the last good prices visible during a provider timeout/rate-limit.
     // The UI should not suddenly become an empty crypto page because a market
     // provider had a temporary network problem.
-    req.log?.warn?.({ err: error?.message }, "crypto market provider request failed");
+    console.warn("[crypto/markets] provider request failed:", error?.message);
     if (cached?.data) {
       res.setHeader("Cache-Control", "no-store");
       res.json({ data: cached.data, updatedAt: new Date(cached.at).toISOString(), stale: true });
