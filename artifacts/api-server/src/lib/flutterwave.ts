@@ -135,9 +135,39 @@ function parsePayResult(status: number, body: any, reference: string, acceptPend
 }
 
 // ── Airtime ────────────────────────────────────────────────────────────────
+// Flutterwave's biller/item codes can differ by account/catalog version. Resolve
+// the live Nigerian airtime item instead of assuming a stale hardcoded pair.
+type AirtimeConfig = { billerCode: string; itemCode: string };
+let airtimeConfigCache: { at: number; config: AirtimeConfig } | null = null;
+
+async function getAirtimeConfig(): Promise<AirtimeConfig> {
+  if (airtimeConfigCache && Date.now() - airtimeConfigCache.at < 10 * 60 * 1000) {
+    return airtimeConfigCache.config;
+  }
+  try {
+    const { status, body } = await flwGet<any>("/bill-categories?country=NG");
+    const rows: any[] = Array.isArray(body?.data) ? body.data : [];
+    const airtime = rows.find((item) =>
+      String(item?.country ?? item?.country_code ?? "").toUpperCase() === "NG" &&
+      (item?.is_airtime === true || String(item?.biller_name ?? "").toUpperCase() === "AIRTIME") &&
+      item?.biller_code && item?.item_code,
+    );
+    if (status >= 200 && status < 300 && airtime) {
+      const config = { billerCode: String(airtime.biller_code), itemCode: String(airtime.item_code) };
+      airtimeConfigCache = { at: Date.now(), config };
+      return config;
+    }
+  } catch (error: any) {
+    console.warn("Flutterwave airtime catalog lookup failed", { message: error?.message ?? String(error) });
+  }
+  // Keep the documented legacy NG airtime pair as a last-resort fallback.
+  return { billerCode: "BIL099", itemCode: "AT099" };
+}
+
 // Flutterwave auto-detects the carrier from the phone number when type = "AIRTIME".
 export async function buyAirtime(params: { phone: string; amount: number; reference: string; network: string }): Promise<FlwResult> {
-  const { status, body } = await flwBillPayment("BIL099", "AT099", { country: "NG", customer_id: params.phone, amount: params.amount, reference: params.reference });
+  const { billerCode, itemCode } = await getAirtimeConfig();
+  const { status, body } = await flwBillPayment(billerCode, itemCode, { country: "NG", customer_id: params.phone, amount: params.amount, reference: params.reference });
   const initial = parsePayResult(status, body, params.reference, true);
   if (!initial.success || !initial.pending) return initial;
   for (let attempt = 0; attempt < 10; attempt++) {
