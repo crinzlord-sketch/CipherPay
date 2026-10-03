@@ -1,4 +1,3 @@
-import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import app from "./app";
@@ -11,19 +10,6 @@ import { startPayoutFundingPoller } from "./lib/payout-funding-poller";
 import { renewDueEmailProSubscriptions } from "./lib/email-pro-subscription";
 import { sendWeeklyUserEmails } from "./lib/user-email-job";
 
-function normalizeProxyUrl(raw: string | undefined): string | undefined {
-  if (!raw?.trim()) return undefined;
-  const value = raw.trim();
-  return /^https?:\/\//i.test(value) ? value : `http://${value}`;
-}
-
-const fixieUrl = normalizeProxyUrl(process.env["FIXIE_URL"]);
-if (fixieUrl) {
-  setGlobalDispatcher(new ProxyAgent(fixieUrl));
-  logger.info("Outbound requests routed through proxy (stable egress IP)");
-} else {
-  logger.warn("FIXIE_URL not set — outbound requests use rotating egress IP (Flutterwave IP whitelist will not work)");
-}
 
 const rawPort = process.env["PORT"];
 if (!rawPort) throw new Error("PORT environment variable is required but was not provided.");
