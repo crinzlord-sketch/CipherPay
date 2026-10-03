@@ -846,7 +846,7 @@ router.post("/admin/users/:id/set-kyc", requireAdmin, async (req: AdminRequest, 
   res.json({ success: true, kycLevel: u.kycLevel });
 });
 
-// Reset user activity: wipe transactions, social orders, sms activations, zero wallet.
+// Reset user activity: wipe activity records while preserving the user wallet balance.
 router.post("/admin/users/:id/reset-activity", requireAdmin, async (req: AdminRequest, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   const [u] = await db.select().from(usersTable).where(eq(usersTable.id, id));
@@ -860,9 +860,8 @@ router.post("/admin/users/:id/reset-activity", requireAdmin, async (req: AdminRe
     await trx.delete(socialOrdersTable).where(eq(socialOrdersTable.userId, id));
     await trx.delete(smsActivationsTable).where(eq(smsActivationsTable.userId, id));
     await trx.delete(notificationsTable).where(eq(notificationsTable.userId, id));
-    await trx.update(walletsTable).set({ balance: "0", ledgerBalance: "0" }).where(eq(walletsTable.userId, id));
   });
-  await notifyUser({ userId: id, type: "warning", title: "Account activity reset", body: `Your transaction history and wallet balance were reset by an administrator. Contact support if this is unexpected.`, email: true });
+  await notifyUser({ userId: id, type: "warning", title: "Account activity reset", body: `Your transaction history and activity records were reset by an administrator. Your wallet balance was preserved.`, email: true });
   res.json({ success: true, message: "User activity wiped" });
 });
 
