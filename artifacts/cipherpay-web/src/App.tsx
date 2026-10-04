@@ -59,19 +59,19 @@ const formatGroupedDigits = (value: string | number) => {
 const parseGroupedDigits = (value: string) => Number(value.replace(/,/g, '')) || 0;
 const nav = [
   { href: '/', label: 'Overview', icon: Home },
-  { href: '/crypto', label: 'Crypto', icon: Coins },
+  { href: '/referrals', label: 'Refer & earn', icon: Gift },
   { href: '/fund', label: 'Fund wallet', icon: Plus },
   { href: '/send', label: 'Send money', icon: SendIcon },
+  { href: '/crypto', label: 'Crypto', icon: Coins },
+  { href: '/transactions', label: 'Transactions', icon: Activity },
   { href: '/chat', label: 'Find & chat', icon: MessageSquare },
   { href: '/data', label: 'Data bundles', icon: Wifi },
   { href: '/sms', label: 'SMS verification', icon: MessageSquare },
   { href: '/sms-extras', label: 'International eSIM', icon: Globe2 },
   { href: '/long-term-numbers', label: 'Long-term numbers', icon: Smartphone },
-  { href: '/social-boost', label: 'Social Boost', icon: Megaphone },
   { href: '/temporary-email', label: 'Temporary email', icon: Globe2 },
   { href: '/email-pro', label: 'Email Pro', icon: Mail },
-  { href: '/transactions', label: 'Transactions', icon: Activity },
-  { href: '/referrals', label: 'Refer & earn', icon: Gift },
+  { href: '/social-boost', label: 'Social Boost', icon: Megaphone },
 ];
 const utilityNav = [
   { href: '/notifications', label: 'Notifications', icon: Bell },
