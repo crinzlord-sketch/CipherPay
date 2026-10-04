@@ -58,33 +58,33 @@ async function getFxRate(): Promise<number> {
   return 0;
 }
 
-async function getCoinCapMarkets(): Promise<Market[]> {
-  const response = await httpsJson<Array<{
-    id:string; symbol:string; name:string; priceUsd?:string; marketCapUsd?:string;
-    volumeUsd24Hr?:string; changePercent24Hr?:string;
-  }>>("https://api.coincap.io/v2/assets?limit=100", 10000);
-  if (response.status < 200 || response.status >= 300 || !Array.isArray(response.body)) {
-    throw new Error("CoinCap returned " + response.status);
+async function getCoinLoreMarkets(): Promise<Market[]> {
+  const response = await httpsJson<{ data: Array<{
+    symbol:string; name:string; price_usd?:string; market_cap_usd?:string;
+    volume24?:number|string; percent_change_24h?:string;
+  }> }>("https://api.coinlore.net/api/tickers/?start=0&limit=100", 10000);
+  if (response.status < 200 || response.status >= 300 || !response.body?.data) {
+    throw new Error("CoinLore returned " + response.status);
   }
   const fx = await getFxRate();
   if (!fx) throw new Error("Unable to get USD/NGN rate");
-  const byId = new Map(response.body.map(item => [item.id, item]));
+  const bySymbol = new Map(response.body.data.map(item => [item.symbol.toUpperCase(), item]));
   const markets = COINS.map(([id, symbol, name]) => {
-    const item = byId.get(id);
-    const priceUsd = numberOrZero(item?.priceUsd);
+    const item = bySymbol.get(symbol);
+    const priceUsd = numberOrZero(item?.price_usd);
     if (!priceUsd) return null;
-    const marketCapUsd = numberOrZero(item?.marketCapUsd);
-    const volumeUsd = numberOrZero(item?.volumeUsd24Hr);
+    const marketCapUsd = numberOrZero(item?.market_cap_usd);
+    const volumeUsd = numberOrZero(item?.volume24);
     return {
       id, symbol, name,
-      image: "https://assets.coincap.io/assets/icons/" + symbol.toLowerCase() + "@2x.png",
+      image: "https://c2.coinlore.com/img/25x25/" + symbol.toLowerCase() + ".png",
       priceUsd, priceNgn: priceUsd * fx,
-      change24h: numberOrZero(item?.changePercent24Hr),
+      change24h: numberOrZero(item?.percent_change_24h),
       marketCapUsd, marketCapNgn: marketCapUsd * fx,
       volumeUsd, volumeNgn: volumeUsd * fx,
     };
   }).filter((item): item is Market => Boolean(item));
-  if (markets.length < 6) throw new Error("CoinCap returned only " + markets.length + " supported assets");
+  if (markets.length < 6) throw new Error("CoinLore returned only " + markets.length + " supported assets");
   return markets;
 }
 
@@ -187,7 +187,7 @@ async function getBinanceMarkets(): Promise<Market[]> {
 
 router.get("/crypto/markets", async (_req: Request, res: Response): Promise<void> => {
   const providers = [
-    ["CoinCap", getCoinCapMarkets],
+    ["CoinLore", getCoinLoreMarkets],
     ["CoinGecko", getCoinGeckoMarkets],
     ["Binance", getBinanceMarkets],
   ] as const;
