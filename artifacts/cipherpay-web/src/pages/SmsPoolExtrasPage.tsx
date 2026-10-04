@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronRight, Globe2, LoaderCircle, MapPin, RefreshCw, Search, ShieldCheck, Smartphone, Wifi } from "lucide-react";
 import { apiRequest } from "./page-api";
 import "./SmsPoolExtrasPage.css";
@@ -23,6 +23,7 @@ export default function SmsPoolExtrasPage() {
   const [buying, setBuying] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const checkoutRef = useRef<HTMLElement | null>(null);
 
   const loadCountries = async () => {
     setLoading(true); setError("");
@@ -105,7 +106,10 @@ export default function SmsPoolExtrasPage() {
         {plansLoading ? <div className="esim-empty"><LoaderCircle className="spin" /> Loading plans…</div> :
         !country ? <div className="esim-empty"><MapPin size={25} /><p>Select a country to see available plans.</p></div> :
         !plans.length ? <div className="esim-empty"><p>No eSIM plans are currently available for this destination.</p></div> :
-        <div className="esim-plan-grid">{plans.map((item) => <button className={selected?.id === item.id ? "esim-plan active" : "esim-plan"} key={item.id} onClick={() => setSelected(item)}>
+        <div className="esim-plan-grid">{plans.map((item) => <button className={selected?.id === item.id ? "esim-plan active" : "esim-plan"} key={item.id} onClick={() => {
+            setSelected(item);
+            requestAnimationFrame(() => checkoutRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }));
+          }}>
           <div className="esim-plan-top"><span>{item.speed || "Mobile data"}</span>{selected?.id === item.id && <Check size={15} />}</div>
           <strong>{item.dataInGb >= 1 ? `${item.dataInGb} GB` : `${Math.round(item.dataInGb * 1000)} MB`}</strong>
           <small>{item.name} · {item.extendable ? "Extendable" : "Single-use"}</small>
@@ -114,7 +118,7 @@ export default function SmsPoolExtrasPage() {
       </div>
     </section>
 
-    <section className="esim-checkout panel">
+    <section ref={checkoutRef} className="esim-checkout panel">
       <div><span className="esim-kicker">03 / CHECKOUT</span><h2>{selected ? `${selected.dataInGb >= 1 ? selected.dataInGb + " GB" : Math.round(selected.dataInGb * 1000) + " MB"} · ${country?.name}` : "Your eSIM plan"}</h2><p>{selected ? `Live provider price: ${usd.format(selected.priceUsd)}. CipherPay will show the final wallet charge before purchase.` : "Choose a destination and plan above."}</p></div>
       <button className="esim-buy" disabled={!selected || buying} onClick={() => void buy()}>{buying ? <><LoaderCircle className="spin" size={17} /> Processing…</> : <>Purchase eSIM <ChevronRight size={17} /></>}</button>
     </section>
