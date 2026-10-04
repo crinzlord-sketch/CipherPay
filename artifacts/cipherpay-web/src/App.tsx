@@ -409,10 +409,10 @@ function LandingPage() {
     finally { setSupportSending(false); }
   };
   const features = [
-    { icon: WalletCards, title: 'One wallet. More control.', text: 'Fund your CipherPay wallet and keep everyday activity in one clear place.' },
-    { icon: Receipt, title: 'Bills without the friction.', text: 'Handle airtime, data and bill payments through focused, simple flows.' },
-    { icon: MessageSquare, title: 'Connect instantly.', text: 'Find people by CipherPay code and chat with text, images, GIFs and replies.' },
-    { icon: Smartphone, title: 'SMS verification.', text: 'Access practical digital services from one account instead of juggling tools.' },
+    { icon: WalletCards, title: 'One wallet. More control.', text: 'Fund your CipherPay wallet and keep your wallet activity in one clear place.' },
+    { icon: SendIcon, title: 'CipherPay transfers.', text: 'Send money to other CipherPay users with a protected transfer flow.' },
+    { icon: MessageSquare, title: 'Find & chat.', text: 'Find people by CipherPay code and chat with text, images, GIFs and replies.' },
+    { icon: Smartphone, title: 'Digital services.', text: 'Use SMS verification, international eSIM, long-term numbers, data bundles and Social Boost from one account.' },
   ];
   return <div className={`cp-landing ${authNavigating ? 'cp-auth-exit' : ''}`}>
     <div className="cp-landing-grid" aria-hidden="true" />
@@ -443,7 +443,7 @@ function LandingPage() {
           <div className="cp-3d-ring cp-3d-ring-a"/>
           <div className="cp-3d-ring cp-3d-ring-b"/>
           <div className="cp-3d-card cp-3d-card-back"><span>CP</span><small>EVERYDAY WALLET</small></div>
-          <div className="cp-3d-card cp-3d-card-front"><small>CIPHERPAY</small><b>₦24,680</b><i/></div>
+          <div className="cp-3d-card cp-3d-card-front"><small>CIPHERPAY</small><b>YOUR WALLET</b><i/></div>
           <div className="cp-3d-coin">CP</div>
         <div className="cp-hero-depth-orbs" aria-hidden="true">
           <span className="cp-depth-orb orb-a">₦</span>
@@ -457,7 +457,7 @@ function LandingPage() {
         </div>
         <div className="cp-wallet-card">
           <div className="cp-card-top"><span className="cp-card-label">CIPHERPAY / WALLET</span><span className="cp-card-chip"/></div>
-          <div className="cp-card-balance"><small>AVAILABLE BALANCE</small>₦24,680.00</div>
+          <div className="cp-card-balance"><small>YOUR CIPHERPAY WALLET</small><b>READY WHEN YOU ARE</b></div>
           <div className="cp-card-bottom"><span>READY WHEN YOU ARE</span><span className="cp-card-orb"/></div>
         </div>
         <div className="cp-float-pill one"><i className="cp-dot"/> <strong>Payment complete</strong></div>
@@ -465,8 +465,8 @@ function LandingPage() {
       </div>
     </section>
     <div className="cp-scatter cp-scatter-hero" aria-hidden="true">
-      <div className="cp-mockup scatter-a"><div className="mock-screen"><b>Wallet</b><strong>₦24,680</strong><span>Available balance</span><i>↗ Send</i></div></div>
-      <div className="cp-mockup scatter-c"><div className="mock-screen"><b>Verify</b><strong>Code confirmed</strong><span>Secure access</span><i>✓ Verified</i></div></div>
+      <div className="cp-mockup scatter-a"><div className="mock-screen"><b>Wallet</b><strong>Fund & send</strong><span>CipherPay wallet</span><i>↗ Transfer</i></div></div>
+      <div className="cp-mockup scatter-c"><div className="mock-screen"><b>SMS verification</b><strong>Digital service</strong><span>Provider-connected</span><i>✓ Ready</i></div></div>
     </div>
     <section className="cp-section cp-reveal-section" id="features" data-cp-reveal>
       <div className="cp-section-head"><div><span className="cp-kicker">THE CIPHERPAY SYSTEM</span><h2>Everything you need.<br/>Nothing you don't.</h2></div><p>Designed to feel calm even when your day isn't. Every tool has a clear purpose, every flow gets out of your way.</p></div>
@@ -476,7 +476,7 @@ function LandingPage() {
         <div className="cp-3d-cube-shadow"/>
       </div>
       <div className="cp-scatter cp-scatter-features" aria-hidden="true">
-        <div className="cp-mockup scatter-d"><div className="mock-screen"><b>Pay bills</b><strong>Electricity</strong><span>₦12,500 • Successful</span><i>Receipt</i></div></div>
+        <div className="cp-mockup scatter-d"><div className="mock-screen"><b>International eSIM</b><strong>Travel data</strong><span>Live provider catalogue</span><i>Explore</i></div></div>
       </div>
     </section>
     <LandingExtras />
@@ -485,7 +485,7 @@ function LandingPage() {
         <article className="cp-show-card"><span className="cp-kicker">A BETTER DEFAULT</span><h3>Small details. Big difference.</h3><p>Animated states, clear confirmations and focused screens make the platform feel responsive instead of mechanical.</p>
         <div className="cp-toggle-demo"><span>Stay in control</span><span className="cp-toggle"><i/></span></div>
         <div className="cp-mini-list"><div className="cp-mini-row"><ShieldCheck size={16}/><span>Protected account</span><span>Ready</span></div><div className="cp-mini-row"><RefreshCw size={16}/><span>Live service flow</span><span>Active</span></div></div></article>
-        <article className="cp-show-card large cp-clean-security" id="security"><div className="cp-security-intro"><span className="cp-kicker">ONE ACCOUNT / MANY TOOLS</span><span className="cp-security-badge"><ShieldCheck size={14}/> Built around control</span></div><h3>Everything you use.<br/><span>One place to manage it.</span></h3><p>Fund your wallet, move money, pay bills, verify services and stay connected without bouncing between different apps.</p><div className="cp-security-grid"><div className="cp-security-item"><WalletCards size={18}/><div><b>Wallet & transfers</b><small>Fund, send and track activity.</small></div><span>01</span></div><div className="cp-security-item"><Receipt size={18}/><div><b>Bills & airtime</b><small>Everyday payments, kept simple.</small></div><span>02</span></div><div className="cp-security-item"><MessageSquare size={18}/><div><b>Find & chat</b><small>Connect with people on CipherPay.</small></div><span>03</span></div><div className="cp-security-item"><Globe2 size={18}/><div><b>Digital services</b><small>Useful tools from one account.</small></div><span>04</span></div></div></article>
+        <article className="cp-show-card large cp-clean-security" id="security"><div className="cp-security-intro"><span className="cp-kicker">ONE ACCOUNT / MANY TOOLS</span><span className="cp-security-badge"><ShieldCheck size={14}/> Built around control</span></div><h3>Everything you use.<br/><span>One place to manage it.</span></h3><p>Fund your wallet, send to other CipherPay users, use digital services and stay connected without bouncing between different apps.</p><div className="cp-security-grid"><div className="cp-security-item"><WalletCards size={18}/><div><b>Wallet & transfers</b><small>Fund, send and track activity.</small></div><span>01</span></div><div className="cp-security-item"><Globe2 size={18}/><div><b>eSIM & long-term numbers</b><small>Travel data and provider-connected rentals.</small></div><span>02</span></div><div className="cp-security-item"><MessageSquare size={18}/><div><b>Find & chat</b><small>Connect with people on CipherPay.</small></div><span>03</span></div><div className="cp-security-item"><Megaphone size={18}/><div><b>Social Boost</b><small>Order supported social services through the connected provider.</small></div><span>04</span></div></div></article>
       </div>
       <div className="cp-scatter cp-scatter-experience" aria-hidden="true">
         <div className="cp-mockup scatter-g"><div className="mock-screen"><b>Messages</b><strong>You're all set.</strong><span>Just now</span><i>Reply</i></div></div>
@@ -493,13 +493,13 @@ function LandingPage() {
     </section>
     <section className="cp-section cp-reveal-section" data-cp-reveal><div className="cp-cta">
       <div className="cp-3d-cta-prism" aria-hidden="true"><span/><span/><span/><span/></div>
-      <div className="cp-scatter cp-scatter-cta" aria-hidden="true"><div className="cp-mockup scatter-j"><div className="mock-screen"><b>Services</b><strong>Everything</strong><span>In one place</span><i>Explore</i></div></div></div>
+      <div className="cp-scatter cp-scatter-cta" aria-hidden="true"><div className="cp-mockup scatter-j"><div className="mock-screen"><b>Long-term numbers</b><strong>Manage rentals</strong><span>Messages & extensions</span><i>Explore</i></div></div></div>
       <span className="cp-kicker">CIPHERPAY</span><h2>Make everyday feel simpler.</h2><p>One place for the things you do often, with an interface that gets out of your way.</p><div className="cp-hero-actions"><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={17}/></button><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button></div></div></section>
     <footer className="cp-footer cp-footer-premium">
       <div className="cp-footer-glow cp-footer-glow-a" /><div className="cp-footer-glow cp-footer-glow-b" />
       <div className="cp-footer-top">
-        <div className="cp-footer-brand"><Logo /><p>One secure place for payments, transfers, digital services and your next move.</p></div>
-        <div className="cp-footer-col"><span>PRODUCT</span><a href="#experience">Everything</a><a href="#crypto">Crypto</a><a href="#bills">Bills</a><a href="#transfer">Transfers</a></div>
+        <div className="cp-footer-brand"><Logo /><p>One secure place for your wallet, CipherPay transfers, communication and connected digital services.</p></div>
+        <div className="cp-footer-col"><span>PRODUCT</span><a href="#experience">Everything</a><a href="#crypto">Crypto</a><a href="#features">Services</a><a href="#security">Security</a></div>
         <div className="cp-footer-col"><span>COMPANY</span><a href="#home">Home</a><a href="/login">Sign in</a><a href="/register">Create account</a><button type="button" onClick={() => setSupportOpen(true)}>Support</button></div>
         
       </div>
