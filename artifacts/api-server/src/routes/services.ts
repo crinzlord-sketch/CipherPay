@@ -406,12 +406,58 @@ const SOCIAL_SERVICES: Array<{
 
 router.get("/social/categories", (_req, res) => { res.json(SOCIAL_CATEGORIES); });
 
-router.get("/social/services", (req, res) => {
+router.get("/social/services", async (req, res): Promise<void> => {
   const { category, platform } = req.query as { category?: string; platform?: string };
-  let services: any[] = SOCIAL_SERVICES.map(({ keywords: _k, ...rest }) => rest);
-  if (category) services = services.filter(s => s.category === category);
-  if (platform) services = services.filter(s => s.platform === platform);
-  res.json(services);
+  try {
+    const live = await smmServices();
+    const services = SOCIAL_SERVICES
+      .filter((service) => !category || service.category === category)
+      .filter((service) => !platform || service.platform === platform)
+      .map((service) => {
+        const provider = live
+          .filter((item) => {
+            const hay = `${item.name} ${item.category}`.toLowerCase();
+            const anchor = service.keywords[0]?.toLowerCase();
+            if (anchor && !hay.includes(anchor)) return false;
+            return service.keywords.some((k) => hay.includes(k.toLowerCase()));
+          })
+          .sort((a, b) => {
+            const score = (item: typeof a) => service.keywords.filter((k) => `${item.name} ${item.category}`.toLowerCase().includes(k.toLowerCase())).length;
+            const diff = score(b) - score(a);
+            if (diff) return diff;
+            const ar = service.minQuantity >= a.min && service.minQuantity <= a.max ? 1 : 0;
+            const br = service.minQuantity >= b.min && service.minQuantity <= b.max ? 1 : 0;
+            return br - ar || a.rate - b.rate;
+          })[0];
+        if (!provider) return null;
+        const claims = [
+          provider.refill ? (provider.refillDays ? `${provider.refillDays}-day refill` : "Refill available") : "No refill flag",
+          provider.cancel ? "Cancellation supported" : "Cancellation unavailable",
+          provider.dripfeed ? "Drip-feed supported" : "Standard delivery",
+          /non[ -]?drop/i.test(provider.name) ? "Provider advertises non-drop" : "",
+        ].filter(Boolean);
+        return {
+          ...(({ keywords: _k, ...rest }) => rest)(service),
+          pricePerUnit: provider.rate / 1000,
+          providerRate: provider.rate,
+          platformFee: 200,
+          minQuantity: Math.max(service.minQuantity, provider.min),
+          maxQuantity: Math.min(service.maxQuantity, provider.max),
+          refill: Boolean(provider.refill),
+          cancel: Boolean(provider.cancel),
+          dripfeed: Boolean(provider.dripfeed),
+          refillDays: provider.refillDays,
+          providerClaims: claims,
+          providerServiceId: provider.service,
+          providerServiceName: provider.name,
+          providerCategory: provider.category,
+        };
+      })
+      .filter(Boolean);
+    res.json(services);
+  } catch (e: any) {
+    res.status(502).json({ error: "Live Social Boost services are temporarily unavailable.", details: e?.message });
+  }
 });
 
 router.post("/social/order", async (req, res): Promise<void> => {
@@ -428,8 +474,10 @@ router.post("/social/order", async (req, res): Promise<void> => {
     return;
   }
 
-  const providerAmount = service.pricePerUnit * quantity;
-  const amount = providerAmount + 200;
+  const sociallyService = await smmFindService(service.keywords, quantity);
+  if (!sociallyService) { res.status(502).json({ error: "No live provider service is available for this order right now." }); return; }
+  const providerAmount = (sociallyService.rate * quantity) / 1000;
+  const amount = Math.ceil((providerAmount + 200) / 10) * 10;
 
   let tx: any;
   try {
@@ -439,13 +487,6 @@ router.post("/social/order", async (req, res): Promise<void> => {
   }
 
   try {
-    const sociallyService = await smmFindService(service.keywords, quantity);
-    if (!sociallyService) {
-      await refundFailed(userId, tx.id, amount, `No socially.ng service matches "${service.keywords.join(" ")}" for quantity ${quantity}`, "social");
-      res.status(502).json({ error: "No matching provider service available right now. You have been refunded." });
-      return;
-    }
-
     const result = await smmAddOrder({ service: sociallyService.service, link, quantity });
     if (!result.ok || !result.orderId) {
       if (sourceFunded) await refundBillSourceToUser(userId, amount, tx.id);
