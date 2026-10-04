@@ -59,6 +59,7 @@ const formatGroupedDigits = (value: string | number) => {
 const parseGroupedDigits = (value: string) => Number(value.replace(/,/g, '')) || 0;
 const nav = [
   { href: '/', label: 'Overview', icon: Home },
+  { href: '/crypto', label: 'Crypto', icon: Coins },
   { href: '/fund', label: 'Fund wallet', icon: Plus },
   { href: '/send', label: 'Send money', icon: SendIcon },
   { href: '/chat', label: 'Find & chat', icon: MessageSquare },
@@ -69,7 +70,6 @@ const nav = [
   { href: '/social-boost', label: 'Social Boost', icon: Megaphone },
   { href: '/temporary-email', label: 'Temporary email', icon: Globe2 },
   { href: '/email-pro', label: 'Email Pro', icon: Mail },
-  { href: '/crypto', label: 'Crypto', icon: Coins },
   { href: '/transactions', label: 'Transactions', icon: Activity },
   { href: '/referrals', label: 'Refer & earn', icon: Gift },
 ];
