@@ -85,8 +85,11 @@ const utilityNav = [
 
 const serviceFeatureForPath = (path: string) => {
   if (path === '/fund' || path.startsWith('/fund/')) return 'wallet_funding';
+  if (path === '/send' || path.startsWith('/send/')) return 'transfers';
   if (path === '/data' || path.startsWith('/data/')) return 'data';
   if (path === '/sms' || path.startsWith('/sms/')) return 'sms';
+  if (path === '/sms-extras' || path.startsWith('/sms-extras/')) return 'sms_esim';
+  if (path === '/long-term-numbers' || path.startsWith('/long-term-numbers/')) return 'sms_rentals';
   if (path === '/temporary-email' || path.startsWith('/temporary-email/')) return 'temporary_email';
   if (path === '/social-boost' || path.startsWith('/social-boost/')) return 'social_boost';
   if (path === '/email-pro' || path.startsWith('/email-pro/')) return 'email_pro';
