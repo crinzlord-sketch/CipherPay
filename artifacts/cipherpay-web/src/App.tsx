@@ -41,7 +41,7 @@ import {
   Bell, Bolt, Check, CircleHelp, Copy, CreditCard, FileText,
   Fingerprint, Globe2, Home, Landmark, LockKeyhole, LogOut, Menu, MessageSquare,
   Layers3, MoreHorizontal, Coins, Network as NetworkIcon, Plus, Receipt, RefreshCw, Send as SendIcon, Megaphone,
-  Settings, ShieldCheck, Smartphone, Target, Tv, UserRound, WalletCards, Wifi, X, Eye, EyeOff, Gift,
+  Settings, ShieldCheck, Smartphone, Target, Tv, UserRound, WalletCards, Wifi, X, Eye, EyeOff, Gift, Mail,
 } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
 import './landing.css';
@@ -69,7 +69,7 @@ const nav = [
   { href: '/long-term-numbers', label: 'Long-term numbers', icon: Smartphone },
   { href: '/social-boost', label: 'Social Boost', icon: Megaphone },
   { href: '/temporary-email', label: 'Temporary email', icon: Globe2 },
-  { href: '/services', label: 'Services', icon: Layers3 },
+  { href: '/email-pro', label: 'Email Pro', icon: Mail },
   { href: '/crypto', label: 'Crypto', icon: Coins },
   { href: '/transactions', label: 'Transactions', icon: Activity },
   { href: '/referrals', label: 'Refer & earn', icon: Gift },
@@ -1986,7 +1986,6 @@ function App() {
             <Route path="/sms-extras"><ProtectedArea><SmsPoolExtrasPage /></ProtectedArea></Route>
             <Route path="/long-term-numbers"><ProtectedArea><LongTermNumbersPage /></ProtectedArea></Route>
             <Route path="/temporary-email"><ProtectedArea><TemporaryEmail /></ProtectedArea></Route>
-            <Route path="/services"><ProtectedArea><ServicesPage /></ProtectedArea></Route>
             <Route path="/social-boost"><ProtectedArea><SocialBoostPage /></ProtectedArea></Route>
             <Route path="/email-pro"><ProtectedArea><EmailProPage /></ProtectedArea></Route>
             <Route path="/crypto"><ProtectedArea><CryptoPage /></ProtectedArea></Route>
