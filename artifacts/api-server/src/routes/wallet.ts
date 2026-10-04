@@ -9,8 +9,23 @@ import { initiatePayment, verifyByReference, createTransfer, initiateBankTransfe
 import { ensureUserPayoutWallet } from "../lib/payout-wallet";
 import { notifyUser } from "../lib/notifications";
 import { checkDepositLimit, checkPerTxLimitSync, getDepositFlagReason } from "../lib/kycLimits";
+import { getServiceFeatureStatus, type ServiceFeatureKey } from "../lib/service-features";
 
 const router: IRouter = Router();
+router.use(async (req, res, next) => {
+  let feature: ServiceFeatureKey | null = null;
+  if (req.path.startsWith("/wallet/fund")) feature = "wallet_funding";
+  else if (req.path.startsWith("/wallet/transfer")) feature = "transfers";
+  else if (req.path.startsWith("/crypto")) feature = "crypto";
+  else if (req.path.startsWith("/wallet/withdraw")) { res.status(503).json({ error: "Withdrawals are disabled." }); return; }
+  if (!feature) return next();
+  try {
+    const status = await getServiceFeatureStatus();
+    if (!status[feature]) { res.status(503).json({ error: "This service is temporarily unavailable.", code: "SERVICE_DISABLED", feature }); return; }
+    next();
+  } catch (e) { next(e); }
+});
+
 router.get("/crypto/markets", async (_req, res): Promise<void> => {
   const ids = "bitcoin,ethereum,solana,tether,usd-coin,binancecoin,ripple,dogecoin,cardano,avalanche-2,tron,stellar";
   const cacheKey = "__cipherPayCryptoMarkets";
