@@ -145,6 +145,11 @@ function Shell({ children }: { children: ReactNode }) {
     document.querySelector('.content')?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [location]);
   useEffect(() => {
+    const openFromQuickActions = () => setMobileOpen(true);
+    window.addEventListener('cipherpay:open-all-menu', openFromQuickActions);
+    return () => window.removeEventListener('cipherpay:open-all-menu', openFromQuickActions);
+  }, []);
+  useEffect(() => {
     document.documentElement.classList.toggle('menu-open', mobileOpen);
     document.body.classList.toggle('menu-open', mobileOpen);
     return () => {
@@ -1024,7 +1029,7 @@ function Dashboard() {
       <PageTitle eyebrow="OVERVIEW / TODAY" title={`Good to see you, ${user.data?.firstName ?? 'there'}.`} detail="Your next move starts here." action={<div className="overview-head-actions"><div className="overview-user-badge"><CipherAvatar src={user.data?.avatarUrl} seed={user.data?.id || user.data?.email} gender={user.data?.gender} size={46} alt="" /><div><b>{user.data?.firstName} {user.data?.lastName}</b><span>{user.data?.email}</span></div></div><Link href="/fund" className="btn btn-primary" data-testid="link-fund-wallet"><Plus size={17} /> Fund wallet</Link></div>} />
       <section className="dashboard-grid">
          <div className="balance-card"><div className="balance-top"><span>Available balance</span><button type="button" className="balance-visibility" onClick={() => setBalanceVisible((visible) => !visible)} aria-label={balanceVisible ? 'Hide balance' : 'Show balance'} aria-pressed={!balanceVisible} title={balanceVisible ? 'Hide balance' : 'Show balance'} data-testid="button-toggle-balance">{balanceVisible ? <Eye size={16} /> : <EyeOff size={16} />}</button></div><div className="balance-value" data-testid="text-wallet-balance">{displayBalance(w?.balance)}</div><div className="balance-bottom"><span>Ledger balance <b>{displayBalance(w?.ledgerBalance)}</b></span><span className="mono">{w?.currency ?? 'NGN'}</span></div><div className="balance-shine" /></div>
-        <div className="quick-actions"><div className="section-head"><h2>Move money</h2><span className="quick-actions-label">Quick actions</span><button type="button" className="quick-actions-view-all" onClick={() => setMobileOpen(true)} aria-label="View all services" data-testid="button-quick-actions-view-all">View All <ArrowRight size={15} /></button></div>
+        <div className="quick-actions"><div className="section-head"><h2>Move money</h2><span className="quick-actions-label">Quick actions</span><button type="button" className="quick-actions-view-all" onClick={() => window.dispatchEvent(new Event('cipherpay:open-all-menu'))} aria-label="View all services" data-testid="button-quick-actions-view-all">View All <ArrowRight size={15} /></button></div>
           <div className="action-row">
             <Link href="/crypto" className="action-tile" data-testid="link-quick-crypto">
               <span className="action-icon purple"><Coins size={19} /></span><b>Crypto</b><small>Manage your crypto</small>
