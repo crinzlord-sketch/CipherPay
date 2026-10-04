@@ -1152,12 +1152,12 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
   const amount = Number(account.amount ?? requestedAmount);
   const paymentStatusLabel = paymentStatus === 'success' ? 'Payment received' : paymentStatus === 'failed' ? 'Payment failed' : permanent ? 'Personal account' : 'Awaiting payment';
   const paymentMessage = paymentStatus === 'success'
-    ? 'Flutterwave confirmed your transfer and the money has been added to your wallet.'
+    ? 'OPay confirmed your transfer and the money has been added to your wallet.'
     : paymentStatus === 'failed'
-      ? 'Flutterwave could not confirm this transfer. Please start a new deposit or contact support if money left your bank.'
+      ? 'OPay could not confirm this transfer. Please start a new deposit or contact support if money left your bank.'
       : permanent
         ? 'This is your permanent CipherPay deposit account. You can use it anytime and send any amount; successful transfers are credited automatically.'
-        : 'Send the exact amount below. We are checking Flutterwave automatically and will update your wallet when the transfer settles.';
+        : 'Send the exact amount below. We are checking OPay automatically and will update your wallet when the transfer settles.';
   const expiresAt = permanent ? 'Permanent' : account.expiresAt
     ? new Date(account.expiresAt).toLocaleString('en-NG', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
     : 'Until payment is received';
@@ -1207,7 +1207,7 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
       {paymentStatus !== 'success' && <div className="transfer-account-card">
         <div className="transfer-bank-heading">
           <span className="transfer-bank-icon"><Landmark size={18} /></span>
-          <div><span>Send to this account</span><strong>{account.bankName || "Flutterwave MFB"}</strong></div>
+          <div><span>Send to this account</span><strong>{account.bankName || "OPay transfer account"}</strong></div>
           <span className="transfer-live-dot"><i /> Live account</span>
         </div>
         <div className="transfer-detail-list">
@@ -1270,8 +1270,6 @@ function Fund() {
   const [result, setResult] = useState<any>(null);
   const [paymentStatus, setPaymentStatus] = useState<'waiting' | 'success' | 'failed' | 'cancelled'>('waiting');
   const [transferOpen, setTransferOpen] = useState(false);
-  const [flutterwaveReady, setFlutterwaveReady] = useState(false);
-  const flutterwaveRef = useRef<any>(null);
   const [error, setError] = useState('');
   const routes: Array<{ value: string; icon: any; label: string; note: string }> = [
     { value: 'card', icon: CreditCard, label: 'Debit card', note: 'Instant card payment' },
@@ -1279,20 +1277,36 @@ function Fund() {
   ];
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (typeof (window as any).FlutterwaveCheckout === 'function') {
-      setFlutterwaveReady(true);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://checkout.flutterwave.com/v3.js';
-    script.async = true;
-    script.dataset.cipherpayFlutterwave = 'true';
-    script.onload = () => setFlutterwaveReady(typeof (window as any).FlutterwaveCheckout === 'function');
-    document.head.appendChild(script);
-    return () => {
-      script.onload = null;
+    const reference = new URLSearchParams(window.location.search).get('opay_reference');
+    if (!reference) return;
+    let active = true;
+    const pollReturn = async () => {
+      try {
+        const token = useToken();
+        const response = await fetch(apiUrl('/api/wallet/fund/verify'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          credentials: 'include',
+          body: JSON.stringify({ reference }),
+        });
+        const payload = await response.json().catch(() => null) as { status?: string } | null;
+        if (!active) return;
+        if (payload?.status === 'success') {
+          setPaymentStatus('success');
+          void queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
+          window.history.replaceState({}, '', '/fund');
+          return;
+        }
+        if (payload?.status === 'failed') {
+          setPaymentStatus('failed');
+          window.history.replaceState({}, '', '/fund');
+          return;
+        }
+      } catch {}
+      if (active) window.setTimeout(() => void pollReturn(), 3000);
     };
+    void pollReturn();
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -1388,63 +1402,6 @@ function Fund() {
     return 'pending';
   };
 
-  const launchCardCheckout = (value: any) => {
-    // Card checkout must use the exact amount/email/reference that the API
-    // signed. Never recompute these values from the browser form.
-    if (!value.publicKey || !value.payloadHash || !value.amount || !value.currency || !value.customer?.email || !value.reference) {
-      setError('Secure card checkout is not configured yet. Please try again shortly.');
-      return;
-    }
-    if (!flutterwaveReady || typeof (window as any).FlutterwaveCheckout !== 'function') {
-      setError('Secure card checkout is still loading. Please tap Continue again.');
-      return;
-    }
-
-    setPaymentStatus('waiting');
-    flutterwaveRef.current = (window as any).FlutterwaveCheckout({
-      public_key: value.publicKey,
-      tx_ref: value.reference,
-      amount: value.amount,
-      currency: value.currency,
-      payment_options: 'card',
-      payload_hash: value.payloadHash,
-      customer: {
-        email: value.customer.email,
-        name: value.customer?.name || undefined,
-      },
-      customizations: {
-        title: 'CipherPay',
-        description: 'Wallet funding',
-      },
-      configurations: {
-        session_duration: 15,
-        max_retry_attempt: 3,
-      },
-      callback: async () => {
-        const status = await verifyCard(value.reference);
-        if (status === 'success') {
-          flutterwaveRef.current?.close?.();
-          flutterwaveRef.current = null;
-        }
-      },
-      onclose: async (incomplete: boolean) => {
-        flutterwaveRef.current = null;
-
-        if (incomplete === true) {
-          const status = await verifyCard(value.reference);
-          if (status !== 'success') setPaymentStatus('cancelled');
-          window.setTimeout(() => {
-            setResult(null);
-            setPaymentStatus('waiting');
-            setError('');
-          }, 2200);
-          return;
-        }
-
-        await verifyCard(value.reference);
-      },
-    });
-  };
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -1461,8 +1418,8 @@ function Fund() {
           if (value.account) {
             setPaymentStatus('waiting');
             setTransferOpen(true);
-          } else if (value.publicKey && value.payloadHash) {
-            launchCardCheckout(value);
+          } else if (value.cashierUrl) {
+            window.location.assign(value.cashierUrl);
           }
         },
         onError: (reason: any) => setError(reason?.message ?? 'Could not prepare wallet funding.'),
@@ -1486,7 +1443,7 @@ function Fund() {
           {paymentStatus === 'cancelled' && <div className="error-box funding-cancelled-box" role="status"><X size={20} /><div><b>Payment cancelled</b><span>Your card payment was cancelled. Your wallet was not credited.</span></div></div>}
           {!result?.account && paymentStatus !== 'success' && paymentStatus !== 'cancelled' && <Button type="submit" className="full-btn" disabled={!amount || mutation.isPending || bankMutation.isPending} data-testid="button-fund-submit">{mutation.isPending || bankMutation.isPending ? 'Preparing…' : 'Continue to funding'} <ArrowRight size={17} /></Button>}
         </form>
-        <div className="side-note"><span className="side-note-icon"><ShieldCheck size={20} /></span><h3>Built for peace of mind.</h3><p>Every transaction is encrypted and your funds stay visible at every step.</p><div className="side-rule" /><b style={{display:'block',marginBottom:6}}>Funding limit</b><span style={{fontSize:12,lineHeight:1.5}}>Minimum deposit: ₦100.</span><div className="side-rule" /><span className="mono">CIPHER / SECURE-01</span></div>
+        <div className="side-note"><span className="side-note-icon"><ShieldCheck size={20} /></span><h3>Built for peace of mind.</h3><p>Every transaction is encrypted and your funds stay visible at every step.</p><div className="side-rule" /><b style={{display:'block',marginBottom:6}}>Funding limit</b><span style={{fontSize:12,lineHeight:1.5}}>Minimum deposit: ₦100.</span><div className="side-rule" /><span className="mono">CIPHER / OPAY-SECURE</span></div>
       </div>
       {result?.account && transferOpen && <div className="transfer-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setTransferOpen(false); }}>
         <div className="transfer-modal-card" role="dialog" aria-modal="true" aria-labelledby="transfer-account-title" onMouseDown={(event) => event.stopPropagation()}>
@@ -1495,7 +1452,7 @@ function Fund() {
       </div>}
       {result?.account && !transferOpen && <div className={`transfer-payment-dock ${paymentStatus}`} role="status">
         <span className="transfer-dock-pulse" />
-        <div><b>{paymentStatus === 'success' ? 'Wallet funded' : paymentStatus === 'failed' ? 'Transfer needs attention' : 'Transfer account still active'}</b><small>{paymentStatus === 'success' ? 'Flutterwave confirmed your payment.' : 'We are still tracking this Flutterwave transfer.'}</small></div>
+        <div><b>{paymentStatus === 'success' ? 'Wallet funded' : paymentStatus === 'failed' ? 'Transfer needs attention' : 'Transfer account still active'}</b><small>{paymentStatus === 'success' ? 'OPay confirmed your payment.' : 'We are still tracking this OPay transfer.'}</small></div>
         <button type="button" onClick={() => setTransferOpen(true)} data-testid="button-reopen-transfer">View details <ArrowRight size={14} /></button>
       </div>}
     </>
