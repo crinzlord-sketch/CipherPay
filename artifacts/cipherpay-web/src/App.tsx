@@ -746,7 +746,7 @@ function Login() {
        ? <form className="auth-form" onSubmit={verifyLogin}>
          <AuthBuddy key={`login-buddy-${faceReaction}`} field="idle" hasText gaze={{ x: 0, y: 0 }} mood={faceMood} buddyRef={buddyRef} />
         <div className="otp-notice" role="status">{otpNotice}</div>
-        <Field label="Six-digit code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} placeholder="000000" value={code} onChange={(event: any) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} required data-testid="input-login-otp" />
+        <Field label="Six-digit code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={4} placeholder="000000" value={code} onChange={(event: any) => setCode(event.target.value.replace(/\D/g, '').slice(0, 4))} required data-testid="input-login-otp" />
         {error && <div className="error-box" role="alert">{error}</div>}
         <Button type="submit" className="full-btn" disabled={otpPending || code.length !== 6} data-testid="button-verify-login-otp">{otpPending ? 'Verifying…' : 'Verify and sign in'} <ArrowRight size={17} /></Button>
         <button type="button" className="text-link back-to-login" onClick={() => void resendLogin()} disabled={otpResendPending || otpResendCooldown > 0}>{otpResendPending ? 'Sending…' : otpResendCooldown > 0 ? `Resend code in ${otpResendCooldown}s` : 'Resend code'}</button>
@@ -854,7 +854,7 @@ function VerifyEmail() {
 
   return <AuthLayout title="Check your email." detail={email ? `We sent a verification code to ${email}.` : 'Enter the code from your verification email.'}>
     <form className="auth-form" onSubmit={submit}>
-      <Field label="Six-digit verification code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} placeholder="000000" value={code} onChange={(event: any) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} required data-testid="input-email-otp" />
+      <Field label="Six-digit verification code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={4} placeholder="000000" value={code} onChange={(event: any) => setCode(event.target.value.replace(/\D/g, '').slice(0, 4))} required data-testid="input-email-otp" />
       {error && <div className="error-box" role="alert">{error}</div>}
       {notice && <div className="success-box" role="status">{notice}</div>}
       <Button type="submit" className="full-btn" disabled={verify.isPending || code.length !== 6 || !email} data-testid="button-verify-email">{verify.isPending ? 'Verifying…' : 'Verify email'} <ArrowRight size={17} /></Button>
@@ -930,7 +930,7 @@ function ResetPassword() {
 
   return <AuthLayout title="Choose a new password." detail={email ? `Enter the code sent to ${email}.` : 'Enter the code from your password-reset email.'}>
     <form className="auth-form" onSubmit={submit}>
-      <Field label="Six-digit reset code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} placeholder="000000" value={code} onChange={(event: any) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} required data-testid="input-reset-code" />
+      <Field label="Six-digit reset code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={4} placeholder="000000" value={code} onChange={(event: any) => setCode(event.target.value.replace(/\D/g, '').slice(0, 4))} required data-testid="input-reset-code" />
       <label className="field"><span>New password</span><div className="password-wrap"><input type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="At least 8 characters" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required data-testid="input-reset-password" /><button type="button" className="password-toggle" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
       <Field label="Confirm new password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="Repeat your new password" minLength={8} value={confirm} onChange={(event: any) => setConfirm(event.target.value)} required data-testid="input-confirm-reset-password" />
       {error && <div className="error-box" role="alert">{error}</div>}
@@ -1029,7 +1029,7 @@ function Dashboard() {
       <PageTitle eyebrow="OVERVIEW / TODAY" title={`Good to see you, ${user.data?.firstName ?? 'there'}.`} detail="Your next move starts here." action={<div className="overview-head-actions"><div className="overview-user-badge"><CipherAvatar src={user.data?.avatarUrl} seed={user.data?.id || user.data?.email} gender={user.data?.gender} size={46} alt="" /><div><b>{user.data?.firstName} {user.data?.lastName}</b><span>{user.data?.email}</span></div></div><Link href="/fund" className="btn btn-primary" data-testid="link-fund-wallet"><Plus size={17} /> Fund wallet</Link></div>} />
       <section className="dashboard-grid">
          <div className="balance-card"><div className="balance-top"><span>Available balance</span><button type="button" className="balance-visibility" onClick={() => setBalanceVisible((visible) => !visible)} aria-label={balanceVisible ? 'Hide balance' : 'Show balance'} aria-pressed={!balanceVisible} title={balanceVisible ? 'Hide balance' : 'Show balance'} data-testid="button-toggle-balance">{balanceVisible ? <Eye size={16} /> : <EyeOff size={16} />}</button></div><div className="balance-value" data-testid="text-wallet-balance">{displayBalance(w?.balance)}</div><div className="balance-bottom"><span>Ledger balance <b>{displayBalance(w?.ledgerBalance)}</b></span><span className="mono">{w?.currency ?? 'NGN'}</span></div><div className="balance-shine" /></div>
-        <div className="quick-actions"><div className="section-head"><h2>Move money</h2><span className="quick-actions-label">Quick actions</span><button type="button" className="quick-actions-view-all" onClick={() => window.dispatchEvent(new Event('cipherpay:open-all-menu'))} aria-label="View all services" data-testid="button-quick-actions-view-all">View All <ArrowRight size={15} /></button></div>
+        <div className="quick-actions"><div className="section-head"><h2>Explore services</h2><span className="quick-actions-label">Quick actions</span><button type="button" className="quick-actions-view-all" onClick={() => window.dispatchEvent(new Event('cipherpay:open-all-menu'))} aria-label="View all services" data-testid="button-quick-actions-view-all">View All <ArrowRight size={15} /></button></div>
           <div className="action-row">
             <Link href="/crypto" className="action-tile" data-testid="link-quick-crypto">
               <span className="action-icon purple"><Coins size={19} /></span><b>Crypto</b><small>Manage your crypto</small>
@@ -1647,11 +1647,11 @@ function Send() {
     }
     if (hasTransferPin === false) {
       if (!/^\d{6}$/.test(pin)) {
-        setPinModalError('Create a 6-digit transfer PIN.');
+        setPinModalError('Create a 4-digit transfer PIN.');
         return;
       }
       if (!/^\d{6}$/.test(pinModalConfirm)) {
-        setPinModalError('Confirm your 6-digit transfer PIN.');
+        setPinModalError('Confirm your 4-digit transfer PIN.');
         return;
       }
       if (pin !== pinModalConfirm) {
@@ -1659,7 +1659,7 @@ function Send() {
         return;
       }
     } else if (!/^\d{6}$/.test(pin)) {
-      setPinModalError('Enter your 6-digit transfer PIN.');
+      setPinModalError('Enter your 4-digit transfer PIN.');
       return;
     }
 
@@ -1688,7 +1688,7 @@ function Send() {
         setHasTransferPin(false);
         setPinModalPin('');
         setPinModalConfirm('');
-        setPinModalError('Your transfer PIN was cleared. Create a new 6-digit PIN to continue.');
+        setPinModalError('Your transfer PIN was cleared. Create a new 4-digit PIN to continue.');
       } else {
         setPinModalError(message);
       }
@@ -1797,15 +1797,15 @@ function Send() {
               ) : hasTransferPin === false ? (
                 <>
                   <h2 id="transfer-pin-modal-title">Create your transfer PIN</h2>
-                  <p>You don't have a transaction PIN yet. Create a 6-digit PIN and confirm it to authorize this transfer.</p>
-                  <input className="transfer-pin-modal-input" type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} placeholder="Create 6-digit PIN" value={pinModalPin} onChange={(event) => setPinModalPin(event.target.value.replace(/\D/g, '').slice(0, 6))} aria-label="Create 6-digit transfer PIN" autoFocus />
-                  <input className="transfer-pin-modal-input" type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} placeholder="Confirm PIN" value={pinModalConfirm} onChange={(event) => setPinModalConfirm(event.target.value.replace(/\D/g, '').slice(0, 6))} aria-label="Confirm transfer PIN" />
+                  <p>You don't have a transaction PIN yet. Create a 4-digit PIN and confirm it to authorize this transfer.</p>
+                  <input className="transfer-pin-modal-input" type="password" inputMode="numeric" autoComplete="new-password" maxLength={4} placeholder="Create 4-digit PIN" value={pinModalPin} onChange={(event) => setPinModalPin(event.target.value.replace(/\D/g, '').slice(0, 4))} aria-label="Create 4-digit transfer PIN" autoFocus />
+                  <input className="transfer-pin-modal-input" type="password" inputMode="numeric" autoComplete="new-password" maxLength={4} placeholder="Confirm PIN" value={pinModalConfirm} onChange={(event) => setPinModalConfirm(event.target.value.replace(/\D/g, '').slice(0, 4))} aria-label="Confirm transfer PIN" />
                 </>
               ) : (
                 <>
                   <h2 id="transfer-pin-modal-title">Enter your transfer PIN</h2>
-                  <p>Enter your 6-digit PIN to authorize this transfer.</p>
-                  <input className="transfer-pin-modal-input" type="password" inputMode="numeric" autoComplete="current-password" maxLength={6} placeholder="••••••" value={pinModalPin} onChange={(event) => setPinModalPin(event.target.value.replace(/\D/g, '').slice(0, 6))} aria-label="6-digit transfer PIN" autoFocus onKeyDown={(event) => { if (event.key === 'Enter') void authorizeAndSend(); }} />
+                  <p>Enter your 4-digit PIN to authorize this transfer.</p>
+                  <input className="transfer-pin-modal-input" type="password" inputMode="numeric" autoComplete="current-password" maxLength={4} placeholder="••••" value={pinModalPin} onChange={(event) => setPinModalPin(event.target.value.replace(/\D/g, '').slice(0, 4))} aria-label="4-digit transfer PIN" autoFocus onKeyDown={(event) => { if (event.key === 'Enter') void authorizeAndSend(); }} />
                 </>
               )}
               {pinModalError && <div className="error-box" role="alert">{pinModalError}</div>}
@@ -1969,7 +1969,7 @@ function SpendingInsightsPage() {
   const s: any = stats.data;
   const maxDaily = Math.max(...(s?.daily ?? []).map((item: any) => Number(item.spent ?? 0)), 1);
   const maxMonthly = Math.max(...(s?.monthly ?? []).map((item: any) => Number(item.spent ?? 0)), 1);
-  const categories = (s?.categoryBreakdown ?? []).slice(0, 6);
+  const categories = (s?.categoryBreakdown ?? []).slice(0, 4);
   if (stats.isLoading) return <LoadingPage title="Loading spending insights" />;
   return <>
     <PageTitle eyebrow="MONEY / INSIGHTS" title="Your spending, clearly." detail="See what you spend today, this week, this month and across the year." action={<Link href="/" className="text-link"><ArrowLeft size={15}/> Back to overview</Link>} />
