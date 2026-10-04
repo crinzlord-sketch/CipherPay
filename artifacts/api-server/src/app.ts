@@ -356,6 +356,23 @@ app.use("/api", async (req: Request, res: Response, next: NextFunction) => {
       next();
       return;
     }
+
+    // Admin accounts always bypass service maintenance/feature toggles.
+    // Service controls are for normal users only; an admin must retain full
+    // access so they can test and operate a service even while it is disabled
+    // for everyone else.
+    const userId = Number(req.headers["x-user-id"]);
+    if (Number.isFinite(userId) && userId > 0) {
+      const [account] = await db.select({ isAdmin: usersTable.isAdmin })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId))
+        .limit(1);
+      if (account?.isAdmin) {
+        next();
+        return;
+      }
+    }
+
     res.status(503).json({
       error: "This service is temporarily unavailable while we carry out scheduled maintenance. Your account and funds remain safe. Please try again shortly.",
       code: "SERVICE_MAINTENANCE",
