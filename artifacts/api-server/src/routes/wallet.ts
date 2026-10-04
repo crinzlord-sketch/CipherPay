@@ -137,7 +137,7 @@ router.post("/wallet/deposit/claim", async (req, res): Promise<void> => {
   });
 });
 
-async function creditOpayFunding(reference: string, providerStatus?: { amount: number; currency: string; orderNo?: string }) {
+export async function creditOpayFunding(reference: string, providerStatus?: { amount: number; currency: string; orderNo?: string }) {
   const [pendingTx] = await db.select().from(transactionsTable)
     .where(and(eq(transactionsTable.reference, reference), eq(transactionsTable.type, "fund")));
   if (!pendingTx || pendingTx.status !== "pending") return { credited: false, transaction: pendingTx ?? null };
@@ -153,7 +153,7 @@ async function creditOpayFunding(reference: string, providerStatus?: { amount: n
   await getOrCreateWallet(pendingTx.userId);
   const credited = await db.transaction(async (tx) => {
     const updated = await tx.update(transactionsTable)
-      .set({ status: "success", metadata: sql`jsonb_set(COALESCE(metadata::jsonb, '{}'::jsonb), '{provider}', '"opay"'::jsonb)::text` })
+      .set({ status: "success", metadata: JSON.stringify({ provider: "opay", settledAt: new Date().toISOString() }) })
       .where(and(eq(transactionsTable.id, pendingTx.id), eq(transactionsTable.status, "pending")))
       .returning({ id: transactionsTable.id });
     if (!updated.length) return false;
