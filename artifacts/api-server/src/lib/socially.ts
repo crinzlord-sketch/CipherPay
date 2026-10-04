@@ -52,6 +52,9 @@ export interface SmmService {
   max: number;
   refill?: boolean;
   cancel?: boolean;
+  dripfeed?: boolean;
+  refillDays?: number;
+  providerClaims?: string[];
 }
 
 let smmServicesCache: { at: number; services: SmmService[] } | null = null;
@@ -73,6 +76,13 @@ export async function smmServices(force = false): Promise<SmmService[]> {
     max: Math.trunc(num(s.max)),
     refill: Boolean(s.refill),
     cancel: Boolean(s.cancel),
+    dripfeed: Boolean(s.dripfeed ?? s.drip_feed),
+    refillDays: (() => { const m = String(s.name ?? "").match(/(\\d+)\\s*[- ]?day(?:s)?\\s*(?:refill|guarantee)/i); return m ? Number(m[1]) : undefined; })(),
+    providerClaims: [
+      s.refill ? "Refill available" : "No refill flag",
+      s.cancel ? "Cancellation supported" : "Cancellation unavailable",
+      (s.dripfeed ?? s.drip_feed) ? "Drip-feed supported" : "Standard delivery",
+    ],
   }));
   if (services.length > 0) smmServicesCache = { at: Date.now(), services };
   return services;
