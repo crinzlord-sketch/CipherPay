@@ -253,10 +253,11 @@ export async function initiateBankTransfer(params: { amount: number; email: stri
   if (status < 200 || status >= 300 || body?.status !== "success" || !auth?.transfer_account) throw new Error(body?.message || "Could not generate a transfer account");
   return { accountNumber: String(auth.transfer_account), bankName: String(auth.transfer_bank ?? "Bank"), amount: Number(auth.transfer_amount ?? params.amount), reference: params.reference, expiresAt: auth.account_expiration ? String(auth.account_expiration) : null, note: auth.transfer_note ? String(auth.transfer_note) : null };
 }
-export async function initiatePayment(params: { amount: number; email: string; reference: string; redirectUrl: string; meta?: Record<string, unknown>; name?: string; paymentOptions?: string; subaccountId?: string }): Promise<{ link: string }> {
+export async function initiatePayment(params: { amount: number; email: string; reference: string; redirectUrl: string; meta?: Record<string, unknown>; name?: string; paymentOptions?: string; subaccountId?: string }): Promise<{ link: string; publicKey?: string }> {
   const { status, body } = await flwPost<any>("/payments", { tx_ref: params.reference, amount: params.amount, currency: "NGN", redirect_url: params.redirectUrl, customer: { email: params.email, name: params.name }, customizations: { title: "CipherPay Wallet Funding" }, ...(params.paymentOptions ? { payment_options: params.paymentOptions } : {}), meta: params.meta, ...(params.subaccountId ? { subaccounts: [{ id: params.subaccountId, transaction_split_ratio: 1 }] } : {}) });
   if (status < 200 || status >= 300 || body?.status !== "success" || !body?.data?.link) throw new Error(body?.message || "Could not start payment");
-  return { link: body.data.link };
+  const publicKey = process.env.FLUTTERWAVE_PUBLIC_KEY?.trim() || process.env.FLW_PUBLIC_KEY?.trim() || undefined;
+  return { link: body.data.link, publicKey };
 }
 export interface FlwVerifiedCharge { status: string; amount: number; currency: string; tx_ref: string; }
 export async function verifyByReference(reference: string): Promise<FlwVerifiedCharge> {
