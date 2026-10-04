@@ -6,7 +6,7 @@ import { FundWalletBody, VerifyFundingBody, WalletTransferBody, WithdrawFundsBod
 import { getOrCreateWallet, creditWallet, debitWallet, formatWallet, formatTransaction } from "../lib/wallet";
 import { generateReference } from "../lib/auth";
 import { createTransfer, initiateBankTransfer, friendlyFlwError } from "../lib/flutterwave";
-import { createCashierPayment, createCardPayment, createBankTransferPayment, friendlyOpayError, opayReference, queryPaymentStatus } from "../lib/opay";
+
 import { ensureUserPayoutWallet } from "../lib/payout-wallet";
 import { notifyUser } from "../lib/notifications";
 import { checkDepositLimit, checkPerTxLimitSync, getDepositFlagReason } from "../lib/kycLimits";
