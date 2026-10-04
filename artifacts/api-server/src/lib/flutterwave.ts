@@ -24,7 +24,7 @@ async function flwFetch(input: string, init: RequestInit = {}): Promise<Response
 }
 
 function secretKey(): string {
-  const k = process.env.FLUTTERWAVE_SECRET_KEY;
+  const k = process.env.FLUTTERWAVE_SECRET_KEY?.trim();
   if (!k) throw new Error("FLUTTERWAVE_SECRET_KEY not set");
   return k;
 }
