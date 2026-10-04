@@ -363,3 +363,12 @@ export async function smsOtp(reference: string): Promise<SociallyOtpResult> {
 
   return { status: "pending", raw };
 }
+
+
+export async function smmMassOrder(lines: Array<{ service: number; quantity: number; link: string }>): Promise<SmmAddResult[]> {
+  const results: SmmAddResult[] = [];
+  for (const item of lines) {
+    results.push(await smmAddOrder(item));
+  }
+  return results;
+}
