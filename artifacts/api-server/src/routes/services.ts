@@ -452,6 +452,67 @@ router.post("/social/order", async (req, res): Promise<void> => {
   }
 });
 
+
+router.post("/social/mass-order", async (req, res): Promise<void> => {
+  const userId = getUserId(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const raw = Array.isArray(req.body?.orders) ? req.body.orders : [];
+  if (!raw.length || raw.length > 50) { res.status(400).json({ error: "Provide between 1 and 50 orders." }); return; }
+
+  const orders = raw.map((item: any) => ({
+    serviceId: String(item?.serviceId ?? ""),
+    link: String(item?.link ?? "").trim(),
+    quantity: Math.trunc(Number(item?.quantity ?? 0)),
+  })).filter((item: any) => item.serviceId && item.link && item.quantity > 0);
+
+  if (orders.length !== raw.length) { res.status(400).json({ error: "Each order needs a service, link and positive quantity." }); return; }
+
+  const prepared: any[] = [];
+  let total = 0;
+  for (const item of orders) {
+    const service = SOCIAL_SERVICES.find((s) => s.id === item.serviceId);
+    if (!service) { res.status(400).json({ error: `Service not found: ${item.serviceId}` }); return; }
+    if (item.quantity < service.minQuantity || item.quantity > service.maxQuantity) {
+      res.status(400).json({ error: `${service.name}: quantity must be between ${service.minQuantity} and ${service.maxQuantity}` }); return;
+    }
+    const provider = await smmFindService(service.keywords, item.quantity);
+    if (!provider) { res.status(400).json({ error: `No live provider service is available for ${service.name} right now.` }); return; }
+    const providerAmount = provider.rate * item.quantity / 1000;
+    const amount = Math.ceil((providerAmount + 200) / 10) * 10;
+    total += amount;
+    prepared.push({ item, service, provider, providerAmount, amount });
+  }
+
+  let tx: any;
+  try {
+    ({ tx } = await debitWallet(userId, total, `Socially mass order (${prepared.length} orders)`, "social", { massOrder: true, total, count: prepared.length }));
+  } catch (e: any) {
+    res.status(400).json({ error: e.message }); return;
+  }
+
+  const results: any[] = [];
+  let deliveredCount = 0;
+  for (const entry of prepared) {
+    try {
+      const result = await smmAddOrder({ service: entry.provider.service, link: entry.item.link, quantity: entry.item.quantity });
+      if (!result.ok || !result.orderId) throw new Error(result.error ?? "Provider rejected the order");
+      deliveredCount++;
+      results.push({ serviceId: entry.item.serviceId, link: entry.item.link, quantity: entry.item.quantity, amount: entry.amount, externalOrderId: result.orderId, status: "processing" });
+    } catch (e: any) {
+      results.push({ serviceId: entry.item.serviceId, link: entry.item.link, quantity: entry.item.quantity, amount: entry.amount, status: "failed", error: e?.message ?? "Provider rejected the order" });
+    }
+  }
+
+  const failed = results.filter((r) => r.status === "failed");
+  const refundAmount = failed.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  if (refundAmount > 0) {
+    await creditWallet(userId, refundAmount, "Refund: failed Socially mass-order items", "refund", { massOrder: true, failed: failed.length });
+  }
+  await db.update(transactionsTable).set({ status: failed.length === results.length ? "failed" : "success", metadata: JSON.stringify({ massOrder: true, results }) }).where(eq(transactionsTable.id, tx.id));
+
+  res.json({ success: failed.length === 0, total, deliveredCount, failedCount: failed.length, refundAmount, results });
+});
+
 router.get("/social/orders", async (req, res): Promise<void> => {
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
