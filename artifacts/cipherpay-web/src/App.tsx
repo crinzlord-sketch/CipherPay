@@ -1268,7 +1268,7 @@ function Fund() {
   const [amount, setAmount] = useState('');
   const [channel, setChannel] = useState('card');
   const [result, setResult] = useState<any>(null);
-  const [paymentStatus, setPaymentStatus] = useState<'waiting' | 'success' | 'failed'>('waiting');
+  const [paymentStatus, setPaymentStatus] = useState<'waiting' | 'success' | 'failed' | 'cancelled'>('waiting');
   const [transferOpen, setTransferOpen] = useState(false);
   const [flutterwaveReady, setFlutterwaveReady] = useState(false);
   const flutterwaveRef = useRef<any>(null);
@@ -1389,9 +1389,10 @@ function Fund() {
   };
 
   const launchCardCheckout = (value: any, requestedAmount: number) => {
-    if (!value.publicKey) {
-      // Safe fallback for environments that have not configured the public key yet.
-      window.location.assign(value.authorizationUrl);
+    // Never fall back to the hosted checkout. That route opens a separate
+    // Flutterwave browser page and bypasses CipherPay's intended inline UX.
+    if (!value.publicKey || !value.payloadHash) {
+      setError('Secure card checkout is not configured yet. Please try again shortly.');
       return;
     }
     if (!flutterwaveReady || typeof (window as any).FlutterwaveCheckout !== 'function') {
@@ -1406,6 +1407,7 @@ function Fund() {
       amount: requestedAmount,
       currency: 'NGN',
       payment_options: 'card',
+      payload_hash: value.payloadHash,
       customer: {
         email: value.customer?.email,
         name: value.customer?.name || undefined,
@@ -1414,6 +1416,10 @@ function Fund() {
         title: 'CipherPay',
         description: 'Wallet funding',
       },
+      configurations: {
+        session_duration: 15,
+        max_retry_attempt: 3,
+      },
       callback: async () => {
         const status = await verifyCard(value.reference);
         if (status === 'success') {
@@ -1421,13 +1427,24 @@ function Fund() {
           flutterwaveRef.current = null;
         }
       },
-      onclose: async () => {
+      onclose: async (incomplete: boolean) => {
         flutterwaveRef.current = null;
+
+        if (incomplete === true) {
+          setPaymentStatus('cancelled');
+          await verifyCard(value.reference);
+          window.setTimeout(() => {
+            setResult(null);
+            setPaymentStatus('waiting');
+            setError('');
+          }, 2200);
+          return;
+        }
+
         await verifyCard(value.reference);
       },
     });
   };
-
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -1465,8 +1482,9 @@ function Fund() {
           <div className="choice-grid">{routes.map(({ value, icon: Icon, label, note }) => <button type="button" key={value} className={`choice-card ${channel === value ? 'selected' : ''}`} onClick={() => setChannel(value)} data-testid={`button-channel-${value}`}><span className="choice-check">{channel === value && <Check size={13} />}</span><span className="choice-icon"><Icon size={19} /></span><b>{label}</b><small>{note}</small></button>)}</div>
           {error && <div className="error-box" role="alert">{error}</div>}
           {paymentStatus === 'success' && <div className="success-box transfer-funding-success" role="status"><Check size={20} /><div><b>Funding successful</b><span>{money.format(parseGroupedDigits(amount))} has been added to your CipherPay wallet.</span></div></div>}
-          {paymentStatus === 'failed' && <div className="error-box" role="alert">This card payment was cancelled or could not be completed. Your wallet was not credited.</div>}
-          {!result?.account && paymentStatus !== 'success' && <Button type="submit" className="full-btn" disabled={!amount || mutation.isPending || bankMutation.isPending} data-testid="button-fund-submit">{mutation.isPending || bankMutation.isPending ? 'Preparing…' : 'Continue to funding'} <ArrowRight size={17} /></Button>}
+          {paymentStatus === 'failed' && <div className="error-box" role="alert">This card payment could not be completed. Your wallet was not credited.</div>}
+          {paymentStatus === 'cancelled' && <div className="error-box funding-cancelled-box" role="status"><X size={20} /><div><b>Payment cancelled</b><span>Your card payment was cancelled. Your wallet was not credited.</span></div></div>}
+          {!result?.account && paymentStatus !== 'success' && paymentStatus !== 'cancelled' && <Button type="submit" className="full-btn" disabled={!amount || mutation.isPending || bankMutation.isPending} data-testid="button-fund-submit">{mutation.isPending || bankMutation.isPending ? 'Preparing…' : 'Continue to funding'} <ArrowRight size={17} /></Button>}
         </form>
         <div className="side-note"><span className="side-note-icon"><ShieldCheck size={20} /></span><h3>Built for peace of mind.</h3><p>Every transaction is encrypted and your funds stay visible at every step.</p><div className="side-rule" /><b style={{display:'block',marginBottom:6}}>Funding limit</b><span style={{fontSize:12,lineHeight:1.5}}>Minimum deposit: ₦100.</span><div className="side-rule" /><span className="mono">CIPHER / SECURE-01</span></div>
       </div>
