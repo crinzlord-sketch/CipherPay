@@ -4,7 +4,15 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const ethersModule = require("../src/vendor/ethers.umd.min.cjs") as any;
-const ethers = ethersModule.Wallet ? ethersModule : (ethersModule.ethers?.Wallet ? ethersModule.ethers : ethersModule.default?.Wallet ? ethersModule.default : ethersModule);
+const ethers = ethersModule.ethers || ethersModule.default?.ethers || ethersModule.default || ethersModule;
+const Wallet = ethers.Wallet;
+const JsonRpcProvider = ethers.JsonRpcProvider;
+const Contract = ethers.Contract;
+const formatUnits = ethers.formatUnits;
+const formatEther = ethers.formatEther;
+const parseUnits = ethers.parseUnits;
+const parseEther = ethers.parseEther;
+const isAddress = ethers.isAddress;
 import bcrypt from "bcryptjs";
 import { db, usersTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
@@ -119,12 +127,12 @@ const getWallet = async (userId:number) => {
 const createWallet = async (userId:number) => {
   const existing = await getWallet(userId);
   if (existing) return existing;
-  const wallet = ethers.Wallet.createRandom();
+  const wallet = Wallet.createRandom();
   await db.execute(sql`INSERT INTO crypto_wallets (user_id,address,encrypted_private_key) VALUES (${userId},${wallet.address},${encrypt(wallet.privateKey)}) ON CONFLICT (user_id) DO NOTHING`);
   return getWallet(userId);
 };
 
-const providerFor = (network:Network) => new ethers.JsonRpcProvider(NETWORKS[network].rpc, NETWORKS[network].chainId, { staticNetwork:true });
+const providerFor = (network:Network) => new JsonRpcProvider(NETWORKS[network].rpc, NETWORKS[network].chainId, { staticNetwork:true });
 
 async function balances(address:string) {
   const networks = Object.keys(NETWORKS) as Network[];
@@ -137,12 +145,12 @@ async function balances(address:string) {
         .filter(([, token]) => token.networks.includes(network))
         .map(async ([key, token]) => {
           const symbol = key.split(":")[0];
-          const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
+          const contract = new Contract(token.address, ERC20_ABI, provider);
           const raw = await contract.balanceOf(address);
           return {
             network,
             asset:symbol,
-            balance:Number(ethers.formatUnits(raw, token.decimals)),
+            balance:Number(formatUnits(raw, token.decimals)),
             address,
             type:"token",
             tokenAddress:token.address,
@@ -150,7 +158,7 @@ async function balances(address:string) {
         });
       const native = await nativePromise;
       return [
-        { network, asset:cfg.native, balance:Number(ethers.formatEther(native)), address, type:"native" },
+        { network, asset:cfg.native, balance:Number(formatEther(native)), address, type:"native" },
         ...(await Promise.all(tokenPromises)),
       ];
     } catch (error) {
@@ -205,7 +213,7 @@ router.post("/crypto/send", async (req,res):Promise<void> => {
   const to = String(req.body?.to || "").trim();
   const amount = Number(req.body?.amount);
   const pin = String(req.body?.pin || "");
-  if (!(network in NETWORKS) || !to || !ethers.isAddress(to) || !Number.isFinite(amount) || amount <= 0) {
+  if (!(network in NETWORKS) || !to || !isAddress(to) || !Number.isFinite(amount) || amount <= 0) {
     res.status(400).json({error:"Enter a valid network, destination address and amount."}); return;
   }
   if (!/^\d{4}$/.test(pin)) { res.status(400).json({error:"Enter your 4-digit transfer PIN."}); return; }
@@ -218,7 +226,7 @@ router.post("/crypto/send", async (req,res):Promise<void> => {
 
   try {
     const provider = providerFor(network);
-    const signer = new ethers.Wallet(decrypt(stored.encrypted_private_key), provider);
+    const signer = new Wallet(decrypt(stored.encrypted_private_key), provider);
     let tx:any;
     let decimals = 18;
     const tokenKey = asset === "ETH" || asset === "BNB" ? "" : asset + (network === "base" ? ":base" : network === "bsc" ? ":bsc" : "");
@@ -226,10 +234,10 @@ router.post("/crypto/send", async (req,res):Promise<void> => {
     if (token) {
       decimals = token.decimals;
       const contract = new ethers.Contract(token.address, ERC20_ABI, signer);
-      tx = await contract.transfer(to, ethers.parseUnits(String(amount), decimals));
+      tx = await contract.transfer(to, parseUnits(String(amount), decimals));
     } else {
       if (asset !== NETWORKS[network].native) { res.status(400).json({error:`{asset} is not supported on {network} yet.`.replace("{asset}",asset).replace("{network}",network)}); return; }
-      tx = await signer.sendTransaction({to,value:ethers.parseEther(String(amount))});
+      tx = await signer.sendTransaction({to,value:parseEther(String(amount))});
     }
     await db.execute(sql`INSERT INTO crypto_transactions (user_id,network,asset,direction,amount,to_address,tx_hash,status) VALUES (${userId},${network},${asset},'outgoing',${String(amount)},${to},${tx.hash},'submitted')`);
     res.json({status:"submitted",txHash:tx.hash,explorer:NETWORKS[network].explorer + tx.hash});
