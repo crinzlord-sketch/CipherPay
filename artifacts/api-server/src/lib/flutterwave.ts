@@ -1,64 +1,24 @@
-import { ProxyAgent, fetch as undiciFetch } from "undici";
+import { fetch as undiciFetch } from "undici";
 
 const BASE = "https://api.flutterwave.com/v3";
 
-function normalizeProxyUrl(raw: string | undefined): string | undefined {
-  if (!raw?.trim()) return undefined;
-  const value = raw.trim();
-  return /^https?:\/\//i.test(value) ? value : `http://${value}`;
-}
-
-const proxyUrl = normalizeProxyUrl(process.env.FIXIE_URL);
-const fixieDispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
-let proxyEgressLogged = false;
-
-async function logProxyEgressIp(): Promise<void> {
-  if (!fixieDispatcher || proxyEgressLogged) return;
-  proxyEgressLogged = true;
-  try {
-    const res = await undiciFetch("https://api.ipify.org?format=json", {
-      dispatcher: fixieDispatcher,
-      headers: { accept: "application/json", "user-agent": "CipherPay/1.0" },
-    });
-    const body = await res.json().catch(() => ({})) as any;
-    console.info("Flutterwave proxy egress IP", {
-      status: res.status,
-      ip: body?.ip ?? null,
-      proxyHost: proxyUrl ? new URL(proxyUrl).hostname : null,
-    });
-  } catch (err: any) {
-    console.error("Flutterwave proxy egress IP lookup failed", {
-      message: err?.message ?? String(err),
-      causeCode: err?.cause?.code ?? null,
-      causeMessage: err?.cause?.message ?? null,
-      proxyHost: proxyUrl ? new URL(proxyUrl).hostname : null,
-    });
-  }
-}
-
 async function flwFetch(input: string, init: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
   try {
-    if (fixieDispatcher) void logProxyEgressIp();
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20000);
-    try {
-      return await undiciFetch(input, {
-        ...init,
-        signal: init.signal ?? controller.signal,
-        ...(fixieDispatcher ? { dispatcher: fixieDispatcher } : {}),
-      });
-    } finally {
-      clearTimeout(timer);
-    }
+    return await undiciFetch(input, {
+      ...init,
+      signal: init.signal ?? controller.signal,
+    });
   } catch (err: any) {
     console.error("Flutterwave network request failed", {
       message: err?.message ?? String(err),
       causeCode: err?.cause?.code ?? null,
       causeMessage: err?.cause?.message ?? null,
-      proxyConfigured: Boolean(proxyUrl),
-      proxyHost: proxyUrl ? new URL(proxyUrl).hostname : null,
     });
     throw err;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
