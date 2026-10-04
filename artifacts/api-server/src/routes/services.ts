@@ -25,8 +25,33 @@ import {
 } from "../lib/socially";
 import { logoPath } from "../lib/logos";
 import { checkPerTxLimitSync, getUserKycLevel } from "../lib/kycLimits";
+import { getServiceFeatureStatus, type ServiceFeatureKey } from "../lib/service-features";
 
 const router: IRouter = Router();
+// Service controls are enforced server-side as well as in the admin UI.
+router.use(async (req, res, next) => {
+  const path = req.path;
+  let feature: ServiceFeatureKey | null = null;
+  if (path.startsWith("/data")) feature = "data";
+  else if (path.startsWith("/sms/esim")) feature = "sms_esim";
+  else if (path.startsWith("/sms/rentals")) feature = "sms_rentals";
+  else if (path.startsWith("/sms")) feature = "sms";
+  else if (path.startsWith("/temporary-email")) feature = "temporary_email";
+  else if (path.startsWith("/social")) feature = "social_boost";
+  else if (path.startsWith("/email-pro") || path.startsWith("/email")) feature = "email_pro";
+  if (!feature) return next();
+  try {
+    const status = await getServiceFeatureStatus();
+    if (!status[feature]) {
+      res.status(503).json({ error: "This service is temporarily unavailable.", code: "SERVICE_DISABLED", feature });
+      return;
+    }
+    next();
+  } catch (e) {
+    next(e);
+  }
+});
+
 
 function getUserId(req: any): number | null {
   const rawId = req.headers["x-user-id"];
