@@ -1255,7 +1255,7 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
             </ol>
           </div>
           <div className="transfer-warning"><ShieldCheck size={16} /><p>{account.note || (permanent ? 'This account belongs to your CipherPay wallet. Use it for future deposits too.' : 'Only send the exact amount shown. Do not send money to this account after it expires.')}</p></div>
-          {result.external && <button type="button" className="primary-button" disabled={claiming} onClick={async () => {
+          {result.external && <Button type="button" disabled={claiming} onClick={async () => {
             setClaiming(true);
             try {
               const token = useToken();
@@ -1272,7 +1272,7 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
             } catch (e: any) {
               window.alert(e?.message || 'Could not submit the deposit.');
             } finally { setClaiming(false); }
-          }}>{claiming ? 'Submitting…' : 'I’ve sent the transfer'}</button>}
+          }}>{claiming ? 'Submitting…' : 'I’ve sent the transfer'}</Button>}
         </>
       )}
 
