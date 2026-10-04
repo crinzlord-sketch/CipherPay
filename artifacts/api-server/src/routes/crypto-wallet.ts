@@ -1,7 +1,9 @@
 import { Router, type IRouter } from "express";
 import { eq, desc } from "drizzle-orm";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
-import { ethers } from "ethers";
+import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const ethers = require("../vendor/ethers.umd.min.js") as any;
 import bcrypt from "bcryptjs";
 import { db, usersTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
