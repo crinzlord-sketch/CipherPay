@@ -85,8 +85,9 @@ export default function CryptoPage(){
   const supportedForNetwork=(asset:string,net:string)=>{
     if(asset==='ETH')return net==='ethereum'||net==='base';
     if(asset==='BNB')return net==='bsc';
-    if(asset==='USDC')return ['ethereum','base','bsc'].includes(net);
-    if(asset==='USDT')return ['ethereum','bsc'].includes(net);
+    if(asset==='POL')return net==='polygon';
+    if(asset==='USDC')return ['ethereum','base','bsc','polygon'].includes(net);
+    if(asset==='USDT')return ['ethereum','bsc','polygon'].includes(net);
     return false;
   };
   const sendableAssets=Array.from(new Set(balances.filter(b=>supportedForNetwork(b.asset,network)).map(b=>b.asset)));
@@ -174,7 +175,7 @@ export default function CryptoPage(){
 
     <section className="cp-crypto-detail-grid">
       <article className="cp-crypto-glass cp-detail-card"><span className="cp-kicker">RECENT ON-CHAIN ACTIVITY</span><h2>{transactions.length?'Your crypto transactions':'Ready for your first transaction'}</h2>
-        {transactions.length?<div className="cp-crypto-tx-list">{transactions.map(tx=><a key={tx.id} href={`https://${tx.network==='base'?'basescan.org':tx.network==='bsc'?'bscscan.com':'etherscan.io'}/tx/${tx.tx_hash}`} target="_blank" rel="noreferrer"><span><b>{tx.direction==='outgoing'?'Sent':'Received'} {tx.amount} {tx.asset}</b><small>{tx.network} · {tx.status} · {new Date(tx.created_at).toLocaleString()}</small></span><ExternalLink size={15}/></a>)}</div>:<p>Your blockchain activity will appear here after you send or receive crypto.</p>}
+        {transactions.length?<div className="cp-crypto-tx-list">{transactions.map(tx=><a key={tx.id} href={`${tx.network==='base'?'https://basescan.org/tx/':tx.network==='bsc'?'https://bscscan.com/tx/':tx.network==='polygon'?'https://polygonscan.com/tx/':'https://etherscan.io/tx/'}${tx.tx_hash}`} target="_blank" rel="noreferrer"><span><b>{tx.direction==='outgoing'?'Sent':'Received'} {tx.amount} {tx.asset}</b><small>{tx.network} · {tx.status} · {new Date(tx.created_at).toLocaleString()}</small></span><ExternalLink size={15}/></a>)}</div>:<p>Your blockchain activity will appear here after you send or receive crypto.</p>}
       </article>
     </section>
 
@@ -186,9 +187,9 @@ export default function CryptoPage(){
 
         {panel==='receive'&&<div className="cp-crypto-receive">
           <div className="cp-modal-asset"><span><b>Receive {sendAsset}</b><small>Your CipherPay self-custody EVM address works on the selected network.</small></span></div>
-          <label className="cp-modal-field">Network<select value={network} onChange={e=>setNetwork(e.target.value)}><option value="ethereum">Ethereum</option><option value="base">Base</option><option value="bsc">BNB Smart Chain</option></select></label>
+          <label className="cp-modal-field">Network<select value={network} onChange={e=>setNetwork(e.target.value)}><option value="ethereum">Ethereum</option><option value="base">Base</option><option value="bsc">BNB Smart Chain</option><option value="polygon">Polygon</option></select></label>
           <div className="cp-receive-address"><code>{walletAddress||'Preparing wallet…'}</code><button onClick={copyAddress} disabled={!walletAddress}>{copied?<Check size={17}/>:<Copy size={17}/>}</button></div>
-          <div className="cp-receive-networks"><b>On-chain wallet</b><span>{sendAsset} · {network==='bsc'?'BNB Smart Chain':network==='base'?'Base':'Ethereum'}</span><small>Only send {sendAsset} on this exact network. Sending on another network can permanently lose funds.</small></div>
+          <div className="cp-receive-networks"><b>On-chain wallet</b><span>{sendAsset} · {network==='bsc'?'BNB Smart Chain':network==='base'?'Base':network==='polygon'?'Polygon':'Ethereum'}</span><small>Only send {sendAsset} on this exact network. Sending on another network can permanently lose funds.</small></div>
           <button type="button" className="cp-modal-disabled" onClick={copyAddress} disabled={!walletAddress}>{copied?'Copied':'Copy address'}</button>
         </div>}
 
