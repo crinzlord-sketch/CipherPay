@@ -16,6 +16,8 @@ import {
   orderNumber as orderSmsPoolNumber,
   checkOrder as checkSmsPoolOrder,
   cancelOrder as cancelSmsPoolOrder,
+  esimCountries, esimPlans, esimPurchase, esimHistory, esimProfile, esimTopup,
+  rentalStock, rentalPricing, rentalOrder, rentalActive, rentalMessages, rentalAutoExtend,
 } from "../lib/smspool";
 import {
   smmFindService, smmAddOrder, smmOrderStatus,
@@ -450,6 +452,67 @@ router.post("/social/order", async (req, res): Promise<void> => {
   }
 });
 
+
+router.post("/social/mass-order", async (req, res): Promise<void> => {
+  const userId = getUserId(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const raw = Array.isArray(req.body?.orders) ? req.body.orders : [];
+  if (!raw.length || raw.length > 50) { res.status(400).json({ error: "Provide between 1 and 50 orders." }); return; }
+
+  const orders = raw.map((item: any) => ({
+    serviceId: String(item?.serviceId ?? ""),
+    link: String(item?.link ?? "").trim(),
+    quantity: Math.trunc(Number(item?.quantity ?? 0)),
+  })).filter((item: any) => item.serviceId && item.link && item.quantity > 0);
+
+  if (orders.length !== raw.length) { res.status(400).json({ error: "Each order needs a service, link and positive quantity." }); return; }
+
+  const prepared: any[] = [];
+  let total = 0;
+  for (const item of orders) {
+    const service = SOCIAL_SERVICES.find((s) => s.id === item.serviceId);
+    if (!service) { res.status(400).json({ error: `Service not found: ${item.serviceId}` }); return; }
+    if (item.quantity < service.minQuantity || item.quantity > service.maxQuantity) {
+      res.status(400).json({ error: `${service.name}: quantity must be between ${service.minQuantity} and ${service.maxQuantity}` }); return;
+    }
+    const provider = await smmFindService(service.keywords, item.quantity);
+    if (!provider) { res.status(400).json({ error: `No live provider service is available for ${service.name} right now.` }); return; }
+    const providerAmount = provider.rate * item.quantity / 1000;
+    const amount = Math.ceil((providerAmount + 200) / 10) * 10;
+    total += amount;
+    prepared.push({ item, service, provider, providerAmount, amount });
+  }
+
+  let tx: any;
+  try {
+    ({ tx } = await debitWallet(userId, total, `Socially mass order (${prepared.length} orders)`, "social", { massOrder: true, total, count: prepared.length }));
+  } catch (e: any) {
+    res.status(400).json({ error: e.message }); return;
+  }
+
+  const results: any[] = [];
+  let deliveredCount = 0;
+  for (const entry of prepared) {
+    try {
+      const result = await smmAddOrder({ service: entry.provider.service, link: entry.item.link, quantity: entry.item.quantity });
+      if (!result.ok || !result.orderId) throw new Error(result.error ?? "Provider rejected the order");
+      deliveredCount++;
+      results.push({ serviceId: entry.item.serviceId, link: entry.item.link, quantity: entry.item.quantity, amount: entry.amount, externalOrderId: result.orderId, status: "processing" });
+    } catch (e: any) {
+      results.push({ serviceId: entry.item.serviceId, link: entry.item.link, quantity: entry.item.quantity, amount: entry.amount, status: "failed", error: e?.message ?? "Provider rejected the order" });
+    }
+  }
+
+  const failed = results.filter((r) => r.status === "failed");
+  const refundAmount = failed.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  if (refundAmount > 0) {
+    await creditWallet(userId, refundAmount, "Refund: failed Socially mass-order items", "refund", { massOrder: true, failed: failed.length });
+  }
+  await db.update(transactionsTable).set({ status: failed.length === results.length ? "failed" : "success", metadata: JSON.stringify({ massOrder: true, results }) }).where(eq(transactionsTable.id, tx.id));
+
+  res.json({ success: failed.length === 0, total, deliveredCount, failedCount: failed.length, refundAmount, results });
+});
+
 router.get("/social/orders", async (req, res): Promise<void> => {
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -570,6 +633,8 @@ router.post("/sms/buy-number", async (req, res): Promise<void> => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("; ") }); return; }
 
   const { country, service } = parsed.data;
+  const activationType = String(req.body?.activationType ?? "SMS").toUpperCase();
+  if (!["SMS", "VOICE", "FLASH"].includes(activationType)) { res.status(400).json({ error: "Invalid activation type." }); return; }
   let offer: Awaited<ReturnType<typeof getSmsPoolOffer>>;
   let rate: number;
   try {
@@ -610,7 +675,7 @@ router.post("/sms/buy-number", async (req, res): Promise<void> => {
     // SMSPool is already funded on the provider side. Ordering directly from
     // that account avoids incorrectly requiring the user to fund a separate
     // Flutterwave payout/source wallet.
-    const result = await orderSmsPoolNumber(offer);
+    const result = await orderSmsPoolNumber(offer, activationType as "SMS" | "VOICE" | "FLASH");
     purchasedOrderId = result.orderId;
     purchasedNumber = result.number;
     const numberFormatted = result.number;
@@ -624,6 +689,7 @@ router.post("/sms/buy-number", async (req, res): Promise<void> => {
       await database.update(transactionsTable).set({
         metadata: JSON.stringify({
           provider: "SMSPool",
+          activationType,
           service: offer!.serviceName,
           country: offer!.countryName,
           number: numberFormatted,
@@ -843,5 +909,84 @@ async function runSocialBoostExpiry(): Promise<void> {
 // Initial run 10 s after startup (lets DB pool settle), then every hour.
 setTimeout(() => { runSocialBoostExpiry().catch(() => {}); }, 10_000);
 setInterval(() => { runSocialBoostExpiry().catch(() => {}); }, 60 * 60 * 1000);
+
+
+// ── SMSPool advanced catalog ────────────────────────────────────────────────
+router.get("/sms/esim/countries", async (_req, res) => {
+  try { res.json(await esimCountries()); }
+  catch (e: any) { res.status(502).json({ error: e?.message ?? "eSIM countries unavailable" }); }
+});
+
+router.get("/sms/esim/plans", async (req, res) => {
+  const country = String(req.query.country ?? "");
+  if (!country) { res.status(400).json({ error: "Country is required." }); return; }
+  try { res.json(await esimPlans(country)); }
+  catch (e: any) { res.status(502).json({ error: e?.message ?? "eSIM plans unavailable" }); }
+});
+
+
+router.post("/sms/esim/buy", async (req, res) => {
+  const userId = getUserId(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const country = String(req.body?.country ?? "");
+  const plan = String(req.body?.plan ?? "");
+  if (!country || !plan) { res.status(400).json({ error: "Choose an eSIM country and plan." }); return; }
+  try {
+    const plans = await esimPlans(country);
+    const selected: any = plans.find((item: any) => String(item.id ?? item.plan_id ?? item.plan ?? "") === plan);
+    const providerPrice = Number(selected?.price ?? selected?.cost ?? selected?.amount ?? 0);
+    if (!(providerPrice > 0)) { res.status(400).json({ error: "That eSIM plan is no longer available." }); return; }
+    const amount = Math.ceil(providerPrice * 1.15 / 10) * 10;
+    const { tx } = await debitWallet(userId, amount, "SMSPool international data eSIM", "service", { provider: "SMSPool", country, plan, providerPrice });
+    try {
+      const result = await esimPurchase(plan);
+      if (result?.success === 0 || result?.success === false) throw new Error(String(result?.message ?? result?.error ?? "eSIM purchase failed"));
+      await db.update(transactionsTable).set({ status: "success", metadata: JSON.stringify({ provider: "SMSPool", product: "eSIM", country, plan, providerPrice, response: result }) }).where(eq(transactionsTable.id, tx.id));
+      res.json({ success: true, amount, result });
+    } catch (e: any) {
+      await creditWallet(userId, amount, "Refund: eSIM purchase failed", "refund", { originalTxId: tx.id, provider: "SMSPool" });
+      await db.update(transactionsTable).set({ status: "failed" }).where(eq(transactionsTable.id, tx.id));
+      res.status(502).json({ error: e?.message ?? "eSIM purchase failed. Your wallet was refunded." });
+    }
+  } catch (e: any) {
+    res.status(400).json({ error: e?.message ?? "Could not purchase eSIM." });
+  }
+});
+
+router.get("/sms/esim/history", async (_req, res) => {
+  try { res.json(await esimHistory()); }
+  catch (e: any) { res.status(502).json({ error: e?.message ?? "eSIM history unavailable" }); }
+});
+
+router.get("/sms/esim/profile", async (req, res) => {
+  const esim = String(req.query.esim ?? "");
+  if (!esim) { res.status(400).json({ error: "eSIM identifier is required." }); return; }
+  try { res.json(await esimProfile(esim)); }
+  catch (e: any) { res.status(502).json({ error: e?.message ?? "eSIM profile unavailable" }); }
+});
+
+router.get("/sms/rentals/stock", async (_req, res) => {
+  try { res.json(await rentalStock()); }
+  catch (e: any) { res.status(502).json({ error: e?.message ?? "Rental stock unavailable" }); }
+});
+
+router.get("/sms/rentals/active", async (_req, res) => {
+  try { res.json(await rentalActive()); }
+  catch (e: any) { res.status(502).json({ error: e?.message ?? "Active rentals unavailable" }); }
+});
+
+router.get("/sms/rentals/messages", async (req, res) => {
+  const code = String(req.query.code ?? "");
+  if (!code) { res.status(400).json({ error: "Rental code is required." }); return; }
+  try { res.json(await rentalMessages(code)); }
+  catch (e: any) { res.status(502).json({ error: e?.message ?? "Rental messages unavailable" }); }
+});
+
+router.post("/sms/rentals/auto-extend", async (req, res) => {
+  const code = String(req.body?.code ?? "");
+  if (!code) { res.status(400).json({ error: "Rental code is required." }); return; }
+  try { res.json(await rentalAutoExtend(code)); }
+  catch (e: any) { res.status(502).json({ error: e?.message ?? "Could not update auto-extension" }); }
+});
 
 export default router;

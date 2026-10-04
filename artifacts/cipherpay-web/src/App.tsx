@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AnimatedDialogProvider, useAnimatedDialog } from './components/animated-dialog';
 import SmsVerification from './pages/SmsVerification';
+import SmsPoolExtrasPage from './pages/SmsPoolExtrasPage';
 import TemporaryEmail from './pages/TemporaryEmail';
 import { KycPage } from './pages/KycPage';
 import { SupportPage } from './pages/SupportPage';
@@ -63,6 +64,7 @@ const nav = [
   { href: '/chat', label: 'Find & chat', icon: MessageSquare },
   { href: '/data', label: 'Data bundles', icon: Wifi },
   { href: '/sms', label: 'SMS verification', icon: MessageSquare },
+  { href: '/sms-extras', label: 'International eSIM & rentals', icon: Globe2 },
   { href: '/temporary-email', label: 'Temporary email', icon: Globe2 },
   { href: '/services', label: 'Services', icon: Layers3 },
   { href: '/crypto', label: 'Crypto', icon: Coins },
@@ -1975,6 +1977,7 @@ function App() {
             <Route path="/bills/:category/:provider"><ProtectedArea><BillProviderPage /></ProtectedArea></Route>
             <Route path="/data"><ProtectedArea><DataBundlesPage /></ProtectedArea></Route>
             <Route path="/sms"><ProtectedArea><SmsVerification /></ProtectedArea></Route>
+            <Route path="/sms-extras"><ProtectedArea><SmsPoolExtrasPage /></ProtectedArea></Route>
             <Route path="/temporary-email"><ProtectedArea><TemporaryEmail /></ProtectedArea></Route>
             <Route path="/services"><ProtectedArea><ServicesPage /></ProtectedArea></Route>
             <Route path="/social-boost"><ProtectedArea><SocialBoostPage /></ProtectedArea></Route>
