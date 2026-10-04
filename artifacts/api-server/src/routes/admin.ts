@@ -17,7 +17,6 @@ import {
   supportMessagesTable,
   sessionsTable,
 } from "@workspace/db";
-import { revokeAllExcept } from "../lib/sessions";
 import { gt, ne } from "drizzle-orm";
 import { signAdminToken, requireAdmin, type AdminRequest } from "../lib/admin-auth";
 import { creditWallet, debitWallet, formatTransaction } from "../lib/wallet";
