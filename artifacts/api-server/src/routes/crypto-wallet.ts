@@ -1,17 +1,6 @@
 import { Router, type IRouter } from "express";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
-import { createRequire } from "node:module";
-const require = createRequire(import.meta.url);
-const ethersModule = require("./vendor/ethers.umd.min.cjs") as any;
-const ethers = ethersModule.ethers || ethersModule.default?.ethers || ethersModule.default || ethersModule;
-const Wallet = ethers.Wallet || ethersModule.Wallet;
-const JsonRpcProvider = ethers.JsonRpcProvider;
-const Contract = ethers.Contract;
-const formatUnits = ethers.formatUnits;
-const formatEther = ethers.formatEther;
-const parseUnits = ethers.parseUnits;
-const parseEther = ethers.parseEther;
-const isAddress = ethers.isAddress;
+import { Wallet, JsonRpcProvider, Contract, formatUnits, formatEther, parseUnits, parseEther, isAddress } from "ethers";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
@@ -191,7 +180,7 @@ router.post("/crypto/send", async (req,res):Promise<void> => {
     const token = TOKENS[tokenKey];
     if (token) {
       decimals = token.decimals;
-      const contract = new ethers.Contract(token.address, ERC20_ABI, signer);
+      const contract = new Contract(token.address, ERC20_ABI, signer);
       tx = await contract.transfer(to, parseUnits(String(amount), decimals));
     } else {
       if (asset !== NETWORKS[network].native) { res.status(400).json({error:`{asset} is not supported on {network} yet.`.replace("{asset}",asset).replace("{network}",network)}); return; }
