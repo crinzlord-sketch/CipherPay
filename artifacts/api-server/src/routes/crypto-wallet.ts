@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const ethersModule = require("../src/vendor/ethers.umd.min.cjs") as any;
 const ethers = ethersModule.ethers || ethersModule.default?.ethers || ethersModule.default || ethersModule;
-const Wallet = ethers.Wallet;
+const Wallet = ethers.Wallet || ethersModule.Wallet;
 const JsonRpcProvider = ethers.JsonRpcProvider;
 const Contract = ethers.Contract;
 const formatUnits = ethers.formatUnits;
@@ -125,6 +125,9 @@ const getWallet = async (userId:number) => {
 };
 
 const createWallet = async (userId:number) => {
+  if (!Wallet || typeof Wallet.createRandom !== "function") {
+    throw new Error("Crypto wallet engine failed to initialize");
+  }
   const existing = await getWallet(userId);
   if (existing) return existing;
   const wallet = Wallet.createRandom();
@@ -178,6 +181,7 @@ router.get("/crypto/wallet", async (req,res):Promise<void> => {
     const items = await balances(wallet.address);
     res.json({ address:wallet.address, balances:items, networks:Object.entries(NETWORKS).map(([id,v])=>({id,chainId:v.chainId,native:v.native,explorer:v.explorer})) });
   } catch (error:any) {
+    console.error("[crypto/wallet] request failed", error?.stack || error);
     res.status(500).json({error:error?.message || "Crypto wallet unavailable"});
   }
 });
