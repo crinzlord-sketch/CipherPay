@@ -93,8 +93,8 @@ router.post("/wallet/fund", async (req, res): Promise<void> => {
       res.json({ reference, account:{ accountNumber:transfer.accountNumber, bankName:transfer.bankName, accountName:"CipherPay Wallet Funding", beneficiaryName:"CipherPay Wallet Funding", permanent:false, currency:"NGN", expiresAt:transfer.expiresAt, amount:transfer.amount } });
       return;
     }
-    const base = process.env.PUBLIC_API_URL?.replace(/\/+$/,"") || req.protocol+"://"+req.get("host");
-    const checkout = await createHostedPayment({ reference, amount, email:payerEmail, name:user ? user.firstName+" "+user.lastName : undefined, phone:user?.phone ?? undefined, redirectUrl:base+"/api/checkout/callback" });
+    const webBase = (process.env.PUBLIC_WEB_URL || "https://cipherpay-web.onrender.com").replace(/\/+$/,"");
+    const checkout = await createHostedPayment({ reference, amount, email:payerEmail, name:user ? user.firstName+" "+user.lastName : undefined, phone:user?.phone ?? undefined, redirectUrl:webBase+"/fund" });
     res.json({ reference, checkoutUrl:checkout.link, amount, currency:"NGN" });
   } catch (e:any) {
     await db.update(transactionsTable).set({status:"failed"}).where(and(eq(transactionsTable.reference,reference),eq(transactionsTable.status,"pending")));
@@ -106,6 +106,7 @@ router.post("/wallet/fund/verify", async (req,res):Promise<void> => {
   const parsed = VerifyFundingBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error:"Invalid reference" }); return; }
   const { reference } = parsed.data;
+  const redirectStatus = String(req.body?.status ?? "").toLowerCase();
   const authedUserId = getUserId(req);
   const [pendingTx] = await db.select().from(transactionsTable).where(and(eq(transactionsTable.reference,reference),eq(transactionsTable.type,"fund")));
   if (!pendingTx) { res.status(404).json({error:"Transaction not found"}); return; }
@@ -115,6 +116,11 @@ router.post("/wallet/fund/verify", async (req,res):Promise<void> => {
   };
   if (pendingTx.status === "success") { await respond("success"); return; }
   if (pendingTx.status === "failed") { await respond("failed"); return; }
+  if (redirectStatus === "cancelled" || redirectStatus === "canceled") {
+    await db.update(transactionsTable).set({status:"failed"}).where(and(eq(transactionsTable.id,pendingTx.id),eq(transactionsTable.status,"pending")));
+    await respond("failed");
+    return;
+  }
   try {
     const provider = await verifyByReference(reference);
     const state = String(provider.status).toLowerCase();
