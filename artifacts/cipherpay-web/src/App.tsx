@@ -36,7 +36,7 @@ import {
 } from '@workspace/api-client-react';
 import { setAuthTokenGetter, setBaseUrl } from '@workspace/api-client-react';
 import {
-  Activity, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Banknote, BarChart3, CalendarDays,
+  Activity, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Banknote, BarChart3, Building2, CalendarDays,
   Bell, Bolt, Check, CircleHelp, Copy, CreditCard, FileText,
   Fingerprint, Globe2, Home, Landmark, LockKeyhole, LogOut, Menu, MessageSquare,
   MoreHorizontal, Coins, Network as NetworkIcon, Plus, Receipt, RefreshCw, Send as SendIcon, Megaphone,
@@ -1282,7 +1282,12 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
 }
 
 function Fund() {
-  const mutation = useFundWallet();
+  const cardState = useState({ cardHolderName: '', cardNumber: '', expiryMonth: '', expiryYear: '', cvv: '' });
+  const [card, setCard] = cardState;
+  const [cardBusy, setCardBusy] = useState(false);
+  const [externalAccount, setExternalAccount] = useState<any>(null);
+  const [externalBusy, setExternalBusy] = useState(false);
+  const [claiming, setClaiming] = useState(false);
   const bankMutation = useFundWalletBankTransfer();
   const [amount, setAmount] = useState('');
   const [channel, setChannel] = useState('card');
@@ -1293,6 +1298,7 @@ function Fund() {
   const routes: Array<{ value: string; icon: any; label: string; note: string }> = [
     { value: 'card', icon: CreditCard, label: 'Debit card', note: 'Instant card payment' },
     { value: 'bank_transfer', icon: Landmark, label: 'Bank transfer', note: 'Get a transfer account' },
+    { value: 'external', icon: Building2, label: 'External bank transfer', note: 'Your personal CipherPay account' },
   ];
 
   useEffect(() => {
@@ -1421,31 +1427,35 @@ function Fund() {
     return 'pending';
   };
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setResult(null);
-    setPaymentStatus('waiting');
-    setTransferOpen(false);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault(); setError(''); setResult(null); setPaymentStatus('waiting'); setTransferOpen(false);
     const requestedAmount = parseGroupedDigits(amount);
-    const mutationToRun: any = channel === 'bank_transfer' ? bankMutation : mutation;
-    mutationToRun.mutate(
-      { data: { amount: requestedAmount, channel } },
-      {
-        onSuccess: (value: any) => {
-          setResult(value);
-          if (value.account) {
-            setPaymentStatus('waiting');
-            setTransferOpen(true);
-          } else if (value.cashierUrl) {
-            window.location.assign(value.cashierUrl);
-          }
-        },
-        onError: (reason: any) => setError(reason?.message ?? 'Could not prepare wallet funding.'),
-      },
-    );
+    if (!requestedAmount || requestedAmount < 100) { setError('Minimum funding amount is ₦100.'); return; }
+    if (channel === 'external') {
+      setExternalBusy(true);
+      try { const payload = await apiRequest<any>('/api/wallet/deposit-account'); setExternalAccount(payload.data ?? payload); setResult({ externalAccount: true }); }
+      catch (e: any) { setError(e?.message ?? 'Could not load your personal bank account.'); }
+      finally { setExternalBusy(false); }
+      return;
+    }
+    if (channel === 'bank_transfer') {
+      bankMutation.mutate({ data: { amount: requestedAmount, channel: 'bank_transfer' } }, {
+        onSuccess: (value: any) => { setResult(value); setTransferOpen(Boolean(value.account)); },
+        onError: (reason: any) => setError(reason?.message ?? 'Could not prepare the bank transfer.'),
+      }); return;
+    }
+    setCardBusy(true);
+    try {
+      const token = useToken();
+      const response = await fetch(apiUrl('/api/wallet/fund/card'), { method:'POST', headers:{'Content-Type':'application/json', ...(token ? { Authorization:'Bearer ' + token } : {})}, credentials:'include', body:JSON.stringify({ amount:requestedAmount, ...card }) });
+      const value = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(value?.error || 'Could not start the card payment.');
+      setResult(value);
+      if (value.redirectUrl) window.location.assign(value.redirectUrl);
+      else if (value.cashierUrl) throw new Error('Hosted checkout was returned unexpectedly. CipherPay is configured for direct card payment.');
+    } catch (e: any) { setError(e?.message ?? 'Could not start the card payment.'); }
+    finally { setCardBusy(false); }
   };
-
   return (
     <>
       <PageTitle eyebrow="MONEY / FUND" title="Add money to your wallet." detail="Choose the route that works for you. Funds appear as soon as they settle." />
@@ -1456,11 +1466,37 @@ function Fund() {
           <div className="amount-chips">{['5000', '10000', '25000', '50000'].map((value) => <button type="button" key={value} onClick={() => setAmount(formatGroupedDigits(value))} className="amount-chip" data-testid={`button-amount-${value}`}>₦{Number(value).toLocaleString()}</button>)}</div>
           <div className="form-section-title with-top"><span className="step">02</span><div><h2>Choose a route</h2><p>Select how you want to pay.</p></div></div>
           <div className="choice-grid">{routes.map(({ value, icon: Icon, label, note }) => <button type="button" key={value} className={`choice-card ${channel === value ? 'selected' : ''}`} onClick={() => setChannel(value)} data-testid={`button-channel-${value}`}><span className="choice-check">{channel === value && <Check size={13} />}</span><span className="choice-icon"><Icon size={19} /></span><b>{label}</b><small>{note}</small></button>)}</div>
+          {channel === 'card' && <div className="card-payment-fields">
+            <div className="form-section-title with-top"><span className="step">03</span><div><h2>Card details</h2><p>Secure card payment. CipherPay does not store your card details.</p></div></div>
+            <Field label="Cardholder name" value={card.cardHolderName} onChange={(e:any) => setCard(v => ({...v, cardHolderName:e.target.value}))} autoComplete="cc-name" required />
+            <Field label="Card number" value={card.cardNumber} onChange={(e:any) => setCard(v => ({...v, cardNumber:e.target.value.replace(/\D/g,'').slice(0,19)}))} inputMode="numeric" autoComplete="cc-number" required />
+            <div className="field-grid-3">
+              <Field label="Expiry month" value={card.expiryMonth} onChange={(e:any) => setCard(v => ({...v, expiryMonth:e.target.value.replace(/\D/g,'').slice(0,2)}))} inputMode="numeric" placeholder="MM" required />
+              <Field label="Expiry year" value={card.expiryYear} onChange={(e:any) => setCard(v => ({...v, expiryYear:e.target.value.replace(/\D/g,'').slice(0,4)}))} inputMode="numeric" placeholder="YY" required />
+              <Field label="CVV" value={card.cvv} onChange={(e:any) => setCard(v => ({...v, cvv:e.target.value.replace(/\D/g,'').slice(0,4)}))} inputMode="numeric" autoComplete="cc-csc" required />
+            </div>
+          </div>}
+          {channel === 'external' && externalAccount && <div className="panel" style={{marginTop:20,padding:20}}>
+            <div className="eyebrow">YOUR CIPHERPAY ACCOUNT</div>
+            <h3 style={{margin:'8px 0'}}>Transfer to your personal account</h3>
+            <div className="transfer-account-grid">
+              <div><small>Bank</small><b>{externalAccount.bankName ?? externalAccount.bank?.name ?? '—'}</b></div>
+              <div><small>Account name</small><b>{externalAccount.accountName ?? externalAccount.account?.name ?? '—'}</b></div>
+              <div><small>Account number</small><b>{externalAccount.accountNumber ?? externalAccount.account?.number ?? '—'}</b></div>
+            </div>
+            <Button type="button" className="full-btn" disabled={claiming} onClick={async () => {
+              const requestedAmount = parseGroupedDigits(amount);
+              if (!requestedAmount || requestedAmount < 100) { setError('Enter the transferred amount first.'); return; }
+              setClaiming(true); setError('');
+              try { const token=useToken(); const response=await fetch(apiUrl('/api/wallet/deposit/claim'),{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},credentials:'include',body:JSON.stringify({amount:requestedAmount})}); const payload=await response.json().catch(()=>null); if(!response.ok) throw new Error(payload?.error || 'Could not submit the transfer claim.'); setPaymentStatus('success'); void queryClient.invalidateQueries({queryKey:['/api/wallet']}); }
+              catch(e:any){setError(e?.message || 'Could not submit the transfer claim.');} finally{setClaiming(false);}
+            }}>{claiming ? 'Submitting…' : 'I’ve sent the transfer'} <Check size={17} /></Button>
+          </div>}
           {error && <div className="error-box" role="alert">{error}</div>}
           {paymentStatus === 'success' && <div className="success-box transfer-funding-success" role="status"><Check size={20} /><div><b>Funding successful</b><span>{money.format(parseGroupedDigits(amount))} has been added to your CipherPay wallet.</span></div></div>}
           {paymentStatus === 'failed' && <div className="error-box" role="alert">This card payment could not be completed. Your wallet was not credited.</div>}
           {paymentStatus === 'cancelled' && <div className="error-box funding-cancelled-box" role="status"><X size={20} /><div><b>Payment cancelled</b><span>Your card payment was cancelled. Your wallet was not credited.</span></div></div>}
-          {!result?.account && paymentStatus !== 'success' && paymentStatus !== 'cancelled' && <Button type="submit" className="full-btn" disabled={!amount || mutation.isPending || bankMutation.isPending} data-testid="button-fund-submit">{mutation.isPending || bankMutation.isPending ? 'Preparing…' : 'Continue to funding'} <ArrowRight size={17} /></Button>}
+          {!result?.account && paymentStatus !== 'success' && paymentStatus !== 'cancelled' && <Button type="submit" className="full-btn" disabled={!amount || cardBusy || bankMutation.isPending || externalBusy} data-testid="button-fund-submit">{cardBusy || bankMutation.isPending || externalBusy ? 'Preparing…' : channel === 'card' ? 'Pay securely' : channel === 'bank_transfer' ? 'Generate transfer account' : 'Show my account'} <ArrowRight size={17} /></Button>}
         </form>
         <div className="side-note"><span className="side-note-icon"><ShieldCheck size={20} /></span><h3>Built for peace of mind.</h3><p>Every transaction is encrypted and your funds stay visible at every step.</p><div className="side-rule" /><b style={{display:'block',marginBottom:6}}>Funding limit</b><span style={{fontSize:12,lineHeight:1.5}}>Minimum deposit: ₦100.</span><div className="side-rule" /><span className="mono">CIPHER / OPAY-SECURE</span></div>
       </div>
