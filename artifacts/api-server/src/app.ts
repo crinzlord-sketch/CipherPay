@@ -3,6 +3,8 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { flutterwaveWebhookHandler } from "./routes/webhooks";
+import { verifyCallbackSignature } from "./lib/opay";
+import { creditOpayFunding } from "./routes/wallet";
 import { logger } from "./lib/logger";
 import { verifyToken } from "./lib/auth";
 import { verifyAdminToken } from "./lib/admin-auth";
@@ -132,6 +134,53 @@ app.get("/api/brand/cipherpay-preview.png", (_req: Request, res: Response): void
 // Flutterwave webhook (charge.completed / transfer.completed). Authenticity is a
 // `verif-hash` header compare (not a body HMAC), so a parsed JSON body is fine.
 app.post("/api/webhooks/flutterwave", flutterwaveWebhookHandler);
+
+app.post("/api/webhooks/opay", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const payload = req.body?.payload ?? {};
+    const sha512 = String(req.body?.sha512 ?? "");
+    const reference = String(payload.reference ?? "");
+    if (!reference || !sha512 || !verifyCallbackSignature({
+      amount: String(payload.amount ?? ""),
+      currency: String(payload.currency ?? ""),
+      reference,
+      refunded: Boolean(payload.refunded),
+      status: String(payload.status ?? ""),
+      timestamp: String(payload.timestamp ?? ""),
+      token: payload.token ?? "",
+      transactionId: String(payload.transactionId ?? ""),
+      sha512,
+    })) {
+      res.status(401).json({ error: "Invalid callback signature" });
+      return;
+    }
+
+    const status = String(payload.status ?? "").toUpperCase();
+    if (status === "SUCCESS") {
+      await creditOpayFunding(reference, {
+        amount: Number(payload.amount ?? 0) / 100,
+        currency: String(payload.currency ?? "NGN"),
+        orderNo: String(payload.transactionId ?? ""),
+      });
+    } else if (["FAIL", "CLOSE"].includes(status)) {
+      const { db, transactionsTable } = await import("@workspace/db");
+      const { and, eq } = await import("drizzle-orm");
+      await db.update(transactionsTable).set({ status: "failed" })
+        .where(and(eq(transactionsTable.reference, reference), eq(transactionsTable.type, "fund"), eq(transactionsTable.status, "pending")));
+    }
+    res.json({ code: "00000", message: "SUCCESS" });
+  } catch (error: any) {
+    req.log?.warn?.({ err: error?.message }, "OPay webhook processing failed");
+    res.status(500).json({ error: "Webhook processing failed" });
+  }
+});
+
+app.get("/api/opay/return", (req: Request, res: Response): void => {
+  const reference = String(req.query.reference ?? "");
+  const target = process.env.PUBLIC_WEB_URL?.replace(/\/+$/, "") || "/";
+  const destination = reference ? `${target}/fund?opay_reference=${encodeURIComponent(reference)}` : `${target}/fund`;
+  res.redirect(302, destination);
+});
 
 // Hosted-checkout return page. Flutterwave redirects the in-app WebView here
 // after payment with ?status=&tx_ref=&transaction_id=. The mobile client detects
