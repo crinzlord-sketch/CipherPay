@@ -3,7 +3,7 @@ import { eq, desc } from "drizzle-orm";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
-const ethers = require("../vendor/ethers.umd.min.js") as any;
+const ethers = require("../src/vendor/ethers.umd.min.js") as any;
 import bcrypt from "bcryptjs";
 import { db, usersTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
