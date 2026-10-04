@@ -5,7 +5,8 @@ import { db, walletsTable, transactionsTable, usersTable } from "@workspace/db";
 import { FundWalletBody, VerifyFundingBody, WalletTransferBody, WithdrawFundsBody, ListTransactionsQueryParams, ClaimDepositBody } from "@workspace/api-zod";
 import { getOrCreateWallet, creditWallet, debitWallet, formatWallet, formatTransaction } from "../lib/wallet";
 import { generateReference } from "../lib/auth";
-import { initiatePayment, verifyByReference, createTransfer, initiateBankTransfer, friendlyFlwError } from "../lib/flutterwave";
+import { createTransfer, initiateBankTransfer, friendlyFlwError } from "../lib/flutterwave";
+import { createCashierPayment, createBankTransferPayment, friendlyOpayError, opayReference, queryPaymentStatus } from "../lib/opay";
 import { ensureUserPayoutWallet } from "../lib/payout-wallet";
 import { notifyUser } from "../lib/notifications";
 import { checkDepositLimit, checkPerTxLimitSync, getDepositFlagReason } from "../lib/kycLimits";
@@ -136,6 +137,52 @@ router.post("/wallet/deposit/claim", async (req, res): Promise<void> => {
   });
 });
 
+async function creditOpayFunding(reference: string, providerStatus?: { amount: number; currency: string; orderNo?: string }) {
+  const [pendingTx] = await db.select().from(transactionsTable)
+    .where(and(eq(transactionsTable.reference, reference), eq(transactionsTable.type, "fund")));
+  if (!pendingTx || pendingTx.status !== "pending") return { credited: false, transaction: pendingTx ?? null };
+
+  const expectedAmount = parseFloat(pendingTx.amount);
+  if (providerStatus) {
+    if (providerStatus.currency !== "NGN" || providerStatus.amount + 0.001 < expectedAmount) {
+      throw new Error("OPay amount or currency mismatch");
+    }
+  }
+  if (pendingTx.isFlagged) return { credited: false, transaction: pendingTx, flagged: true };
+
+  await getOrCreateWallet(pendingTx.userId);
+  const credited = await db.transaction(async (tx) => {
+    const updated = await tx.update(transactionsTable)
+      .set({ status: "success", metadata: sql`jsonb_set(COALESCE(metadata::jsonb, '{}'::jsonb), '{provider}', '"opay"'::jsonb)::text` })
+      .where(and(eq(transactionsTable.id, pendingTx.id), eq(transactionsTable.status, "pending")))
+      .returning({ id: transactionsTable.id });
+    if (!updated.length) return false;
+    const [w] = await tx.update(walletsTable)
+      .set({
+        balance: sql`${walletsTable.balance} + ${expectedAmount}`,
+        ledgerBalance: sql`${walletsTable.ledgerBalance} + ${expectedAmount}`,
+      })
+      .where(eq(walletsTable.userId, pendingTx.userId))
+      .returning({ balance: walletsTable.balance });
+    const balanceAfter = parseFloat(w.balance);
+    await tx.update(transactionsTable).set({
+      balanceBefore: (balanceAfter - expectedAmount).toFixed(2),
+      balanceAfter: balanceAfter.toFixed(2),
+    }).where(eq(transactionsTable.id, pendingTx.id));
+    return true;
+  });
+  if (credited) {
+    await notifyUser({
+      userId: pendingTx.userId,
+      type: "transaction",
+      title: "Wallet funded ✓",
+      body: `₦${expectedAmount.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been added to your CipherPay wallet.`,
+      link: "/transactions",
+    }).catch(() => {});
+  }
+  return { credited, transaction: pendingTx };
+}
+
 router.post("/wallet/fund", async (req, res): Promise<void> => {
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -145,14 +192,6 @@ router.post("/wallet/fund", async (req, res): Promise<void> => {
 
   const { amount, email, channel } = parsed.data;
   if (!Number.isFinite(amount) || amount < 100) { res.status(400).json({ error: "Amount must be at least ₦100" }); return; }
-  // Bank-transfer funding is handled in-app via our fixed account. This hosted
-  // checkout path now supports card only.
-  if (channel !== "card") {
-    res.status(400).json({ error: "Choose debit card or use the bank transfer funding option." });
-    return;
-  }
-  const paymentOptions = "card";
-  const reference = generateReference("FUND");
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
   const payerEmail = email || user?.email;
@@ -161,213 +200,138 @@ router.post("/wallet/fund", async (req, res): Promise<void> => {
   const depositLimitError = await checkDepositLimit(userId, user?.kycLevel ?? 0, amount);
   if (depositLimitError) { res.status(400).json({ error: depositLimitError }); return; }
   const flagReason = getDepositFlagReason(user?.kycLevel ?? 0, amount);
+  const reference = opayReference(String(userId));
 
-  // Prefer the configured public API URL for external deployments. The
-  // Replit-injected domain remains a development fallback.
-  const configuredApiUrl = process.env.PUBLIC_API_URL?.replace(/\/+$/, "");
-  const replitDomain =
-    process.env.REPLIT_DEV_DOMAIN ??
-    (process.env.REPLIT_DOMAINS ? process.env.REPLIT_DOMAINS.split(",")[0] : undefined);
-  const host = replitDomain ?? (req.headers["x-forwarded-host"] as string) ?? req.get("host") ?? "localhost";
-  const proto = replitDomain ? "https" : ((req.headers["x-forwarded-proto"] as string) ?? req.protocol ?? "https");
-  const redirectUrl = configuredApiUrl
-    ? `${configuredApiUrl}/api/checkout/callback`
-    : `${proto}://${host}/api/checkout/callback`;
+  await db.insert(transactionsTable).values({
+    userId,
+    type: "fund",
+    amount: amount.toFixed(2),
+    status: "pending",
+    reference,
+    description: flagReason ? "Wallet funding via OPay — held for KYC review" : "Wallet funding via OPay",
+    isFlagged: Boolean(flagReason),
+    flagReason,
+    metadata: JSON.stringify({ provider: "opay", email: payerEmail, channel, heldForKyc: Boolean(flagReason) }),
+  });
 
+  const configuredApiUrl = process.env.PUBLIC_API_URL?.replace(/\/+$/, "") || `${req.protocol}://${req.get("host")}`;
+  const callbackUrl = `${configuredApiUrl}/api/webhooks/opay`;
+  const returnUrl = `${configuredApiUrl}/api/opay/return`;
   try {
-    // Persist the exact funding values first. The checksum returned below is
-    // generated from these server-controlled values, never from browser input.
-    await db.insert(transactionsTable).values({
-      userId,
-      type: "fund",
-      amount: amount.toFixed(2),
-      status: "pending",
-      reference,
-      description: flagReason ? "Wallet funding via card — held for KYC review" : "Wallet funding via card",
-      isFlagged: Boolean(flagReason),
-      flagReason,
-      metadata: JSON.stringify({ provider: "flutterwave", email: payerEmail, channel: "card", heldForKyc: Boolean(flagReason) }),
-    });
-
-    const init = await initiatePayment({
-      amount,
-      email: payerEmail,
-      reference,
-      name: user ? `${user.firstName} ${user.lastName}` : undefined,
-      meta: { userId },
-      paymentOptions,
-    });
-    if (flagReason) {
-      await notifyUser({
-        userId, type: "warning", title: "Deposit held for KYC review",
-        body: `Your ₦${amount.toLocaleString()} payment will remain held because ${flagReason.toLowerCase()} Complete your KYC and an admin will review and release it.`,
-        link: `/transactions`,
-      }).catch(() => {});
+    if (channel === "bank_transfer") {
+      const transfer = await createBankTransferPayment({
+        reference, amount, callbackUrl, returnUrl,
+        email: payerEmail,
+        name: user ? `${user.firstName} ${user.lastName}` : undefined,
+        phone: user?.phone ?? undefined,
+      });
+      res.json({
+        reference: transfer.reference,
+        account: {
+          accountNumber: transfer.accountNumber,
+          bankName: transfer.bankName,
+          accountName: "CipherPay Wallet Funding",
+          beneficiaryName: "CipherPay Wallet Funding",
+          permanent: false,
+          currency: "NGN",
+          expiresAt: transfer.expiresAt,
+          amount: transfer.amount,
+          note: "Send the exact amount shown. OPay will confirm the transfer automatically.",
+        },
+      });
+      return;
     }
 
-    // Inline checkout receives only server-generated values. There is no
-    // hosted authorization URL, so the customer stays inside CipherPay's flow.
+    const cashier = await createCashierPayment({
+      reference, amount, email: payerEmail,
+      name: user ? `${user.firstName} ${user.lastName}` : undefined,
+      phone: user?.phone ?? undefined, callbackUrl, returnUrl,
+    });
     res.json({
-      reference: init.reference,
-      publicKey: init.publicKey,
-      payloadHash: init.payloadHash,
-      amount: init.amount,
-      currency: init.currency,
-      accessCode: reference,
-      customer: { email: init.email, name: user ? `${user.firstName} ${user.lastName}` : undefined },
+      reference: cashier.reference,
+      cashierUrl: cashier.cashierUrl,
+      amount: cashier.amount,
+      currency: "NGN",
+      customer: { email: payerEmail, name: user ? `${user.firstName} ${user.lastName}` : undefined },
     });
   } catch (e: any) {
-    req.log?.warn?.({ err: e?.message }, "card/checkout fund init failed");
-    res.status(502).json({ error: friendlyFlwError(e?.message) });
+    await db.update(transactionsTable).set({ status: "failed" }).where(and(eq(transactionsTable.reference, reference), eq(transactionsTable.status, "pending")));
+    req.log?.warn?.({ err: e?.message, reference }, "OPay funding init failed");
+    res.status(502).json({ error: friendlyOpayError(e?.message) });
   }
 });
 
-// Bank-transfer funding: generate a temporary deposit account the user pays into
-// from their own bank app. The wallet is credited by the charge.completed
-// webhook (and the verify endpoint, which the client polls). Same pending fund
-// transaction model as hosted checkout — keyed by `reference`.
 router.post("/wallet/fund/bank-transfer", async (req, res): Promise<void> => {
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const amount = Number(req.body?.amount);
+  if (!Number.isFinite(amount) || amount < 100) { res.status(400).json({ error: "Amount must be at least ₦100" }); return; }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+  const email = user?.email;
+  if (!email) { res.status(400).json({ error: "Email is required for payment" }); return; }
+  const limitError = await checkDepositLimit(userId, user?.kycLevel ?? 0, amount);
+  if (limitError) { res.status(400).json({ error: limitError }); return; }
+  const reference = opayReference(String(userId));
+  const flagReason = getDepositFlagReason(user?.kycLevel ?? 0, amount);
+  await db.insert(transactionsTable).values({
+    userId, type: "fund", amount: amount.toFixed(2), status: "pending", reference,
+    description: flagReason ? "Wallet funding via OPay bank transfer — held for KYC review" : "Wallet funding via OPay bank transfer",
+    isFlagged: Boolean(flagReason), flagReason,
+    metadata: JSON.stringify({ provider: "opay", channel: "bank_transfer", email, heldForKyc: Boolean(flagReason) }),
+  });
+  const configuredApiUrl = process.env.PUBLIC_API_URL?.replace(/\/+$/, "") || `${req.protocol}://${req.get("host")}`;
   try {
-    const payout = await ensureUserPayoutWallet(userId);
-    const personName = `${payout.user.firstName} ${payout.user.lastName}`.trim();
-    const accountName = `CipherPay - ${personName}`;
-    res.json({
-      reference: null,
-      account: {
-        accountNumber: payout.accountNumber,
-        bankName: payout.bankName,
-        accountName,
-        beneficiaryName: accountName,
-        permanent: true,
-        currency: "NGN",
-      },
+    const transfer = await createBankTransferPayment({
+      reference, amount, callbackUrl: `${configuredApiUrl}/api/webhooks/opay`,
+      returnUrl: `${configuredApiUrl}/api/opay/return`, email,
+      name: `${user.firstName} ${user.lastName}`, phone: user.phone ?? undefined,
     });
+    res.json({ reference: transfer.reference, account: {
+      accountNumber: transfer.accountNumber, bankName: transfer.bankName,
+      accountName: "CipherPay Wallet Funding", beneficiaryName: "CipherPay Wallet Funding",
+      permanent: false, currency: "NGN", expiresAt: transfer.expiresAt, amount: transfer.amount,
+      note: "Send the exact amount shown. OPay will confirm the transfer automatically.",
+    }});
   } catch (e: any) {
-    req.log?.warn?.({ userId, err: e?.message }, "payout wallet funding account failed");
-    res.status(502).json({ error: friendlyFlwError(e?.message) });
+    await db.update(transactionsTable).set({ status: "failed" }).where(and(eq(transactionsTable.reference, reference), eq(transactionsTable.status, "pending")));
+    req.log?.warn?.({ err: e?.message, reference }, "OPay bank transfer init failed");
+    res.status(502).json({ error: friendlyOpayError(e?.message) });
   }
 });
 
 router.post("/wallet/fund/verify", async (req, res): Promise<void> => {
   const parsed = VerifyFundingBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("; ") }); return; }
-
   const { reference } = parsed.data;
   const authedUserId = getUserId(req);
-
-  // Look up by reference AND type='fund' — the reference is unguessable and acts
-  // as the auth token for the unauthenticated Flutterwave callback path. The type
-  // guard prevents this endpoint from ever mutating a non-fund row (e.g. a pending
-  // withdrawal), which would otherwise be marked failed here without a refund.
-  // Authenticated callers get their full wallet back; unauthenticated callers get
-  // only {status, reference}.
   const [pendingTx] = await db.select().from(transactionsTable)
     .where(and(eq(transactionsTable.reference, reference), eq(transactionsTable.type, "fund")));
   if (!pendingTx) { res.status(404).json({ error: "Transaction not found" }); return; }
-
-  const txUserId = pendingTx.userId;
-  const respond = async (status: "success" | "failed") => {
-    if (authedUserId && authedUserId === txUserId) {
-      const wallet = await getOrCreateWallet(txUserId);
+  const respond = async (status: "success" | "failed" | "pending") => {
+    if (authedUserId && authedUserId === pendingTx.userId) {
+      const wallet = await getOrCreateWallet(pendingTx.userId);
       res.json({ status, reference, ...formatWallet(wallet) });
-    } else {
-      res.json({ status, reference });
-    }
+    } else res.json({ status, reference });
   };
-
   if (pendingTx.status === "success") { await respond("success"); return; }
-  if (pendingTx.status === "failed")  { await respond("failed");  return; }
+  if (pendingTx.status === "failed") { await respond("failed"); return; }
 
-  // Verify with Flutterwave
-  let flwTx;
   try {
-    flwTx = await verifyByReference(reference);
-  } catch (e: any) {
-    req.log?.warn?.({ err: e?.message, reference }, "wallet fund verify failed");
-    res.status(502).json({ error: friendlyFlwError(e?.message) });
-    return;
-  }
-  if (flwTx.status !== "successful") {
-    // Only mark failed on a TERMINAL provider failure. For a non-final status
-    // (e.g. still "pending" at Flutterwave when the user returns early), leave the
-    // row pending so the later charge.completed webhook can finalize and credit
-    // it — marking it failed here would permanently block that webhook credit.
-    const terminalFailure = ["failed", "cancelled", "error"].includes(String(flwTx.status).toLowerCase());
-    if (terminalFailure) {
-      await db.update(transactionsTable).set({ status: "failed" })
-        .where(and(eq(transactionsTable.id, pendingTx.id), eq(transactionsTable.status, "pending")));
-      res.status(400).json({ error: `Payment failed (status: ${flwTx.status})` });
+    const provider = await queryPaymentStatus(reference);
+    if (provider.status === "SUCCESS") {
+      await creditOpayFunding(reference, provider);
+      await respond("success");
       return;
     }
-    // Non-final: keep pending, tell the client to wait for confirmation.
-    res.status(202).json({ status: "pending", reference, error: "Payment not yet confirmed — we'll credit your wallet once it settles." });
-    return;
-  }
-
-  // Integrity checks — must match our stored expectation before crediting.
-  // Flutterwave reports the charged amount directly in naira (not kobo).
-  const expectedAmount = parseFloat(pendingTx.amount);
-  if (flwTx.amount + 0.001 < expectedAmount) {
-    res.status(400).json({ error: "Amount mismatch — payment rejected" });
-    return;
-  }
-  if (flwTx.currency !== "NGN") {
-    res.status(400).json({ error: "Currency mismatch — payment rejected" });
-    return;
-  }
-
-  if (pendingTx.isFlagged) {
-    res.status(202).json({
-      status: "pending",
-      reference,
-      flagged: true,
-      message: "Payment received and held for KYC review. An admin will release it after your verification is complete.",
-    });
-    return;
-  }
-
-  // Ensure the wallet row exists before the atomic increment below.
-  await getOrCreateWallet(txUserId);
-
-  // Atomic credit: only the request that flips pending->success may credit. The
-  // balance is incremented with a single SQL expression (no read-modify-write of
-  // an absolute value), so concurrent credits cannot lose updates.
-  try {
-    const credited = await db.transaction(async (tx) => {
-      const updated = await tx.update(transactionsTable)
-        .set({ status: "success" })
-        .where(and(eq(transactionsTable.id, pendingTx.id), eq(transactionsTable.status, "pending")))
-        .returning({ id: transactionsTable.id });
-      if (updated.length === 0) return false; // another request won the race
-
-      const [w] = await tx.update(walletsTable)
-        .set({
-          balance: sql`${walletsTable.balance} + ${expectedAmount}`,
-          ledgerBalance: sql`${walletsTable.ledgerBalance} + ${expectedAmount}`,
-        })
-        .where(eq(walletsTable.userId, txUserId))
-        .returning({ balance: walletsTable.balance });
-      const balanceAfter = parseFloat(w.balance);
-      const balanceBefore = balanceAfter - expectedAmount;
-      await tx.update(transactionsTable).set({
-        balanceBefore: balanceBefore.toFixed(2),
-        balanceAfter: balanceAfter.toFixed(2),
-      }).where(eq(transactionsTable.id, pendingTx.id));
-      return true;
-    });
-    if (credited) {
-      await notifyUser({
-        userId: txUserId, type: "transaction",
-        title: "Wallet funded ✓",
-        body: `₦${expectedAmount.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been added to your CipherPay wallet.`,
-        link: `/transactions`,
-      }).catch(() => {});
+    if (["FAIL", "CLOSE"].includes(provider.status)) {
+      await db.update(transactionsTable).set({ status: "failed" }).where(and(eq(transactionsTable.id, pendingTx.id), eq(transactionsTable.status, "pending")));
+      await respond("failed");
+      return;
     }
-    await respond("success");
+    res.status(202).json({ status: "pending", reference, error: "Payment not yet confirmed — we'll credit your wallet once it settles." });
   } catch (e: any) {
-    res.status(502).json({ error: e?.message ?? "Crediting failed" });
+    req.log?.warn?.({ err: e?.message, reference }, "OPay funding verification failed");
+    res.status(502).json({ error: friendlyOpayError(e?.message) });
   }
 });
 
