@@ -337,6 +337,8 @@ export async function rentalStock(): Promise<any[]> {
       isRefundable: Number(item?.is_refundable ?? 0),
       refundWithinHours: Number(item?.refund_within ?? 0),
       refundMinDays: Number(item?.refund_min_days ?? 0),
+      stock: Number(item?.stock ?? item?.available ?? item?.quantity ?? item?.count ?? item?.available_stock ?? 0),
+      stockKnown: item?.stock !== undefined || item?.available !== undefined || item?.quantity !== undefined || item?.count !== undefined || item?.available_stock !== undefined,
     };
   }).filter((item: any) => item.id && item.name);
 }
