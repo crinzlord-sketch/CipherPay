@@ -1388,10 +1388,10 @@ function Fund() {
     return 'pending';
   };
 
-  const launchCardCheckout = (value: any, requestedAmount: number) => {
-    // Never fall back to the hosted checkout. That route opens a separate
-    // Flutterwave browser page and bypasses CipherPay's intended inline UX.
-    if (!value.publicKey || !value.payloadHash) {
+  const launchCardCheckout = (value: any) => {
+    // Card checkout must use the exact amount/email/reference that the API
+    // signed. Never recompute these values from the browser form.
+    if (!value.publicKey || !value.payloadHash || !value.amount || !value.currency || !value.customer?.email || !value.reference) {
       setError('Secure card checkout is not configured yet. Please try again shortly.');
       return;
     }
@@ -1404,12 +1404,12 @@ function Fund() {
     flutterwaveRef.current = (window as any).FlutterwaveCheckout({
       public_key: value.publicKey,
       tx_ref: value.reference,
-      amount: requestedAmount,
-      currency: 'NGN',
+      amount: value.amount,
+      currency: value.currency,
       payment_options: 'card',
       payload_hash: value.payloadHash,
       customer: {
-        email: value.customer?.email,
+        email: value.customer.email,
         name: value.customer?.name || undefined,
       },
       customizations: {
@@ -1431,8 +1431,8 @@ function Fund() {
         flutterwaveRef.current = null;
 
         if (incomplete === true) {
-          setPaymentStatus('cancelled');
-          await verifyCard(value.reference);
+          const status = await verifyCard(value.reference);
+          if (status !== 'success') setPaymentStatus('cancelled');
           window.setTimeout(() => {
             setResult(null);
             setPaymentStatus('waiting');
@@ -1461,8 +1461,8 @@ function Fund() {
           if (value.account) {
             setPaymentStatus('waiting');
             setTransferOpen(true);
-          } else if (value.authorizationUrl) {
-            launchCardCheckout(value, requestedAmount);
+          } else if (value.publicKey && value.payloadHash) {
+            launchCardCheckout(value);
           }
         },
         onError: (reason: any) => setError(reason?.message ?? 'Could not prepare wallet funding.'),
