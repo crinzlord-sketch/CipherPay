@@ -156,7 +156,7 @@ export async function toNgn(usd: number): Promise<number> {
   return Math.ceil((usd * rate) / 10) * 10;
 }
 
-export async function orderNumber(offer: SmsPoolOffer): Promise<{
+export async function orderNumber(offer: SmsPoolOffer, activationType: "SMS" | "VOICE" | "FLASH" = "SMS"): Promise<{
   orderId: string;
   number: string;
   expiresIn: number;
@@ -168,7 +168,7 @@ export async function orderNumber(offer: SmsPoolOffer): Promise<{
     max_price: String(offer.priceUsd),
     pricing_option: "0",
     quantity: "1",
-    activation_type: "SMS",
+    activation_type: activationType,
   };
   let response: Record<string, unknown>;
   try {
@@ -231,4 +231,56 @@ export async function checkOrder(orderId: string): Promise<{
 export async function cancelOrder(orderId: string): Promise<boolean> {
   const response = await request<Record<string, unknown>>("/sms/cancel", { orderid: orderId });
   return Number(response.success) === 1;
+}
+
+export async function providerPost<T = any>(path: string, fields: Record<string, string | number> = {}): Promise<T> {
+  return request<T>(path, Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, String(v)])));
+}
+
+export async function esimCountries(): Promise<any[]> {
+  return listOf<any>(await request<unknown>("/esim/countries"));
+}
+
+export async function esimPlans(country: string): Promise<any[]> {
+  return listOf<any>(await request<unknown>("/esim/plans", { country }));
+}
+
+export async function esimPurchase(plan: string): Promise<any> {
+  return request<any>("/esim/purchase", { plan, plan_id: plan });
+}
+
+export async function esimHistory(): Promise<any[]> {
+  return listOf<any>(await request<unknown>("/esim/history"));
+}
+
+export async function esimProfile(esim: string): Promise<any> {
+  return request<any>("/esim/profile", { esim });
+}
+
+export async function esimTopup(esim: string, plan: string): Promise<any> {
+  return request<any>("/esim/topup", { esim, plan });
+}
+
+export async function rentalStock(): Promise<any> {
+  return request<any>("/rental/retrieve_stock");
+}
+
+export async function rentalPricing(id: string): Promise<any> {
+  return request<any>("/rental/retrieve_pricing", { id });
+}
+
+export async function rentalOrder(id: string, days: number): Promise<any> {
+  return request<any>("/rental/order", { id, days });
+}
+
+export async function rentalActive(): Promise<any[]> {
+  return listOf<any>(await request<unknown>("/rental/retrieve"));
+}
+
+export async function rentalMessages(rentalCode: string): Promise<any> {
+  return request<any>("/rental/retrieve_messages", { rental_code: rentalCode });
+}
+
+export async function rentalAutoExtend(rentalCode: string): Promise<any> {
+  return request<any>("/rental/auto_extend", { rental_code: rentalCode });
 }
