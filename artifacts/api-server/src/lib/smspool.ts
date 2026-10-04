@@ -313,9 +313,15 @@ export async function esimTopup(esim: string, plan: string): Promise<any> {
 }
 
 export async function rentalStock(): Promise<any[]> {
-  // SMSPool's current rental catalogue endpoint is retrieve_all. It returns
-  // an object keyed by rental ID, so normalize it for the web app.
-  const raw = await request<unknown>("/rental/retrieve_all");
+  let raw: unknown;
+  try {
+    raw = await request<unknown>("/rental/retrieve_all");
+  } catch {
+    // SMSPool's public collection exposes both catalogue variants; keep a
+    // compatibility fallback because accounts can expose one while the other
+    // returns an error.
+    raw = await request<unknown>("/rental/retrieve_stock");
+  }
   if (Array.isArray(raw)) return raw;
   if (raw && typeof raw === "object") {
     return Object.entries(raw as Record<string, unknown>).map(([id, value]) => {
