@@ -194,7 +194,7 @@ export default function CryptoPage(){
         </div>}
 
         {panel==='send'&&<div>
-          <label className="cp-modal-field">Network<select value={network} onChange={e=>setNetwork(e.target.value)}><option value="ethereum">Ethereum</option><option value="base">Base</option><option value="bsc">BNB Smart Chain</option></select></label>
+          <label className="cp-modal-field">Network<select value={network} onChange={e=>setNetwork(e.target.value)}><option value="ethereum">Ethereum</option><option value="base">Base</option><option value="bsc">BNB Smart Chain</option><option value="polygon">Polygon</option></select></label>
           <label className="cp-modal-field">Asset<select value={sendAsset} onChange={e=>setSendAsset(e.target.value)}>{sendableAssets.map(a=><option key={a}>{a}</option>)}</select></label>
           <label className="cp-modal-field">Destination address<input value={sendTo} onChange={e=>setSendTo(e.target.value)} placeholder="0x…" autoCapitalize="none"/></label>
           <label className="cp-modal-field">Amount<input value={sendAmount} onChange={e=>setSendAmount(e.target.value)} inputMode="decimal" placeholder="0.00"/></label>
