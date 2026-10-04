@@ -15,6 +15,7 @@ import emailRouter from "./email";
 import chatRouter from "./chat";
 import referralsRouter from "./referrals";
 import cryptoRouter from "./crypto";
+import cryptoWalletRouter from "./crypto-wallet";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(emailRouter);
 router.use(chatRouter);
 router.use(referralsRouter);
 router.use(cryptoRouter);
+router.use(cryptoWalletRouter);
 
 export default router;
