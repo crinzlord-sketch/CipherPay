@@ -1270,13 +1270,31 @@ function Fund() {
   const [result, setResult] = useState<any>(null);
   const [paymentStatus, setPaymentStatus] = useState<'waiting' | 'success' | 'failed'>('waiting');
   const [transferOpen, setTransferOpen] = useState(false);
-  const [cardCheckoutOpen, setCardCheckoutOpen] = useState(false);
-  const [cardCheckoutUrl, setCardCheckoutUrl] = useState('');
+  const [flutterwaveReady, setFlutterwaveReady] = useState(false);
+  const flutterwaveRef = useRef<any>(null);
   const [error, setError] = useState('');
   const routes: Array<{ value: string; icon: any; label: string; note: string }> = [
     { value: 'card', icon: CreditCard, label: 'Debit card', note: 'Instant card payment' },
     { value: 'bank_transfer', icon: Landmark, label: 'Bank transfer', note: 'Get a transfer account' },
   ];
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (typeof (window as any).FlutterwaveCheckout === 'function') {
+      setFlutterwaveReady(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.flutterwave.com/v3.js';
+    script.async = true;
+    script.dataset.cipherpayFlutterwave = 'true';
+    script.onload = () => setFlutterwaveReady(typeof (window as any).FlutterwaveCheckout === 'function');
+    document.head.appendChild(script);
+    return () => {
+      script.onload = null;
+    };
+  }, []);
+
   useEffect(() => {
     if (!result?.reference || result?.account) return;
     let active = true;
@@ -1290,17 +1308,15 @@ function Fund() {
           credentials: 'include',
           body: JSON.stringify({ reference: result.reference }),
         });
-        const payload = await response.json().catch(() => null) as { status?: string; error?: string } | null;
+        const payload = await response.json().catch(() => null) as { status?: string } | null;
         if (!active) return;
         if (payload?.status === 'success') {
           setPaymentStatus('success');
-          setCardCheckoutOpen(false);
           void queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
           return;
         }
         if (payload?.status === 'failed') {
           setPaymentStatus('failed');
-          setCardCheckoutOpen(false);
           return;
         }
       } catch {}
@@ -1309,23 +1325,6 @@ function Fund() {
     void pollCardPayment();
     return () => { active = false; if (timer) window.clearTimeout(timer); };
   }, [result?.reference, result?.account]);
-
-  useEffect(() => {
-    if (!cardCheckoutOpen) return;
-    const onMessage = (event: MessageEvent) => {
-      if (event.data?.type !== 'cipherpay:checkout-callback') return;
-      if (event.data.status === 'successful' || event.data.status === 'completed') {
-        setPaymentStatus('success');
-        setCardCheckoutOpen(false);
-        void queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
-      } else if (['cancelled', 'canceled', 'failed', 'error'].includes(String(event.data.status || '').toLowerCase())) {
-        setPaymentStatus('failed');
-        setCardCheckoutOpen(false);
-      }
-    };
-    window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
-  }, [cardCheckoutOpen]);
 
   useEffect(() => {
     if (!result?.account || !result.reference) return;
@@ -1355,8 +1354,7 @@ function Fund() {
           return;
         }
       } catch {
-        // The Flutterwave webhook remains the source of truth; transient polling
-        // failures should not tell the user that a valid payment failed.
+        // Flutterwave webhook remains the source of truth.
       }
       if (active) timer = window.setTimeout(() => void pollPayment(), 5000);
     };
@@ -1366,15 +1364,80 @@ function Fund() {
       if (timer) window.clearTimeout(timer);
     };
   }, [result?.account?.accountNumber, result?.reference]);
+
+  const verifyCard = async (reference: string) => {
+    try {
+      const token = useToken();
+      const response = await fetch(apiUrl('/api/wallet/fund/verify'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        credentials: 'include',
+        body: JSON.stringify({ reference }),
+      });
+      const payload = await response.json().catch(() => null) as { status?: string } | null;
+      if (payload?.status === 'success') {
+        setPaymentStatus('success');
+        void queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
+        return 'success';
+      }
+      if (payload?.status === 'failed') {
+        setPaymentStatus('failed');
+        return 'failed';
+      }
+    } catch {}
+    return 'pending';
+  };
+
+  const launchCardCheckout = (value: any, requestedAmount: number) => {
+    if (!value.publicKey) {
+      // Safe fallback for environments that have not configured the public key yet.
+      window.location.assign(value.authorizationUrl);
+      return;
+    }
+    if (!flutterwaveReady || typeof (window as any).FlutterwaveCheckout !== 'function') {
+      setError('Secure card checkout is still loading. Please tap Continue again.');
+      return;
+    }
+
+    setPaymentStatus('waiting');
+    flutterwaveRef.current = (window as any).FlutterwaveCheckout({
+      public_key: value.publicKey,
+      tx_ref: value.reference,
+      amount: requestedAmount,
+      currency: 'NGN',
+      payment_options: 'card',
+      customer: {
+        email: value.customer?.email,
+        name: value.customer?.name || undefined,
+      },
+      customizations: {
+        title: 'CipherPay',
+        description: 'Wallet funding',
+      },
+      callback: async () => {
+        const status = await verifyCard(value.reference);
+        if (status === 'success') {
+          flutterwaveRef.current?.close?.();
+          flutterwaveRef.current = null;
+        }
+      },
+      onclose: async () => {
+        flutterwaveRef.current = null;
+        await verifyCard(value.reference);
+      },
+    });
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setResult(null);
     setPaymentStatus('waiting');
     setTransferOpen(false);
+    const requestedAmount = parseGroupedDigits(amount);
     const mutationToRun: any = channel === 'bank_transfer' ? bankMutation : mutation;
     mutationToRun.mutate(
-      { data: { amount: parseGroupedDigits(amount), channel } },
+      { data: { amount: requestedAmount, channel } },
       {
         onSuccess: (value: any) => {
           setResult(value);
@@ -1382,15 +1445,14 @@ function Fund() {
             setPaymentStatus('waiting');
             setTransferOpen(true);
           } else if (value.authorizationUrl) {
-            setPaymentStatus('waiting');
-            setCardCheckoutUrl(value.authorizationUrl);
-            setCardCheckoutOpen(true);
+            launchCardCheckout(value, requestedAmount);
           }
         },
         onError: (reason: any) => setError(reason?.message ?? 'Could not prepare wallet funding.'),
       },
     );
   };
+
   return (
     <>
       <PageTitle eyebrow="MONEY / FUND" title="Add money to your wallet." detail="Choose the route that works for you. Funds appear as soon as they settle." />
@@ -1402,17 +1464,12 @@ function Fund() {
           <div className="form-section-title with-top"><span className="step">02</span><div><h2>Choose a route</h2><p>Select how you want to pay.</p></div></div>
           <div className="choice-grid">{routes.map(({ value, icon: Icon, label, note }) => <button type="button" key={value} className={`choice-card ${channel === value ? 'selected' : ''}`} onClick={() => setChannel(value)} data-testid={`button-channel-${value}`}><span className="choice-check">{channel === value && <Check size={13} />}</span><span className="choice-icon"><Icon size={19} /></span><b>{label}</b><small>{note}</small></button>)}</div>
           {error && <div className="error-box" role="alert">{error}</div>}
-           {result && !result.account && cardCheckoutOpen && <div className="card-checkout-shell"><div><b>Secure card payment</b><span>Complete your payment without leaving CipherPay.</span></div></div>}
-           {!result?.account && <Button type="submit" className="full-btn" disabled={!amount || mutation.isPending || bankMutation.isPending} data-testid="button-fund-submit">{mutation.isPending || bankMutation.isPending ? 'Preparing…' : 'Continue to funding'} <ArrowRight size={17} /></Button>}
+          {paymentStatus === 'success' && <div className="success-box transfer-funding-success" role="status"><Check size={20} /><div><b>Funding successful</b><span>{money.format(parseGroupedDigits(amount))} has been added to your CipherPay wallet.</span></div></div>}
+          {paymentStatus === 'failed' && <div className="error-box" role="alert">This card payment was cancelled or could not be completed. Your wallet was not credited.</div>}
+          {!result?.account && paymentStatus !== 'success' && <Button type="submit" className="full-btn" disabled={!amount || mutation.isPending || bankMutation.isPending} data-testid="button-fund-submit">{mutation.isPending || bankMutation.isPending ? 'Preparing…' : 'Continue to funding'} <ArrowRight size={17} /></Button>}
         </form>
         <div className="side-note"><span className="side-note-icon"><ShieldCheck size={20} /></span><h3>Built for peace of mind.</h3><p>Every transaction is encrypted and your funds stay visible at every step.</p><div className="side-rule" /><b style={{display:'block',marginBottom:6}}>Funding limit</b><span style={{fontSize:12,lineHeight:1.5}}>Minimum deposit: ₦100.</span><div className="side-rule" /><span className="mono">CIPHER / SECURE-01</span></div>
       </div>
-      {cardCheckoutOpen && cardCheckoutUrl && <div className="transfer-modal-backdrop card-checkout-backdrop" role="presentation">
-        <div className="card-checkout-modal" role="dialog" aria-modal="true" aria-label="Secure card payment">
-          <div className="card-checkout-header"><div><span className="eyebrow">CIPHERPAY / SECURE CHECKOUT</span><h2>Complete your card payment</h2><p>Your payment stays inside CipherPay. If you cancel, your wallet will not be credited.</p></div><button type="button" className="transfer-modal-close" onClick={() => { setCardCheckoutOpen(false); setPaymentStatus('failed'); }} aria-label="Cancel card payment"><X size={17} /></button></div>
-          <iframe className="card-checkout-frame" src={cardCheckoutUrl} title="Secure card payment" />
-        </div>
-      </div>}
       {result?.account && transferOpen && <div className="transfer-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setTransferOpen(false); }}>
         <div className="transfer-modal-card" role="dialog" aria-modal="true" aria-labelledby="transfer-account-title" onMouseDown={(event) => event.stopPropagation()}>
           <TransferAccountPanel result={result} requestedAmount={parseGroupedDigits(amount)} paymentStatus={paymentStatus} onClose={() => setTransferOpen(false)} onReset={() => { setResult(null); setAmount(''); setTransferOpen(false); }} />
@@ -1426,7 +1483,6 @@ function Fund() {
     </>
   );
 }
-
 function Send() {
   const mutation = useWalletTransfer();
   const [mode, setMode] = useState<'cipherpay' | 'bank'>('cipherpay');
