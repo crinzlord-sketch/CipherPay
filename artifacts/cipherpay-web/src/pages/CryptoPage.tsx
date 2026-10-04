@@ -73,7 +73,7 @@ export default function CryptoPage(){
   };
   const loadTransactions=async()=>{
     try{
-      const response=await fetch(apiUrl('/api/crypto/transactions'),{headers:authHeaders(),cache:'no-store'});
+      const response=await fetch(apiUrl(`/api/crypto/transactions?mode=${testnet?'testnet':'mainnet'}`),{headers:authHeaders(),cache:'no-store'});
       if(response.ok){const body=await response.json();setTransactions(Array.isArray(body.transactions)?body.transactions:[]);}
     }catch{}
   };
