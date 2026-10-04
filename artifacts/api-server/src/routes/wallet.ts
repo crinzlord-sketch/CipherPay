@@ -26,91 +26,6 @@ router.use(async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.get("/crypto/markets", async (_req, res): Promise<void> => {
-  const ids = "bitcoin,ethereum,solana,tether,usd-coin,binancecoin,ripple,dogecoin,cardano,avalanche-2,tron,stellar";
-  const cacheKey = "__cipherPayCryptoMarkets";
-  const now = Date.now();
-  const cached = (globalThis as any)[cacheKey] as { at: number; data: unknown } | undefined;
-
-  // One request returns both USD and NGN values. This is deliberately cached so
-  // every CipherPay user does not create a separate provider request.
-  if (cached && now - cached.at < 60_000) {
-    res.setHeader("Cache-Control", "public, max-age=30");
-    res.json({ data: cached.data, updatedAt: new Date(cached.at).toISOString(), stale: false });
-    return;
-  }
-
-  try {
-    const params = new URLSearchParams({
-      ids,
-      vs_currencies: "usd,ngn",
-      include_market_cap: "true",
-      include_24hr_vol: "true",
-      include_24hr_change: "true",
-      include_last_updated_at: "true",
-    });
-    const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?${params.toString()}`, {
-      headers: { accept: "application/json" },
-      signal: AbortSignal.timeout(10_000),
-    });
-
-    if (!response.ok) {
-      throw new Error(`CoinGecko returned ${response.status}`);
-    }
-
-    const rows = await response.json() as Record<string, any>;
-    const names: Record<string, { symbol: string; name: string }> = {
-      bitcoin: { symbol: "BTC", name: "Bitcoin" },
-      ethereum: { symbol: "ETH", name: "Ethereum" },
-      solana: { symbol: "SOL", name: "Solana" },
-      tether: { symbol: "USDT", name: "Tether" },
-      "usd-coin": { symbol: "USDC", name: "USD Coin" },
-      binancecoin: { symbol: "BNB", name: "BNB" },
-      ripple: { symbol: "XRP", name: "XRP" },
-      dogecoin: { symbol: "DOGE", name: "Dogecoin" },
-      cardano: { symbol: "ADA", name: "Cardano" },
-      "avalanche-2": { symbol: "AVAX", name: "Avalanche" },
-      tron: { symbol: "TRX", name: "TRON" },
-      stellar: { symbol: "XLM", name: "Stellar" },
-    };
-
-    const data = ids.split(",").map((id) => {
-      const row = rows[id] ?? {};
-      const meta = names[id];
-      return {
-        id,
-        symbol: meta.symbol,
-        name: meta.name,
-        image: `https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons/svg/color/${meta.symbol.toLowerCase()}.svg`,
-        priceNgn: Number(row.ngn ?? 0),
-        priceUsd: Number(row.usd ?? 0),
-        change24h: Number(row.usd_24h_change ?? 0),
-        marketCapNgn: Number(row.ngn_market_cap ?? 0),
-        marketCapUsd: Number(row.usd_market_cap ?? 0),
-        volumeNgn: Number(row.ngn_24h_vol ?? 0),
-        volumeUsd: Number(row.usd_24h_vol ?? 0),
-      };
-    }).filter((item) => item.priceUsd > 0);
-
-    if (!data.length) throw new Error("CoinGecko returned no usable market rows");
-
-    (globalThis as any)[cacheKey] = { at: now, data };
-    res.setHeader("Cache-Control", "public, max-age=30");
-    res.json({ data, updatedAt: new Date(now).toISOString(), stale: false });
-  } catch (error: any) {
-    // Keep the last good prices visible during a provider timeout/rate-limit.
-    // The UI should not suddenly become an empty crypto page because a market
-    // provider had a temporary network problem.
-    console.warn("[crypto/markets] provider request failed:", error?.message);
-    if (cached?.data) {
-      res.setHeader("Cache-Control", "no-store");
-      res.json({ data: cached.data, updatedAt: new Date(cached.at).toISOString(), stale: true });
-      return;
-    }
-    res.status(502).json({ error: "Live market provider unavailable." });
-  }
-});
-
 // Tiered withdrawal processing fee (NGN). Charged on top of the amount the
 // user wants delivered. Kept here next to the route that consumes it so the
 // admin approval screen can compute the same number for display.
@@ -292,7 +207,13 @@ router.post("/wallet/fund", async (req, res): Promise<void> => {
     // authorizationUrl carries the Flutterwave hosted checkout link the client
     // opens in a WebView. accessCode is unused by Flutterwave but kept on the
     // response shape for backwards compatibility (we echo the reference).
-    res.json({ reference, authorizationUrl: init.link, accessCode: reference });
+    res.json({
+      reference,
+      authorizationUrl: init.link,
+      publicKey: init.publicKey ?? null,
+      accessCode: reference,
+      customer: { email: payerEmail, name: user ? `${user.firstName} ${user.lastName}` : undefined },
+    });
   } catch (e: any) {
     req.log?.warn?.({ err: e?.message }, "card/checkout fund init failed");
     res.status(502).json({ error: friendlyFlwError(e?.message) });
