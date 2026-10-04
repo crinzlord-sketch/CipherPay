@@ -62,7 +62,6 @@ const nav = [
   { href: '/fund', label: 'Fund wallet', icon: Plus },
   { href: '/send', label: 'Send money', icon: SendIcon },
   { href: '/crypto', label: 'Crypto', icon: Coins },
-  { href: '/transactions', label: 'Transactions', icon: Activity },
   { href: '/chat', label: 'Find & chat', icon: MessageSquare },
   { href: '/data', label: 'Data bundles', icon: Wifi },
   { href: '/sms', label: 'SMS verification', icon: MessageSquare },
@@ -71,6 +70,7 @@ const nav = [
   { href: '/temporary-email', label: 'Temporary email', icon: Globe2 },
   { href: '/email-pro', label: 'Email Pro', icon: Mail },
   { href: '/social-boost', label: 'Social Boost', icon: Megaphone },
+  { href: '/transactions', label: 'Transactions', icon: Activity },
   { href: '/referrals', label: 'Refer & earn', icon: Gift },
 ];
 const utilityNav = [
