@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { rm, mkdir, copyFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
@@ -19,6 +19,9 @@ async function buildAll() {
 
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
+
+  await mkdir(path.join(distDir, "vendor"), { recursive: true });
+  await copyFile(path.resolve(artifactDir, "src/vendor/ethers.umd.min.cjs"), path.join(distDir, "vendor/ethers.umd.min.cjs"));
 
   await esbuild({
     entryPoints: [path.resolve(artifactDir, "src/index.ts")],
