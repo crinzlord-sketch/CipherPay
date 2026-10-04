@@ -68,7 +68,7 @@ const getUserId = (req: any) => {
 };
 
 const encryptionKey = () => {
-  const source = process.env.CRYPTO_WALLET_ENCRYPTION_KEY || process.env.JWT_SECRET;
+  const source = process.env.CRYPTO_WALLET_ENCRYPTION_KEY || process.env.SESSION_SECRET;
   if (!source) throw new Error("Crypto wallet encryption key is not configured");
   return createHash("sha256").update(source).digest();
 };
