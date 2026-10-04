@@ -9,6 +9,10 @@ export default function LongTermNumbersPage() {
   const [stock, setStock] = useState<any[]>([]);
   const [rentals, setRentals] = useState<Rental[]>([]);
   const [selected, setSelected] = useState<Rental | null>(null);
+  const [selectedStock, setSelectedStock] = useState<any | null>(null);
+  const [pricing, setPricing] = useState<{ days: number; amount: number }[]>([]);
+  const [pricingLoading, setPricingLoading] = useState(false);
+  const [buying, setBuying] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
@@ -47,6 +51,40 @@ export default function LongTermNumbersPage() {
 
   useEffect(() => { void load(); }, []);
 
+  const selectStock = async (item: any) => {
+    const id = String(item?.id ?? item?.code ?? "");
+    if (!id) return;
+    setSelectedStock(item);
+    setPricing([]);
+    setPricingLoading(true);
+    setError("");
+    try {
+      const result = await apiRequest<any>(`/api/sms/rentals/pricing?id=${encodeURIComponent(id)}`);
+      setPricing(Array.isArray(result?.options) ? result.options : []);
+    } catch (e: any) {
+      setError(e?.message ?? "Could not load rental pricing.");
+    } finally {
+      setPricingLoading(false);
+    }
+  };
+
+  const buyRental = async (days: number) => {
+    const id = String(selectedStock?.id ?? selectedStock?.code ?? "");
+    if (!id || !days) return;
+    setBuying(true); setError(""); setNotice("");
+    try {
+      const result = await apiRequest<any>("/api/sms/rentals/buy", { method: "POST", body: { id, days } });
+      setNotice(result?.message ?? "Long-term number purchased successfully.");
+      setSelectedStock(null);
+      setPricing([]);
+      await load();
+    } catch (e: any) {
+      setError(e?.message ?? "Could not purchase this long-term number.");
+    } finally {
+      setBuying(false);
+    }
+  };
+
   const openMessages = async (rental: Rental) => {
     const code = String(rental.rental_code ?? rental.code ?? "");
     if (!code) return;
@@ -77,8 +115,8 @@ export default function LongTermNumbersPage() {
       <div>
         <span className="rentals-badge"><Smartphone size={14} /> LONG-TERM NUMBERS</span>
         <h1>A number that stays<br /><span>with you.</span></h1>
-        <p>Manage long-term SMS rental numbers separately from international eSIM data plans. Keep the number active, check messages, and manage extensions from one workspace.</p>
-        <div className="rentals-trust"><span><ShieldCheck size={15} /> Provider-connected</span><span><Clock3 size={15} /> Long-term rental</span><span><MessageSquare size={15} /> Messages in one place</span></div>
+        <p>Choose a long-term number, select how long you want to keep it, then manage messages and extensions from one workspace.</p>
+        <div className="rentals-trust"><span><ShieldCheck size={15} /> Secure rental</span><span><Clock3 size={15} /> Long-term rental</span><span><MessageSquare size={15} /> Messages in one place</span></div>
       </div>
       <div className="rentals-visual"><div className="rentals-phone"><div className="rentals-screen"><span>ACTIVE NUMBER</span><b>+•••• ••••</b><small>Long-term rental</small><i>● Connected</i></div></div></div>
     </section>
@@ -100,13 +138,13 @@ export default function LongTermNumbersPage() {
 
       <aside className="rentals-side">
         <section className="panel rental-stock"><div className="rentals-head"><div><span className="rentals-kicker">02 / AVAILABILITY</span><h2>Rental stock</h2></div></div>
-          {stock.length ? <div className="stock-list">{stock.slice(0, 12).map((item: any, index) => <div className="stock-row" key={String(item.id ?? item.code ?? index)}><span>{item.country ?? item.name ?? item.country_name ?? "International"}</span><b>{item.price ?? item.cost ?? item.amount ? String(item.price ?? item.cost ?? item.amount) : "Available"}</b><ChevronRight size={15} /></div>)}</div> : <p className="stock-empty">Live rental stock will appear here when the provider returns inventory.</p>}
+          {stock.length ? <div className="stock-list">{stock.slice(0, 12).map((item: any, index) => <button type="button" className={selectedStock === item ? "stock-row selected" : "stock-row"} key={String(item.id ?? item.code ?? index)} onClick={() => void selectStock(item)}><span><b>{item.country ?? item.name ?? item.country_name ?? "International"}</b><small>{item.region ?? "Long-term number"}</small></span><em>Choose</em><ChevronRight size={15} /></button>)}</div> : <p className="stock-empty">Live rental stock will appear here when available.</p>}
         </section>
-        <section className="rental-note"><ShieldCheck size={18} /><div><b>Separate from eSIM.</b><p>eSIM is for mobile data. Long-term numbers are for keeping a rental number and managing its messages and extensions.</p></div></section>
+        <section className="panel rental-purchase"><div className="rentals-head"><div><span className="rentals-kicker">03 / PURCHASE</span><h2>{selectedStock ? (selectedStock.country ?? selectedStock.name ?? "Long-term number") : "Select a number"}</h2></div></div>{!selectedStock ? <p className="stock-empty">Click a country above to view available rental durations and purchase.</p> : pricingLoading ? <div className="rentals-empty"><LoaderCircle className="spin" /> Loading rental options…</div> : pricing.length ? <div className="rental-pricing-grid">{pricing.map((option) => <button type="button" key={option.days} className="rental-price-option" disabled={buying} onClick={() => void buyRental(option.days)}><span>{option.days} days</span><b>₦{Number(option.amount).toLocaleString("en-NG")}</b><small>{buying ? "Processing…" : "Buy number"}</small></button>)}</div> : <p className="stock-empty">No rental durations are available for this number right now.</p>}</section>
       </aside>
     </section>
 
-    {selected && <section className="panel rental-messages"><div className="rentals-head"><div><span className="rentals-kicker">03 / MESSAGES</span><h2>{selected.number ?? "Rental messages"}</h2></div><button onClick={() => setSelected(null)}>Close</button></div>{messages.length ? messages.map((message, i) => <div className="message-row" key={String(message.id ?? i)}><b>{message.code ?? message.sms ?? message.message ?? "Message"}</b><small>{message.created_at ?? message.createdAt ?? ""}</small></div>) : <div className="rentals-empty"><MessageSquare size={22} /><p>No messages returned for this rental.</p></div>}</section>}
+    {selected && <section className="panel rental-messages"><div className="rentals-head"><div><span className="rentals-kicker">04 / MESSAGES</span><h2>{selected.number ?? "Rental messages"}</h2></div><button onClick={() => setSelected(null)}>Close</button></div>{messages.length ? messages.map((message, i) => <div className="message-row" key={String(message.id ?? i)}><b>{message.code ?? message.sms ?? message.message ?? "Message"}</b><small>{message.created_at ?? message.createdAt ?? ""}</small></div>) : <div className="rentals-empty"><MessageSquare size={22} /><p>No messages returned for this rental.</p></div>}</section>}
 
     {(notice || error) && <div className={notice ? "rental-notice" : "rental-notice error"}>{notice || error}</div>}
   </div>;
