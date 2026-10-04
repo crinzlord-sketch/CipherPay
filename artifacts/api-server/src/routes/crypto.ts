@@ -65,7 +65,7 @@ async function getBinanceMarkets(): Promise<Market[]> {
 
 async function getCoinMarketCapMarkets(): Promise<Market[]> {
   const symbols = COINS.map(([, symbol]) => symbol).join(",");
-  const url = "https://pro-api.coinmarketcap.com/public-api/v1/cryptocurrency/quotes/latest?symbol="
+  const url = "https://pro-api.coinmarketcap.com/public-api/v3/cryptocurrency/quotes/latest?symbol="
     + encodeURIComponent(symbols) + "&convert=USD&skip_invalid=true";
   const response = await httpsJson<{
     data?: Record<string, { id:number; name:string; symbol:string; quote?: { USD?: { price?:number; volume_24h?:number; market_cap?:number; percent_change_24h?:number } } }>
