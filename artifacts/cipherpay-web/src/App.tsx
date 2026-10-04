@@ -317,7 +317,7 @@ function Shell({ children }: { children: ReactNode }) {
       }} aria-label={location === '/notifications' ? 'Close notifications' : unreadNotifications > 0 ? `Open notifications, ${unreadNotifications} unread` : 'Open notifications'} aria-pressed={location === '/notifications'} data-testid="button-notifications"><Bell size={19} />{unreadNotifications > 0 && <i />}</button>{user && <span className="topbar-name">{user.firstName}</span>}<button className="logout-link" onClick={() => void logout()} data-testid="button-logout"><LogOut size={16} /> <span>Log out</span></button></header>
       <div className="content">{(() => {
         const featureKey = serviceFeatureForPath(location);
-        const maintenance = Boolean(featureKey && serviceFeatures && serviceFeatures[featureKey] === false);
+        const maintenance = Boolean(!user?.isAdmin && featureKey && serviceFeatures && serviceFeatures[featureKey] === false);
         const labels: Record<string, string> = {
           transfers: 'Transfers',
           data: 'Data bundles',
