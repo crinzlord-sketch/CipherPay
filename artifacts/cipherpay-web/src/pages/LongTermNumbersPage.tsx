@@ -17,12 +17,29 @@ export default function LongTermNumbersPage() {
   const load = async () => {
     setLoading(true); setError("");
     try {
-      const [stockData, activeData] = await Promise.all([
+      const [stockResult, activeResult] = await Promise.allSettled([
         apiRequest<any>("/api/sms/rentals/stock"),
         apiRequest<any>("/api/sms/rentals/active"),
       ]);
-      setStock(Array.isArray(stockData) ? stockData : stockData?.data ?? stockData?.stock ?? []);
-      setRentals(Array.isArray(activeData) ? activeData : activeData?.data ?? activeData?.rentals ?? []);
+
+      const failures: string[] = [];
+      if (stockResult.status === "fulfilled") {
+        const stockData = stockResult.value;
+        setStock(Array.isArray(stockData) ? stockData : stockData?.data ?? stockData?.stock ?? []);
+      } else {
+        failures.push(stockResult.reason?.message ?? "Rental stock is temporarily unavailable.");
+        setStock([]);
+      }
+
+      if (activeResult.status === "fulfilled") {
+        const activeData = activeResult.value;
+        setRentals(Array.isArray(activeData) ? activeData : activeData?.data ?? activeData?.rentals ?? []);
+      } else {
+        failures.push(activeResult.reason?.message ?? "Active rentals are temporarily unavailable.");
+        setRentals([]);
+      }
+
+      if (failures.length) setError(failures.join(" "));
     } catch (e: any) {
       setError(e?.message ?? "Long-term numbers are temporarily unavailable.");
     } finally { setLoading(false); }
