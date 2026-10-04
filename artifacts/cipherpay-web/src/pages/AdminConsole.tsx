@@ -9,6 +9,7 @@ import { useAnimatedDialog } from '../components/animated-dialog';
 import { apiUrl, formatWhen } from './page-api';
 import './admin.css';
 import UserDetailView from './UserDetailView';
+import { avatarDataUrl } from '../components/CipherAvatar';
 
 type Tab = 'overview' | 'users' | 'admins' | 'support' | 'money' | 'verification' | 'activity' | 'services';
 type AdminOptions = { method?: string; body?: unknown; headers?: Record<string, string> };
@@ -60,7 +61,6 @@ function AdminButton({ children, onClick, variant = 'soft', disabled = false }: 
 
 function AdminAvatar({ user, large = false }: { user: any; large?: boolean }) {
   const [failed, setFailed] = useState(false);
-  const initials = `${String(user?.firstName?.[0] ?? '')}${String(user?.lastName?.[0] ?? '')}`.toUpperCase() || 'CP';
   const className = large ? 'admin-avatar admin-avatar-large' : 'admin-avatar';
   const rawSrc = typeof user?.avatarUrl === 'string' ? user.avatarUrl.trim() : '';
   const src = rawSrc
@@ -68,10 +68,18 @@ function AdminAvatar({ user, large = false }: { user: any; large?: boolean }) {
       ? rawSrc
       : apiUrl(rawSrc.startsWith('/') ? rawSrc : `/${rawSrc}`))
     : '';
-  if (src && !failed) {
-    return <img className={`${className} admin-avatar-image`} src={src} alt="" onError={() => setFailed(true)} />;
-  }
-  return <span className={className}>{initials}</span>;
+  const fallback = avatarDataUrl(user?.id ?? user?.email ?? 'cipherpay-user', user?.gender);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  return <img
+    className={`${className} admin-avatar-image`}
+    src={src && !failed ? src : fallback}
+    alt=""
+    onError={() => setFailed(true)}
+  />;
 }
 
 function StatCard({ icon: Icon, label, value, detail, tone = 'orange' }: { icon: typeof Users; label: string; value: string | number; detail?: string; tone?: string }) {
