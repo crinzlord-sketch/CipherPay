@@ -1976,7 +1976,8 @@ function App() {
             <Route path="/bills/:category"><ProtectedArea><BillsPage /></ProtectedArea></Route>
             <Route path="/bills/:category/:provider"><ProtectedArea><BillProviderPage /></ProtectedArea></Route>
             <Route path="/data"><ProtectedArea><DataBundlesPage /></ProtectedArea></Route>
-            <Route path="/sms"><ProtectedArea><SmsVerification /></ProtectedArea></Route>\n        <Route path="/sms-extras"><ProtectedArea><SmsPoolExtrasPage /></ProtectedArea></Route>
+            <Route path="/sms"><ProtectedArea><SmsVerification /></ProtectedArea></Route>
+            <Route path="/sms-extras"><ProtectedArea><SmsPoolExtrasPage /></ProtectedArea></Route>
             <Route path="/temporary-email"><ProtectedArea><TemporaryEmail /></ProtectedArea></Route>
             <Route path="/services"><ProtectedArea><ServicesPage /></ProtectedArea></Route>
             <Route path="/social-boost"><ProtectedArea><SocialBoostPage /></ProtectedArea></Route>
