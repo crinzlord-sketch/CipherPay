@@ -3,6 +3,11 @@ import https from "node:https";
 
 const router: IRouter = Router();
 
+let marketCache: { data: Market[]; provider: string; updatedAt: string; fx: number } | null = null;
+const FALLBACK_FX_NGN = 1500;
+const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
+  Promise.race([promise, new Promise<T>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms))]);
+
 const COINS = [
   ["bitcoin", "BTC", "Bitcoin"], ["ethereum", "ETH", "Ethereum"], ["solana", "SOL", "Solana"],
   ["tether", "USDT", "Tether"], ["usd-coin", "USDC", "USD Coin"], ["binancecoin", "BNB", "BNB"],
@@ -58,7 +63,7 @@ async function getFxRate(): Promise<number> {
   return 0;
 }
 
-async function getCoinLoreMarkets(): Promise<Market[]> {
+async function getCoinLoreMarkets(fxOverride?: number): Promise<Market[]> {
   const response = await httpsJson<{ data: Array<{
     symbol:string; name:string; price_usd?:string; market_cap_usd?:string;
     volume24?:number|string; percent_change_24h?:string;
@@ -66,8 +71,7 @@ async function getCoinLoreMarkets(): Promise<Market[]> {
   if (response.status < 200 || response.status >= 300 || !response.body?.data) {
     throw new Error("CoinLore returned " + response.status);
   }
-  const fx = await getFxRate();
-  if (!fx) throw new Error("Unable to get USD/NGN rate");
+  const fx = fxOverride && fxOverride > 0 ? fxOverride : (await getFxRate()) || FALLBACK_FX_NGN;
   const bySymbol = new Map(response.body.data.map(item => [item.symbol.toUpperCase(), item]));
   const markets = COINS.map(([id, symbol, name]) => {
     const item = bySymbol.get(symbol);
@@ -115,8 +119,7 @@ async function getCoinGeckoMarkets(): Promise<Market[]> {
     throw new Error("CoinGecko returned " + response.status + ": insufficient market data");
   }
 
-  const fx = await getFxRate();
-  if (!fx) throw new Error("Unable to get USD/NGN rate");
+  const fx = fxOverride && fxOverride > 0 ? fxOverride : (await getFxRate()) || FALLBACK_FX_NGN;
 
   const byId = new Map(response.body.map(item => [item.id, item]));
 
@@ -159,8 +162,7 @@ async function getBinanceMarkets(): Promise<Market[]> {
     throw new Error("Binance returned " + response.status);
   }
 
-  const fx = await getFxRate();
-  if (!fx) throw new Error("Unable to get USD/NGN rate");
+  const fx = fxOverride && fxOverride > 0 ? fxOverride : (await getFxRate()) || FALLBACK_FX_NGN;
 
   const bySymbol = new Map(response.body.map(row => [row.symbol, row]));
   const stable: Record<string, number> = { USDT: 1, USDC: 1 };
@@ -186,22 +188,44 @@ async function getBinanceMarkets(): Promise<Market[]> {
 }
 
 router.get("/crypto/markets", async (_req: Request, res: Response): Promise<void> => {
-  const providers = [
-    ["CoinLore", getCoinLoreMarkets],
-    ["CoinGecko", getCoinGeckoMarkets],
-    ["Binance", getBinanceMarkets],
-  ] as const;
-  for (const [provider, loader] of providers) {
-    try {
-      const data = await loader();
-      res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=120");
-      res.json({ provider, updatedAt: new Date().toISOString(), data });
-      return;
-    } catch (error) {
-      console.warn("[crypto/markets] " + provider + " failed", error);
-    }
+  // Serve a recent snapshot immediately when the API instance already has one.
+  if (marketCache) {
+    res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=300");
+    res.json({ provider:marketCache.provider, updatedAt:marketCache.updatedAt, data:marketCache.data, stale:false });
+    // Refresh in the background; the user never waits for the provider.
+    void (async () => {
+      try {
+        const fx = await withTimeout(getFxRate(), 2500).catch(() => 0);
+        const data = await withTimeout(getCoinLoreMarkets(fx || marketCache?.fx || FALLBACK_FX_NGN), 3500);
+        marketCache = { data, provider:"CoinLore", updatedAt:new Date().toISOString(), fx:fx || marketCache?.fx || FALLBACK_FX_NGN };
+      } catch (error) {
+        console.warn("[crypto/markets] background refresh failed", error);
+      }
+    })();
+    return;
   }
-  res.status(502).json({ error: "Live crypto market data is temporarily unavailable. Please try again." });
+
+  // First request: do not make FX a dependency and do not wait 10 seconds per provider.
+  try {
+    const fxPromise = withTimeout(getFxRate(), 2500).catch(() => 0);
+    const data = await withTimeout(getCoinLoreMarkets(await fxPromise || FALLBACK_FX_NGN), 3500);
+    const fx = await fxPromise || FALLBACK_FX_NGN;
+    marketCache = { data, provider:"CoinLore", updatedAt:new Date().toISOString(), fx };
+    res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=300");
+    res.json({ provider:"CoinLore", updatedAt:marketCache.updatedAt, data, stale:false });
+    return;
+  } catch (error) {
+    console.warn("[crypto/markets] CoinLore failed", error);
+  }
+
+  // Keep the last successful snapshot available during a provider hiccup.
+  if (marketCache) {
+    res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=300");
+    res.json({ provider:marketCache.provider, updatedAt:marketCache.updatedAt, data:marketCache.data, stale:true });
+    return;
+  }
+
+  res.status(503).json({ error: "Live crypto market data is temporarily unavailable. Please try again." });
 });
 
 export default router;
