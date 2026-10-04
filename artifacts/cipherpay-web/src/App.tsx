@@ -1628,16 +1628,13 @@ function Send() {
     <PageTitle
       eyebrow="MONEY / SEND"
       title="Send money, simply."
-      detail="Move funds to another CipherPay user or send directly to any Nigerian bank account."
+      detail="Send funds instantly to another CipherPay user."
     />
     <div className="form-layout">
       <form className="panel main-form" onSubmit={submit}>
         <div className="tabs send-tabs">
           <button type="button" className={`tab ${mode === 'cipherpay' ? 'active' : ''}`} onClick={() => { setMode('cipherpay'); setError(''); setResult(null); }}>
             CipherPay user
-          </button>
-          <button type="button" className={`tab ${mode === 'bank' ? 'active' : ''}`} onClick={() => { setMode('bank'); setError(''); setResult(null); }}>
-            Bank account
           </button>
         </div>
 
