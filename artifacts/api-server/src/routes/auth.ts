@@ -815,10 +815,10 @@ router.post("/auth/sessions/revoke-all", async (req, res): Promise<void> => {
 // stays JWT-based. We just store a bcrypt hash of the PIN on the user row.
 // Forgotten PINs can only be cleared by an admin (after verifying identity via
 // support); a self-serve reset would defeat the purpose of the lock.
-const PIN_RE = /^\d{6}$/;
+const PIN_RE = /^\d{4}$/;
 function pinIssue(v: any): string | null {
   if (typeof v !== "string") return "PIN is required";
-  if (!PIN_RE.test(v)) return "PIN must be exactly 6 digits";
+  if (!PIN_RE.test(v)) return "PIN must be exactly 4 digits";
   return null;
 }
 
