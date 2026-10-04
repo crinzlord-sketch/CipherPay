@@ -62,7 +62,10 @@ function AdminAvatar({ user, large = false }: { user: any; large?: boolean }) {
   const [failed, setFailed] = useState(false);
   const initials = `${String(user?.firstName?.[0] ?? '')}${String(user?.lastName?.[0] ?? '')}`.toUpperCase() || 'CP';
   const className = large ? 'admin-avatar admin-avatar-large' : 'admin-avatar';
-  const src = typeof user?.avatarUrl === 'string' && user.avatarUrl.trim() ? apiUrl(user.avatarUrl) : '';
+  const rawSrc = typeof user?.avatarUrl === 'string' ? user.avatarUrl.trim() : '';
+  const src = rawSrc
+    ? (/^(data:|https?:\\/\\/)/i.test(rawSrc) ? rawSrc : apiUrl(rawSrc.startsWith('/') ? rawSrc : `/${rawSrc}`))
+    : '';
   if (src && !failed) {
     return <img className={`${className} admin-avatar-image`} src={src} alt="" onError={() => setFailed(true)} />;
   }
