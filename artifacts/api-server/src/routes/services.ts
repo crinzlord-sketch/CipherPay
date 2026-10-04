@@ -20,7 +20,7 @@ import {
   rentalStock, rentalPricing, rentalOrder, rentalActive, rentalMessages, rentalAutoExtend,
 } from "../lib/smspool";
 import {
-  smmFindService, smmAddOrder, smmOrderStatus,
+  smmServices, smmFindService, smmAddOrder, smmOrderStatus,
   dataProviders as sociallyDataProviders, dataPackages as sociallyDataPackages, buyDataBundle as sociallyBuyDataBundle,
 } from "../lib/socially";
 import { logoPath } from "../lib/logos";
