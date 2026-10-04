@@ -443,7 +443,7 @@ function LandingPage() {
           <div className="cp-3d-ring cp-3d-ring-a"/>
           <div className="cp-3d-ring cp-3d-ring-b"/>
           <div className="cp-3d-card cp-3d-card-back"><span>CP</span><small>EVERYDAY WALLET</small></div>
-          <div className="cp-3d-card cp-3d-card-front"><small>CIPHERPAY</small><b>YOUR WALLET</b><i/></div>
+          <div className="cp-3d-card cp-3d-card-front"><small>CIPHERPAY</small><b>₦24,680</b><i/></div>
           <div className="cp-3d-coin">CP</div>
         <div className="cp-hero-depth-orbs" aria-hidden="true">
           <span className="cp-depth-orb orb-a">₦</span>
@@ -457,7 +457,7 @@ function LandingPage() {
         </div>
         <div className="cp-wallet-card">
           <div className="cp-card-top"><span className="cp-card-label">CIPHERPAY / WALLET</span><span className="cp-card-chip"/></div>
-          <div className="cp-card-balance"><small>YOUR CIPHERPAY WALLET</small><b>READY WHEN YOU ARE</b></div>
+          <div className="cp-card-balance"><small>AVAILABLE BALANCE</small>₦24,680.00</div>
           <div className="cp-card-bottom"><span>READY WHEN YOU ARE</span><span className="cp-card-orb"/></div>
         </div>
         <div className="cp-float-pill one"><i className="cp-dot"/> <strong>Payment complete</strong></div>
@@ -465,8 +465,8 @@ function LandingPage() {
       </div>
     </section>
     <div className="cp-scatter cp-scatter-hero" aria-hidden="true">
-      <div className="cp-mockup scatter-a"><div className="mock-screen"><b>Wallet</b><strong>Fund & send</strong><span>CipherPay wallet</span><i>↗ Transfer</i></div></div>
-      <div className="cp-mockup scatter-c"><div className="mock-screen"><b>SMS verification</b><strong>Digital service</strong><span>Provider-connected</span><i>✓ Ready</i></div></div>
+      <div className="cp-mockup scatter-a"><div className="mock-screen"><b>Wallet</b><strong>₦24,680</strong><span>Available balance</span><i>↗ Send</i></div></div>
+      <div className="cp-mockup scatter-c"><div className="mock-screen"><b>Verify</b><strong>Code confirmed</strong><span>Secure access</span><i>✓ Verified</i></div></div>
     </div>
     <section className="cp-section cp-reveal-section" id="features" data-cp-reveal>
       <div className="cp-section-head"><div><span className="cp-kicker">THE CIPHERPAY SYSTEM</span><h2>Everything you need.<br/>Nothing you don't.</h2></div><p>Designed to feel calm even when your day isn't. Every tool has a clear purpose, every flow gets out of your way.</p></div>
@@ -476,7 +476,7 @@ function LandingPage() {
         <div className="cp-3d-cube-shadow"/>
       </div>
       <div className="cp-scatter cp-scatter-features" aria-hidden="true">
-        <div className="cp-mockup scatter-d"><div className="mock-screen"><b>International eSIM</b><strong>Travel data</strong><span>Live provider catalogue</span><i>Explore</i></div></div>
+        <div className="cp-mockup scatter-d"><div className="mock-screen"><b>Pay bills</b><strong>Electricity</strong><span>₦12,500 • Successful</span><i>Receipt</i></div></div>
       </div>
     </section>
     <LandingExtras />
