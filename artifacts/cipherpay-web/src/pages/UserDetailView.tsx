@@ -1,6 +1,8 @@
 import {
   Activity, ArrowLeft, Clock3, Eye, Globe2, LogIn, MapPin, Monitor, RefreshCw, ShieldCheck, Smartphone, Wifi, Zap, CreditCard
 } from 'lucide-react';
+import { useState } from 'react';
+import { apiUrl } from './page-api';
 
 function naira(value: unknown) {
   return '₦' + Number(value ?? 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -55,6 +57,10 @@ export default function UserDetailView({ detail, loading, onBack, onRefresh }: {
     ['Joined', formatLagosWhen(user.createdAt)], ['Last profile update', formatLagosWhen(user.updatedAt)],
   ];
 
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const avatarSrc = typeof user.avatarUrl === 'string' && user.avatarUrl.trim() ? apiUrl(user.avatarUrl) : '';
+  const avatarInitials = (String(user.firstName?.[0] ?? '') + String(user.lastName?.[0] ?? '')).toUpperCase() || 'CP';
+
   return <section className="admin-section admin-user-detail">
     <div className="admin-user-detail-top">
       <button type="button" className="admin-back-link" onClick={onBack}><ArrowLeft size={16} /> Back to users</button>
@@ -65,7 +71,7 @@ export default function UserDetailView({ detail, loading, onBack, onRefresh }: {
 
     <section className="cp-card cp-card-pad admin-user-hero">
       <div className="admin-user-hero-main">
-        <span className="admin-user-detail-avatar">{String(user.firstName?.[0] ?? '')}{String(user.lastName?.[0] ?? '')}</span>
+        {avatarSrc && !avatarFailed ? <img className="admin-user-detail-avatar admin-avatar-image" src={avatarSrc} alt="" onError={() => setAvatarFailed(true)} /> : <span className="admin-user-detail-avatar">{avatarInitials}</span>}
         <div>
           <span className="cp-kicker">CUSTOMER PROFILE · #{user.id ?? '—'}</span>
           <h2>{user.firstName} {user.lastName}</h2>
