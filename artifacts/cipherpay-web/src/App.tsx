@@ -1153,12 +1153,12 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
   const amount = Number(account.amount ?? requestedAmount);
   const paymentStatusLabel = paymentStatus === 'success' ? 'Payment received' : paymentStatus === 'failed' ? 'Payment failed' : permanent ? 'Personal account' : 'Awaiting payment';
   const paymentMessage = paymentStatus === 'success'
-    ? 'OPay confirmed your transfer and the money has been added to your wallet.'
+    ? 'Flutterwave confirmed your transfer and the money has been added to your wallet.'
     : paymentStatus === 'failed'
-      ? 'OPay could not confirm this transfer. Please start a new deposit or contact support if money left your bank.'
+      ? 'Flutterwave could not confirm this transfer. Please start a new deposit or contact support if money left your bank.'
       : permanent
         ? 'This is your permanent CipherPay deposit account. You can use it anytime and send any amount; successful transfers are credited automatically.'
-        : 'Send the exact amount below. We are checking OPay automatically and will update your wallet when the transfer settles.';
+        : 'Send the exact amount below. We are checking Flutterwave automatically and will update your wallet when the transfer settles.';
   const expiresAt = permanent ? 'Permanent' : account.expiresAt
     ? new Date(account.expiresAt).toLocaleString('en-NG', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
     : 'Until payment is received';
@@ -1208,7 +1208,7 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
       {paymentStatus !== 'success' && <div className="transfer-account-card">
         <div className="transfer-bank-heading">
           <span className="transfer-bank-icon"><Landmark size={18} /></span>
-          <div><span>Send to this account</span><strong>{account.bankName || "OPay transfer account"}</strong></div>
+          <div><span>Send to this account</span><strong>Bank transfer account</strong></div>
           <span className="transfer-live-dot"><i /> Live account</span>
         </div>
         <div className="transfer-detail-list">
@@ -1255,25 +1255,7 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
             </ol>
           </div>
           <div className="transfer-warning"><ShieldCheck size={16} /><p>{account.note || (permanent ? 'This account belongs to your CipherPay wallet. Use it for future deposits too.' : 'Only send the exact amount shown. Do not send money to this account after it expires.')}</p></div>
-          {result.external && <Button type="button" disabled={claiming} onClick={async () => {
-            setClaiming(true);
-            try {
-              const token = useToken();
-              const response = await fetch(apiUrl('/api/wallet/deposit/claim'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                credentials: 'include',
-                body: JSON.stringify({ amount }),
-              });
-              const payload = await response.json().catch(() => null);
-              if (!response.ok) throw new Error(payload?.error || 'Could not submit the deposit.');
-              setPaymentStatus('waiting');
-              window.alert('Deposit submitted. We will confirm the bank transfer and credit your wallet.');
-            } catch (e: any) {
-              window.alert(e?.message || 'Could not submit the deposit.');
-            } finally { setClaiming(false); }
-          }}>{claiming ? 'Submitting…' : 'I’ve sent the transfer'}</Button>}
-        </>
+                  </>
       )}
 
       <div className="transfer-panel-footer"><span>Reference: <b>{result.reference || '—'}</b></span><button type="button" className="transfer-new-button" onClick={onReset}>Start another deposit <ArrowRight size={14} /></button></div>
