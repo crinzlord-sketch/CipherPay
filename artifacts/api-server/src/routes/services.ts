@@ -1031,6 +1031,76 @@ router.get("/sms/esim/profile", async (req, res) => {
   catch (e: any) { res.status(502).json({ error: e?.message ?? "eSIM profile unavailable" }); }
 });
 
+router.get("/sms/rentals/pricing", async (req, res) => {
+  const id = String(req.query.id ?? "");
+  if (!id) { res.status(400).json({ error: "Rental option is required." }); return; }
+  try {
+    const raw = await rentalPricing(id);
+    const pricing = raw?.pricing && typeof raw.pricing === "object" ? raw.pricing : {};
+    const rate = await getSmsPoolNgnPerUsd();
+    const options = Object.entries(pricing)
+      .map(([days, value]) => {
+        const usd = Number(value);
+        if (!Number.isFinite(usd) || usd <= 0) return null;
+        const amount = Math.ceil((usd * rate * 1.15) / 10) * 10;
+        return { days: Number(days), amount, providerPriceUsd: usd };
+      })
+      .filter((item): item is { days: number; amount: number; providerPriceUsd: number } => !!item && Number.isFinite(item.days) && item.days > 0)
+      .sort((a, b) => a.days - b.days);
+    res.json({ options });
+  } catch (e: any) {
+    res.status(502).json({ error: e?.message ?? "Rental pricing unavailable" });
+  }
+});
+
+router.post("/sms/rentals/buy", async (req, res) => {
+  const userId = getUserId(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const id = String(req.body?.id ?? "");
+  const days = Number(req.body?.days ?? 0);
+  if (!id || !Number.isInteger(days) || days <= 0) {
+    res.status(400).json({ error: "Choose a rental and duration." });
+    return;
+  }
+
+  try {
+    const raw = await rentalPricing(id);
+    const pricing = raw?.pricing && typeof raw.pricing === "object" ? raw.pricing : {};
+    const providerPriceUsd = Number(pricing[String(days)]);
+    if (!(providerPriceUsd > 0)) {
+      res.status(400).json({ error: "That rental duration is no longer available." });
+      return;
+    }
+
+    const rate = await getSmsPoolNgnPerUsd();
+    const amount = Math.ceil((providerPriceUsd * rate * 1.15) / 10) * 10;
+    const { tx } = await debitWallet(
+      userId,
+      amount,
+      "Long-term number rental",
+      "service",
+      { product: "long_term_number", rentalId: id, days, providerPriceUsd },
+    );
+
+    try {
+      const result = await rentalOrder(id, days);
+      if (result?.success === 0 || result?.success === false) {
+        throw new Error(String(result?.message ?? result?.error ?? "Rental purchase failed"));
+      }
+      await db.update(transactionsTable)
+        .set({ status: "success", metadata: JSON.stringify({ product: "long_term_number", rentalId: id, days, providerPriceUsd, response: result }) })
+        .where(eq(transactionsTable.id, tx.id));
+      res.json({ success: true, amount, days, result });
+    } catch (e: any) {
+      await creditWallet(userId, amount, "Refund: long-term number purchase failed", "refund", { originalTxId: tx.id, product: "long_term_number" });
+      await db.update(transactionsTable).set({ status: "failed" }).where(eq(transactionsTable.id, tx.id));
+      res.status(502).json({ error: e?.message ?? "Rental purchase failed. Your wallet was refunded." });
+    }
+  } catch (e: any) {
+    res.status(400).json({ error: e?.message ?? "Could not purchase long-term number." });
+  }
+});
+
 router.get("/sms/rentals/stock", async (_req, res) => {
   try { res.json(await rentalStock()); }
   catch (e: any) { res.status(502).json({ error: e?.message ?? "Rental stock unavailable" }); }
