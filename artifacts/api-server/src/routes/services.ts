@@ -16,7 +16,7 @@ import {
   orderNumber as orderSmsPoolNumber,
   checkOrder as checkSmsPoolOrder,
   cancelOrder as cancelSmsPoolOrder,
-  esimCountries, esimPlans, esimHistory, esimProfile, esimTopup,
+  esimCountries, esimPlans, esimPurchase, esimHistory, esimProfile, esimTopup,
   rentalStock, rentalPricing, rentalOrder, rentalActive, rentalMessages, rentalAutoExtend,
 } from "../lib/smspool";
 import {
@@ -861,6 +861,35 @@ router.get("/sms/esim/plans", async (req, res) => {
   if (!country) { res.status(400).json({ error: "Country is required." }); return; }
   try { res.json(await esimPlans(country)); }
   catch (e: any) { res.status(502).json({ error: e?.message ?? "eSIM plans unavailable" }); }
+});
+
+
+router.post("/sms/esim/buy", async (req, res) => {
+  const userId = getUserId(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const country = String(req.body?.country ?? "");
+  const plan = String(req.body?.plan ?? "");
+  if (!country || !plan) { res.status(400).json({ error: "Choose an eSIM country and plan." }); return; }
+  try {
+    const plans = await esimPlans(country);
+    const selected: any = plans.find((item: any) => String(item.id ?? item.plan_id ?? item.plan ?? "") === plan);
+    const providerPrice = Number(selected?.price ?? selected?.cost ?? selected?.amount ?? 0);
+    if (!(providerPrice > 0)) { res.status(400).json({ error: "That eSIM plan is no longer available." }); return; }
+    const amount = Math.ceil(providerPrice * 1.15 / 10) * 10;
+    const { tx } = await debitWallet(userId, amount, "SMSPool international data eSIM", "service", { provider: "SMSPool", country, plan, providerPrice });
+    try {
+      const result = await esimPurchase(plan);
+      if (result?.success === 0 || result?.success === false) throw new Error(String(result?.message ?? result?.error ?? "eSIM purchase failed"));
+      await db.update(transactionsTable).set({ status: "success", metadata: JSON.stringify({ provider: "SMSPool", product: "eSIM", country, plan, providerPrice, response: result }) }).where(eq(transactionsTable.id, tx.id));
+      res.json({ success: true, amount, result });
+    } catch (e: any) {
+      await creditWallet(userId, amount, "Refund: eSIM purchase failed", "refund", { originalTxId: tx.id, provider: "SMSPool" });
+      await db.update(transactionsTable).set({ status: "failed" }).where(eq(transactionsTable.id, tx.id));
+      res.status(502).json({ error: e?.message ?? "eSIM purchase failed. Your wallet was refunded." });
+    }
+  } catch (e: any) {
+    res.status(400).json({ error: e?.message ?? "Could not purchase eSIM." });
+  }
 });
 
 router.get("/sms/esim/history", async (_req, res) => {
