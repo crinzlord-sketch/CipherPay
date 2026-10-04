@@ -512,6 +512,42 @@
   font-size: 0.73rem;
 }
 
+/* WhatsApp service restriction notice */
+.sms-whatsapp-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 13px 14px;
+  border: 1px solid hsl(var(--destructive) / 0.24);
+  border-radius: 13px;
+  background: hsl(var(--destructive) / 0.07);
+  color: hsl(var(--foreground));
+}
+
+.sms-whatsapp-warning-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  border-radius: 10px;
+  background: hsl(var(--destructive) / 0.11);
+  color: hsl(var(--destructive));
+}
+
+.sms-whatsapp-warning strong {
+  display: block;
+  margin: 1px 0 4px;
+  font-size: 0.82rem;
+}
+
+.sms-whatsapp-warning p {
+  margin: 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
 /* SMS verification */
 .sms-layout {
   display: grid;
