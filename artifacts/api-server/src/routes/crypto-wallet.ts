@@ -3,7 +3,7 @@ import { eq, desc } from "drizzle-orm";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
-const ethersModule = require("../src/vendor/ethers.umd.min.cjs") as any;
+const ethersModule = require("./vendor/ethers.umd.min.cjs") as any;
 const ethers = ethersModule.ethers || ethersModule.default?.ethers || ethersModule.default || ethersModule;
 const Wallet = ethers.Wallet || ethersModule.Wallet;
 const JsonRpcProvider = ethers.JsonRpcProvider;
