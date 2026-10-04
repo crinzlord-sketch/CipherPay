@@ -233,7 +233,7 @@ router.post("/crypto/send", async (req,res):Promise<void> => {
     const signer = new Wallet(decrypt(stored.encrypted_private_key), provider);
     let tx:any;
     let decimals = 18;
-    const tokenKey = asset === "ETH" || asset === "BNB" ? "" : asset + (network === "base" ? ":base" : network === "bsc" ? ":bsc" : "");
+    const tokenKey = asset === "ETH" || asset === "BNB" || asset === "POL" ? "" : asset + (network === "base" ? ":base" : network === "bsc" ? ":bsc" : network === "polygon" ? ":polygon" : "");
     const token = TOKENS[tokenKey];
     if (token) {
       decimals = token.decimals;
