@@ -607,7 +607,7 @@ export default function AdminConsole() {
      {tab === 'services' && <section className="admin-section">
        <section className="cp-card cp-card-pad">
          <div className="admin-card-title">
-           <div><span className="cp-kicker">SERVICE AVAILABILITY</span><h2>Control what’s live.</h2><p>Temporarily pause a service for everyone without taking the rest of CipherPay offline. Changes take effect immediately.</p></div>
+           <div><span className="cp-kicker">SERVICE CONTROL</span><h2>Control every live service.</h2><p>These controls match the services currently exposed by CipherPay. Turning one off blocks its backend routes for customers immediately.</p></div>
            <Zap size={20} />
          </div>
          <div className="admin-service-grid">
