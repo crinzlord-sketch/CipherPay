@@ -10,11 +10,12 @@ import { sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-type Network = "ethereum" | "base" | "bsc";
+type Network = "ethereum" | "base" | "bsc" | "polygon";
 const NETWORKS: Record<Network, { chainId:number; rpc:string; native:string; explorer:string }> = {
   ethereum: { chainId:1, rpc:process.env.CRYPTO_ETH_RPC || "https://ethereum-rpc.publicnode.com", native:"ETH", explorer:"https://etherscan.io/tx/" },
   base: { chainId:8453, rpc:process.env.CRYPTO_BASE_RPC || "https://base-rpc.publicnode.com", native:"ETH", explorer:"https://basescan.org/tx/" },
   bsc: { chainId:56, rpc:process.env.CRYPTO_BSC_RPC || "https://bsc-rpc.publicnode.com", native:"BNB", explorer:"https://bscscan.com/tx/" },
+  polygon: { chainId:137, rpc:process.env.CRYPTO_POLYGON_RPC || "https://polygon-bor-rpc.publicnode.com", native:"POL", explorer:"https://polygonscan.com/tx/" },
 };
 
 const TOKENS: Record<string, { address:string; decimals:number; networks:Network[] }> = {
@@ -42,6 +43,16 @@ const TOKENS: Record<string, { address:string; decimals:number; networks:Network
     address: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
     decimals: 18,
     networks: ["bsc"],
+  },
+  "USDC:polygon": {
+    address: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+    decimals: 6,
+    networks: ["polygon"],
+  },
+  "USDT:polygon": {
+    address: "0xc2132D05D31c914a87C6611C10748AaCbA0F3b9f",
+    decimals: 6,
+    networks: ["polygon"],
   },
 };
 
