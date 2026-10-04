@@ -313,34 +313,32 @@ export async function esimTopup(esim: string, plan: string): Promise<any> {
 }
 
 export async function rentalStock(): Promise<any[]> {
-  let raw: unknown;
-  try {
-    raw = await request<unknown>("/rental/retrieve_all");
-  } catch {
-    // SMSPool's public collection exposes both catalogue variants; keep a
-    // compatibility fallback because accounts can expose one while the other
-    // returns an error.
-    raw = await request<unknown>("/rental/retrieve_stock");
-  }
+  // SMSPool's rental catalogue requires type=1 (extendable rentals).
+  // The response is { success: 1, data: [...] }, not a bare array.
+  const raw = await request<any>("/rental/retrieve_all", { type: "1" });
   if (Array.isArray(raw)) return raw;
-  if (raw && typeof raw === "object") {
-    return Object.entries(raw as Record<string, unknown>).map(([id, value]) => {
-      const item = value && typeof value === "object" ? value as Record<string, unknown> : {};
-      let pricing: Record<string, unknown> = {};
-      if (typeof item.pricing === "string") {
-        try { pricing = JSON.parse(item.pricing) as Record<string, unknown>; } catch { /* ignore malformed provider pricing */ }
-      } else if (item.pricing && typeof item.pricing === "object") {
-        pricing = item.pricing as Record<string, unknown>;
-      }
-      return {
-        id,
-        name: String(item.name ?? item.country ?? item.country_name ?? "International"),
-        region: String(item.region ?? ""),
-        pricing,
-      };
-    });
-  }
-  return [];
+  const rows = Array.isArray(raw?.data) ? raw.data : [];
+  return rows.map((item: any) => {
+    let pricing: Record<string, unknown> = {};
+    if (typeof item?.pricing === "string") {
+      try { pricing = JSON.parse(item.pricing) as Record<string, unknown>; } catch { /* ignore malformed provider pricing */ }
+    } else if (item?.pricing && typeof item.pricing === "object") {
+      pricing = item.pricing as Record<string, unknown>;
+    }
+    return {
+      id: String(item?.ID ?? item?.id ?? ""),
+      name: String(item?.name ?? item?.tag ?? "International"),
+      region: String(item?.region ?? ""),
+      pricing,
+      priority: Number(item?.priority ?? 0),
+      pool: item?.pool ?? null,
+      singleService: item?.single_service ?? null,
+      singleServiceExtend: item?.single_service_extend ?? null,
+      isRefundable: Number(item?.is_refundable ?? 0),
+      refundWithinHours: Number(item?.refund_within ?? 0),
+      refundMinDays: Number(item?.refund_min_days ?? 0),
+    };
+  }).filter((item: any) => item.id && item.name);
 }
 
 export async function rentalPricing(id: string): Promise<any> {
@@ -348,7 +346,7 @@ export async function rentalPricing(id: string): Promise<any> {
 }
 
 export async function rentalOrder(id: string, days: number): Promise<any> {
-  return request<any>("/rental/order", { id, days });
+  return request<any>("/purchase/rental", { id, days });
 }
 
 export async function rentalActive(): Promise<any[]> {
