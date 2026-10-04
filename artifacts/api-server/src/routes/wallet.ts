@@ -183,6 +183,23 @@ export async function creditOpayFunding(reference: string, providerStatus?: { am
   return { credited, transaction: pendingTx };
 }
 
+async function creditFlutterwaveFunding(reference: string, providerStatus?: { amount:number; currency:string }) {
+  const [tx] = await db.select().from(transactionsTable).where(and(eq(transactionsTable.reference,reference),eq(transactionsTable.type,"fund")));
+  if (!tx || tx.status !== "pending") return;
+  const expected = parseFloat(tx.amount);
+  if (providerStatus && (providerStatus.currency !== "NGN" || providerStatus.amount + 0.001 < expected)) throw new Error("Flutterwave amount or currency mismatch");
+  if (tx.isFlagged) return;
+  await getOrCreateWallet(tx.userId);
+  await db.transaction(async (trx) => {
+    const updated = await trx.update(transactionsTable).set({status:"success",metadata:JSON.stringify({provider:"flutterwave",settledAt:new Date().toISOString()})}).where(and(eq(transactionsTable.id,tx.id),eq(transactionsTable.status,"pending"))).returning({id:transactionsTable.id});
+    if (!updated.length) return;
+    const [wallet] = await trx.update(walletsTable).set({balance:sql`${walletsTable.balance} + ${expected}`,ledgerBalance:sql`${walletsTable.ledgerBalance} + ${expected}`}).where(eq(walletsTable.userId,tx.userId)).returning({balance:walletsTable.balance});
+    const after=parseFloat(wallet.balance);
+    await trx.update(transactionsTable).set({balanceBefore:(after-expected).toFixed(2),balanceAfter:after.toFixed(2)}).where(eq(transactionsTable.id,tx.id));
+  });
+  await notifyUser({userId:tx.userId,type:"transaction",title:"Wallet funded ✓",body:`₦${expected.toLocaleString("en-NG",{minimumFractionDigits:2,maximumFractionDigits:2})} has been added to your CipherPay wallet.`,link:"/transactions"}).catch(()=>{});
+}
+
 router.post("/wallet/fund", async (req, res): Promise<void> => {
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
