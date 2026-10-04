@@ -1270,11 +1270,63 @@ function Fund() {
   const [result, setResult] = useState<any>(null);
   const [paymentStatus, setPaymentStatus] = useState<'waiting' | 'success' | 'failed'>('waiting');
   const [transferOpen, setTransferOpen] = useState(false);
+  const [cardCheckoutOpen, setCardCheckoutOpen] = useState(false);
+  const [cardCheckoutUrl, setCardCheckoutUrl] = useState('');
   const [error, setError] = useState('');
   const routes: Array<{ value: string; icon: any; label: string; note: string }> = [
     { value: 'card', icon: CreditCard, label: 'Debit card', note: 'Instant card payment' },
     { value: 'bank_transfer', icon: Landmark, label: 'Bank transfer', note: 'Get a transfer account' },
   ];
+  useEffect(() => {
+    if (!result?.reference || result?.account) return;
+    let active = true;
+    let timer: number | undefined;
+    const pollCardPayment = async () => {
+      try {
+        const token = useToken();
+        const response = await fetch(apiUrl('/api/wallet/fund/verify'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          credentials: 'include',
+          body: JSON.stringify({ reference: result.reference }),
+        });
+        const payload = await response.json().catch(() => null) as { status?: string; error?: string } | null;
+        if (!active) return;
+        if (payload?.status === 'success') {
+          setPaymentStatus('success');
+          setCardCheckoutOpen(false);
+          void queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
+          return;
+        }
+        if (payload?.status === 'failed') {
+          setPaymentStatus('failed');
+          setCardCheckoutOpen(false);
+          return;
+        }
+      } catch {}
+      if (active) timer = window.setTimeout(() => void pollCardPayment(), 5000);
+    };
+    void pollCardPayment();
+    return () => { active = false; if (timer) window.clearTimeout(timer); };
+  }, [result?.reference, result?.account]);
+
+  useEffect(() => {
+    if (!cardCheckoutOpen) return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type !== 'cipherpay:checkout-callback') return;
+      if (event.data.status === 'successful' || event.data.status === 'completed') {
+        setPaymentStatus('success');
+        setCardCheckoutOpen(false);
+        void queryClient.invalidateQueries({ queryKey: ['/api/wallet'] });
+      } else if (['cancelled', 'canceled', 'failed', 'error'].includes(String(event.data.status || '').toLowerCase())) {
+        setPaymentStatus('failed');
+        setCardCheckoutOpen(false);
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [cardCheckoutOpen]);
+
   useEffect(() => {
     if (!result?.account || !result.reference) return;
     let active = true;
@@ -1329,6 +1381,10 @@ function Fund() {
           if (value.account) {
             setPaymentStatus('waiting');
             setTransferOpen(true);
+          } else if (value.authorizationUrl) {
+            setPaymentStatus('waiting');
+            setCardCheckoutUrl(value.authorizationUrl);
+            setCardCheckoutOpen(true);
           }
         },
         onError: (reason: any) => setError(reason?.message ?? 'Could not prepare wallet funding.'),
@@ -1346,11 +1402,17 @@ function Fund() {
           <div className="form-section-title with-top"><span className="step">02</span><div><h2>Choose a route</h2><p>Select how you want to pay.</p></div></div>
           <div className="choice-grid">{routes.map(({ value, icon: Icon, label, note }) => <button type="button" key={value} className={`choice-card ${channel === value ? 'selected' : ''}`} onClick={() => setChannel(value)} data-testid={`button-channel-${value}`}><span className="choice-check">{channel === value && <Check size={13} />}</span><span className="choice-icon"><Icon size={19} /></span><b>{label}</b><small>{note}</small></button>)}</div>
           {error && <div className="error-box" role="alert">{error}</div>}
-           {result && !result.account && <div className="success-box"><Check size={17} /><div><b>Payment link ready</b><span>Continue to complete your funding.</span></div>{result.authorizationUrl && <a href={result.authorizationUrl} target="_blank" rel="noreferrer" className="text-link" data-testid="link-payment">Continue</a>}</div>}
+           {result && !result.account && cardCheckoutOpen && <div className="card-checkout-shell"><div><b>Secure card payment</b><span>Complete your payment without leaving CipherPay.</span></div></div>}
            {!result?.account && <Button type="submit" className="full-btn" disabled={!amount || mutation.isPending || bankMutation.isPending} data-testid="button-fund-submit">{mutation.isPending || bankMutation.isPending ? 'Preparing…' : 'Continue to funding'} <ArrowRight size={17} /></Button>}
         </form>
         <div className="side-note"><span className="side-note-icon"><ShieldCheck size={20} /></span><h3>Built for peace of mind.</h3><p>Every transaction is encrypted and your funds stay visible at every step.</p><div className="side-rule" /><b style={{display:'block',marginBottom:6}}>Funding limit</b><span style={{fontSize:12,lineHeight:1.5}}>Minimum deposit: ₦100.</span><div className="side-rule" /><span className="mono">CIPHER / SECURE-01</span></div>
       </div>
+      {cardCheckoutOpen && cardCheckoutUrl && <div className="transfer-modal-backdrop card-checkout-backdrop" role="presentation">
+        <div className="card-checkout-modal" role="dialog" aria-modal="true" aria-label="Secure card payment">
+          <div className="card-checkout-header"><div><span className="eyebrow">CIPHERPAY / SECURE CHECKOUT</span><h2>Complete your card payment</h2><p>Your payment stays inside CipherPay. If you cancel, your wallet will not be credited.</p></div><button type="button" className="transfer-modal-close" onClick={() => { setCardCheckoutOpen(false); setPaymentStatus('failed'); }} aria-label="Cancel card payment"><X size={17} /></button></div>
+          <iframe className="card-checkout-frame" src={cardCheckoutUrl} title="Secure card payment" />
+        </div>
+      </div>}
       {result?.account && transferOpen && <div className="transfer-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setTransferOpen(false); }}>
         <div className="transfer-modal-card" role="dialog" aria-modal="true" aria-labelledby="transfer-account-title" onMouseDown={(event) => event.stopPropagation()}>
           <TransferAccountPanel result={result} requestedAmount={parseGroupedDigits(amount)} paymentStatus={paymentStatus} onClose={() => setTransferOpen(false)} onReset={() => { setResult(null); setAmount(''); setTransferOpen(false); }} />
