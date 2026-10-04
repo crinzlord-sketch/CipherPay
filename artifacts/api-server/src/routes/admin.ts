@@ -369,7 +369,7 @@ router.get("/admin/users", requireAdmin, async (req, res): Promise<void> => {
   const rows = await db
     .select({
       id: usersTable.id, email: usersTable.email, firstName: usersTable.firstName, lastName: usersTable.lastName,
-      phone: usersTable.phone, isVerified: usersTable.isVerified, kycLevel: usersTable.kycLevel,
+      phone: usersTable.phone, avatarUrl: usersTable.avatarUrl, isVerified: usersTable.isVerified, kycLevel: usersTable.kycLevel,
       isAdmin: usersTable.isAdmin, isSuspended: usersTable.isSuspended, suspendReason: usersTable.suspendReason,
       createdAt: usersTable.createdAt, balance: walletsTable.balance,
     })
