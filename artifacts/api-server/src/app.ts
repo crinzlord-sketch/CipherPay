@@ -257,6 +257,8 @@ const serviceRouteFeature = (path: string): ServiceFeatureKey | null => {
   if (path.startsWith("/airtime")) return "airtime";
   if (path.startsWith("/data")) return "data";
   if (path.startsWith("/bills")) return "bills";
+  if (path.startsWith("/sms/esim")) return "sms_esim";
+  if (path.startsWith("/sms/rentals")) return "sms_rentals";
   if (path.startsWith("/sms")) return "sms";
   if (path.startsWith("/temporary-email")) return "temporary_email";
   if (path.startsWith("/email")) return "email_pro";
