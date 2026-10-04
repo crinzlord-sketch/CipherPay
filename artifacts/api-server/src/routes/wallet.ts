@@ -210,7 +210,8 @@ router.post("/wallet/fund", async (req, res): Promise<void> => {
     res.json({
       reference,
       authorizationUrl: init.link,
-      publicKey: init.publicKey ?? null,
+      publicKey: init.publicKey,
+      payloadHash: init.payloadHash,
       accessCode: reference,
       customer: { email: payerEmail, name: user ? `${user.firstName} ${user.lastName}` : undefined },
     });
