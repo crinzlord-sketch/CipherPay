@@ -237,16 +237,67 @@ export async function providerPost<T = any>(path: string, fields: Record<string,
   return request<T>(path, Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, String(v)])));
 }
 
+export interface SmsPoolEsimPlan {
+  id: string;
+  name: string;
+  countryCode: string;
+  countryName: string;
+  dataInGb: number;
+  priceUsd: number;
+  speed: string;
+  extendable: number;
+  network: string;
+}
+
+export async function esimPricing(search = ""): Promise<SmsPoolEsimPlan[]> {
+  const raw = await request<unknown>("/esim/pricing", { start: "0", length: "500", Search: search });
+  const rows = listOf<Record<string, unknown>>(raw);
+  return rows.map((row) => ({
+    id: String(row.ID ?? row.id ?? ""),
+    name: String(row.name ?? row.country ?? ""),
+    countryCode: String(row.countryCode ?? row.country_code ?? ""),
+    countryName: String(row.name ?? row.country ?? ""),
+    dataInGb: Number(row.dataInGb ?? row.data_in_gb ?? row.data ?? 0),
+    priceUsd: Number(row.price ?? row.cost ?? 0),
+    speed: String(row.speed ?? ""),
+    extendable: Number(row.extendable ?? 0),
+    network: String(row.network ?? ""),
+  })).filter((p) => p.id && p.countryName && p.priceUsd > 0);
+}
+
 export async function esimCountries(): Promise<any[]> {
-  return listOf<any>(await request<unknown>("/esim/countries"));
+  const plans = await esimPricing();
+  const unique = new Map<string, any>();
+  for (const plan of plans) {
+    const key = plan.countryCode || plan.countryName;
+    if (!unique.has(key)) unique.set(key, {
+      code: plan.countryCode,
+      name: plan.countryName,
+      planCount: 0,
+      minPriceUsd: plan.priceUsd,
+      maxDataGb: plan.dataInGb,
+    });
+    const current = unique.get(key);
+    current.planCount += 1;
+    current.minPriceUsd = Math.min(current.minPriceUsd, plan.priceUsd);
+    current.maxDataGb = Math.max(current.maxDataGb, plan.dataInGb);
+  }
+  return [...unique.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function esimPlans(country: string): Promise<any[]> {
-  return listOf<any>(await request<unknown>("/esim/plans", { country }));
+  const query = String(country ?? "").trim();
+  const plans = await esimPricing(query);
+  const normalized = query.toLowerCase();
+  return plans.filter((plan) =>
+    plan.countryCode.toLowerCase() === normalized ||
+    plan.countryName.toLowerCase() === normalized ||
+    plan.id === query
+  );
 }
 
-export async function esimPurchase(plan: string): Promise<any> {
-  return request<any>("/esim/purchase", { plan, plan_id: plan });
+export async function esimPurchase(planId: string): Promise<any> {
+  return request<any>("/esim/purchase", { id: String(planId) });
 }
 
 export async function esimHistory(): Promise<any[]> {
