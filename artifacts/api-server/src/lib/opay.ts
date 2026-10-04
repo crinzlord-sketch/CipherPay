@@ -2,8 +2,8 @@ import { createHmac } from "node:crypto";
 import { fetch as undiciFetch } from "undici";
 
 const BASE = (process.env.OPAY_ENV ?? "sandbox").toLowerCase() === "production"
-  ? "https://api.opaycheckout.com/api/v1/international"
-  : "https://sandboxapi.opaycheckout.com/api/v1/international";
+  ? "https://liveapi.opaycheckout.com/api/v1/international"
+  : "https://testapi.opaycheckout.com/api/v1/international";
 const PUBLIC_KEY = () => process.env.OPAY_PUBLIC_KEY?.trim();
 const SECRET_KEY = () => process.env.OPAY_SECRET_KEY?.trim();
 const MERCHANT_ID = () => process.env.OPAY_MERCHANT_ID?.trim();
