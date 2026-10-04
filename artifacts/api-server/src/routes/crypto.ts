@@ -46,7 +46,7 @@ async function getFxRate(): Promise<number> {
 
 async function getBinanceMarkets(): Promise<Market[]> {
   const symbols = COINS.map(([, symbol]) => symbol).filter(symbol => symbol !== "USDT" && symbol !== "USDC").map(symbol => symbol + "USDT");
-  const response = await httpsJson<Array<{ symbol:string; lastPrice:string; priceChangePercent:string; quoteVolume:string }>>("https://data-api.binance.vision/api/v3/ticker/24hr, 10000);
+  const response = await httpsJson<Array<{ symbol:string; lastPrice:string; priceChangePercent:string; quoteVolume:string }>>("https://data-api.binance.vision/api/v3/ticker/24hr", 10000);
   if (response.status < 200 || response.status >= 300) throw new Error("Binance returned " + response.status);
   const rows = response.body;
   const bySymbol = new Map(rows.map(row => [row.symbol, row]));
