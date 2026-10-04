@@ -32,6 +32,7 @@ export default function CryptoPage(){
   const [transactions,setTransactions]=useState<CryptoTx[]>([]);
   const [selected,setSelected]=useState('BTC');
   const [marketLoading,setMarketLoading]=useState(true);
+  const [testnet,setTestnet]=useState(false);
   const [walletLoading,setWalletLoading]=useState(true);
   const [marketError,setMarketError]=useState('');
   const [walletError,setWalletError]=useState('');
@@ -52,7 +53,7 @@ export default function CryptoPage(){
   const loadWallet=async()=>{
     try{
       setWalletError('');
-      const response=await fetch(apiUrl('/api/crypto/wallet'),{headers:authHeaders(),cache:'no-store'});
+      const response=await fetch(apiUrl(testnet?'/api/crypto/testnet/wallet':'/api/crypto/wallet'),{headers:authHeaders(),cache:'no-store'});
       const body=await response.json();
       if(!response.ok) throw new Error(body?.error||'Crypto wallet unavailable');
       setWalletAddress(body.address||'');
@@ -62,7 +63,7 @@ export default function CryptoPage(){
 
   const loadBalances=async()=>{
     try{
-      const response=await fetch(apiUrl('/api/crypto/balances'),{headers:authHeaders(),cache:'no-store'});
+      const response=await fetch(apiUrl(testnet?'/api/crypto/testnet/balances':'/api/crypto/balances'),{headers:authHeaders(),cache:'no-store'});
       if(response.ok){
         const body=await response.json();
         setBalances(Array.isArray(body.balances)?body.balances:[]);
@@ -78,10 +79,9 @@ export default function CryptoPage(){
   };
 
   useEffect(()=>{
-    void loadWallet();
-    void loadBalances();
-    void loadTransactions();
-  },[]);
+    setWalletLoading(true); setWalletAddress(''); setBalances([]); setTransactions([]); setNetwork(testnet?'sepolia':'ethereum'); setSendAsset('ETH');
+    void loadWallet(); void loadBalances(); void loadTransactions();
+  },[testnet]);
   useEffect(()=>{
     let active=true;
     const load=async()=>{
@@ -118,6 +118,7 @@ export default function CryptoPage(){
   },0);
   const balanceValueNgn=balanceValueUsd*(ngnPerUsd||0);
   const supportedForNetwork=(asset:string,net:string)=>{
+    if(testnet)return asset==='ETH'&&net==='sepolia';
     if(asset==='ETH')return net==='ethereum'||net==='base';
     if(asset==='BNB')return net==='bsc';
     if(asset==='POL')return net==='polygon';
@@ -142,7 +143,7 @@ export default function CryptoPage(){
   const submitSend=async()=>{
     setSending(true);setSendError('');setSendSuccess('');setConfirmSend(false);
     try{
-      const response=await fetch(apiUrl('/api/crypto/send'),{
+      const response=await fetch(apiUrl(testnet?'/api/crypto/testnet/send':'/api/crypto/send'),{
         method:'POST',headers:{...authHeaders(),'Content-Type':'application/json'},
         body:JSON.stringify({network,asset:sendAsset,to:sendTo,amount:Number(sendAmount)}),
       });
@@ -165,7 +166,7 @@ export default function CryptoPage(){
     <section className="cp-crypto-dashboard">
       <div className="cp-crypto-dashboard-copy">
         <div className="cp-crypto-balance-hero">
-          <div><span>YOUR CRYPTO BALANCE</span><strong>{currency==='USD'?usd.format(balanceValueUsd):ngn.format(balanceValueNgn)}</strong><small>{balances.filter(b=>b.balance>0).length} assets held · Blockchain wallet active</small></div>
+          <div><span>YOUR CRYPTO BALANCE</span><strong>{currency==='USD'?usd.format(balanceValueUsd):ngn.format(balanceValueNgn)}</strong><small>{testnet?'Sepolia ETH · test funds only':`${balances.filter(b=>b.balance>0).length} assets held · Blockchain wallet active`}</small></div>
           <button type="button" className="cp-currency-switch" onClick={()=>setCurrency(currency==='USD'?'NGN':'USD')}><b>{currency}</b><span>⇄</span><em>{currency==='USD'?'NGN':'USD'}</em></button>
         </div>
         <span className="cp-kicker">CIPHERPAY / CRYPTO WALLET</span>
@@ -217,11 +218,11 @@ export default function CryptoPage(){
         <h2>{panel==='sell'?'Sell to NGN':panel==='swap'?'Swap crypto':panel==='send'?'Send crypto':'Receive crypto'}</h2>
 
         {panel==='receive'&&<div className="cp-crypto-receive">
-          <label className="cp-modal-field">Network<select value={network} onChange={e=>setNetwork(e.target.value)}><option value="ethereum">Ethereum</option><option value="base">Base</option><option value="bsc">BNB Smart Chain</option><option value="polygon">Polygon</option></select></label>
+          <label className="cp-modal-field">Network<select value={network} onChange={e=>setNetwork(e.target.value)} disabled={testnet}>{testnet?<option value="sepolia">Sepolia Testnet</option>:<><option value="ethereum">Ethereum</option><option value="base">Base</option><option value="bsc">BNB Smart Chain</option><option value="polygon">Polygon</option></>}</select></label>
           <div className="cp-coin-picker"><span className="cp-picker-label">Choose asset to receive</span><div className="cp-coin-picker-grid">{receiveAssets.map(asset=><button type="button" key={asset} className={sendAsset===asset?'active':''} onClick={()=>setSendAsset(asset)}><CoinIcon asset={asset}/><span><b>{asset}</b><small>{ASSET_META[asset]?.name}</small></span>{sendAsset===asset&&<Check size={15}/>}</button>)}</div></div>
           <div className="cp-modal-asset"><CoinIcon asset={sendAsset} size={40}/><span><b>Receive {ASSET_META[sendAsset]?.name||sendAsset}</b><small>Real on-chain address. Your funds go to this blockchain account.</small></span></div>
           <div className="cp-receive-address"><code>{walletAddress||'Preparing wallet…'}</code><button onClick={copyAddress} disabled={!walletAddress}>{copied?<Check size={17}/>:<Copy size={17}/>}</button></div>
-          <div className="cp-receive-networks"><b>On-chain wallet</b><span>{sendAsset} · {network==='bsc'?'BNB Smart Chain':network==='base'?'Base':network==='polygon'?'Polygon':'Ethereum'}</span><small>Only send {sendAsset} on this exact network. Sending on another network can permanently lose funds.</small></div>
+          <div className="cp-receive-networks"><b>{testnet?'TESTNET WALLET · Sepolia':'On-chain wallet'}</b><span>{sendAsset} · {network==='bsc'?'BNB Smart Chain':network==='base'?'Base':network==='polygon'?'Polygon':'Ethereum'}</span><small>Only send {sendAsset} on this exact network. Sending on another network can permanently lose funds.</small></div>
           <button type="button" className="cp-modal-disabled" onClick={copyAddress} disabled={!walletAddress}>{copied?'Copied':'Copy address'}</button>
         </div>}
 
