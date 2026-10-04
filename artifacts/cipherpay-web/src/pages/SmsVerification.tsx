@@ -131,6 +131,12 @@ export default function SmsVerification() {
 
   const selectedCountry = countries.find((item) => item.code === country);
   const selectedService = services.find((item) => item.id === service);
+  const isWhatsAppService = Boolean(
+    selectedService &&
+      (normalizeSearch(selectedService.name) === 'whatsapp' ||
+        normalizeSearch(selectedService.id) === 'whatsapp' ||
+        normalizeSearch(selectedService.id) === 'wa'),
+  );
 
   const chooseCountry = (item: Country) => {
     setCountry(item.code);
@@ -335,6 +341,15 @@ export default function SmsVerification() {
               ) : null}
             </div>
           </label>
+          {isWhatsAppService ? (
+            <div className="sms-whatsapp-warning" role="note">
+              <div className="sms-whatsapp-warning-icon"><AlertCircle size={17} /></div>
+              <div>
+                <strong>WhatsApp numbers are restricted</strong>
+                <p>WhatsApp access requires a whitelist application. Your legal first and last name must be provided. For personal use, state that it is for personal use. For business use, explain the nature of the business.</p>
+              </div>
+            </div>
+          ) : null}
           <div className={`sms-catalog-state ${servicesQuery.isError ? 'is-error' : ''}`} aria-live="polite">
             {servicesQuery.isError ? <><AlertCircle size={15} /> <span>{serviceStatus}</span> <button type="button" className="text-link" onClick={() => void servicesQuery.refetch()}>Retry</button></> : serviceStatus}
           </div>
