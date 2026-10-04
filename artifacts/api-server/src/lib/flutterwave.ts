@@ -303,6 +303,7 @@ export async function createHostedPayment(params: { amount: number; email: strin
     payment_options: "card",
     customer: { email: params.email, name: params.name ?? "", phonenumber: params.phone ?? "" },
     customizations: { title: "CipherPay", description: "Wallet funding" },
+    configurations: { session_duration: 15, max_retry_attempt: 2 },
   });
   const link = String(body?.data?.link ?? "");
   if (status < 200 || status >= 300 || body?.status !== "success" || !link) throw new Error(body?.message || `Flutterwave payment initialization failed (HTTP ${status})`);
