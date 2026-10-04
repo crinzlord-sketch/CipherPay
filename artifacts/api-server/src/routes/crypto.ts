@@ -64,9 +64,15 @@ async function getBinanceMarkets(): Promise<Market[]> {
 }
 
 async function getCoinMarketCapMarkets(): Promise<Market[]> {
-  const ids = COINS.map(([id]) => id).join(",");
+  const cmcSlugs: Record<string, string> = {
+    bitcoin: "bitcoin", ethereum: "ethereum", solana: "solana", tether: "tether",
+    "usd-coin": "usd-coin", binancecoin: "binance-coin", ripple: "xrp",
+    dogecoin: "dogecoin", cardano: "cardano", "avalanche-2": "avalanche",
+    tron: "tron", stellar: "stellar",
+  };
+  const slugs = COINS.map(([id]) => cmcSlugs[id]).filter(Boolean).join(",");
   const url = "https://pro-api.coinmarketcap.com/public-api/v3/cryptocurrency/quotes/latest?slug="
-    + encodeURIComponent(ids) + "&convert=USD&skip_invalid=true";
+    + encodeURIComponent(slugs) + "&convert=USD&skip_invalid=true";
 
   const response = await httpsJson<{
     data?: Array<{
