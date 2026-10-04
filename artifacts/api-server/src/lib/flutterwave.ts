@@ -294,6 +294,40 @@ export async function initiatePayment(params: {
   return { publicKey, payloadHash, amount, currency, email, reference };
 }
 
+export async function createHostedPayment(params: { amount: number; email: string; reference: string; redirectUrl: string; name?: string; phone?: string; }): Promise<{ link: string }> {
+  const { status, body } = await flwPost<any>("/payments", {
+    tx_ref: params.reference,
+    amount: params.amount,
+    currency: "NGN",
+    redirect_url: params.redirectUrl,
+    payment_options: "card",
+    customer: { email: params.email, name: params.name ?? "", phonenumber: params.phone ?? "" },
+    customizations: { title: "CipherPay", description: "Wallet funding" },
+  });
+  const link = String(body?.data?.link ?? "");
+  if (status < 200 || status >= 300 || body?.status !== "success" || !link) throw new Error(body?.message || `Flutterwave payment initialization failed (HTTP ${status})`);
+  return { link };
+}
+
+export async function createBankTransferCharge(params: { amount: number; email: string; reference: string; name?: string; phone?: string; }): Promise<{ accountNumber: string; bankName: string; amount: number; expiresAt?: string }> {
+  const { status, body } = await flwPost<any>("/charges?type=bank_transfer", {
+    tx_ref: params.reference,
+    amount: params.amount,
+    currency: "NGN",
+    email: params.email,
+    fullname: params.name ?? "",
+    phone_number: params.phone ?? "",
+    is_bank_transfer: true,
+  });
+  if (status < 200 || status >= 300 || body?.status === "error") throw new Error(body?.message || `Flutterwave bank-transfer initialization failed (HTTP ${status})`);
+  const auth = body?.meta?.authorization ?? body?.data?.meta?.authorization ?? {};
+  const accountNumber = String(auth?.transfer_account ?? body?.data?.account_number ?? "");
+  const bankName = String(auth?.transfer_bank ?? body?.data?.bank_name ?? "Flutterwave");
+  const transferAmount = Number(auth?.transfer_amount ?? body?.data?.amount ?? params.amount);
+  if (!accountNumber) throw new Error("Flutterwave did not return a transfer account");
+  return { accountNumber, bankName, amount: transferAmount, expiresAt: auth?.transfer_expiry ? String(auth.transfer_expiry) : undefined };
+}
+
 export interface FlwVerifiedCharge { status: string; amount: number; currency: string; tx_ref: string; }
 export async function verifyByReference(reference: string): Promise<FlwVerifiedCharge> {
   const { status, body } = await flwGet<any>(`/transactions/verify_by_reference?tx_ref=${encodeURIComponent(reference)}`);
