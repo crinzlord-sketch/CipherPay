@@ -2,16 +2,16 @@ import { eq } from "drizzle-orm";
 import { db, appSettingsTable } from "@workspace/db";
 
 export const SERVICE_FEATURES = [
-  { key: "transfers", label: "Transfers", description: "Send money to CipherPay users or external bank accounts." },
-  { key: "wallet_funding", label: "Wallet funding", description: "Add money to a CipherPay wallet." },
-  { key: "airtime", label: "Airtime", description: "Buy airtime for supported networks." },
-  { key: "data", label: "Data", description: "Buy mobile data plans." },
-  { key: "bills", label: "Bills", description: "Pay electricity and other supported bills." },
-  { key: "sms", label: "SMS verification", description: "Purchase SMS verification numbers and activations." },
+  { key: "wallet_funding", label: "Wallet funding", description: "Fund a CipherPay wallet through the configured deposit provider." },
+  { key: "transfers", label: "CipherPay transfers", description: "Send money between CipherPay users. External bank withdrawal is disabled." },
+  { key: "data", label: "Data bundles", description: "Purchase live mobile data bundles through Socially." },
+  { key: "sms", label: "SMS verification", description: "Purchase temporary verification numbers with SMS, Voice OTP or Flash Call where supported." },
+  { key: "sms_esim", label: "International eSIM", description: "Purchase live data-only eSIM plans from SMSPool." },
+  { key: "sms_rentals", label: "Long-term numbers", description: "Manage SMSPool rental numbers, messages and extensions." },
   { key: "temporary_email", label: "Temporary email", description: "Create and use temporary inboxes." },
-  { key: "social_boost", label: "Social Boost", description: "Paid social media growth and engagement services." },
+  { key: "social_boost", label: "Social Boost", description: "Browse and order supported Socially social-media services." },
   { key: "email_pro", label: "Email Pro", description: "Paid email sending and Email Pro access." },
-  { key: "crypto", label: "Crypto", description: "Crypto wallet, stablecoin and related transactions." },
+  { key: "crypto", label: "Crypto", description: "Crypto wallet and supported crypto transactions." },
 ] as const;
 
 export type ServiceFeatureKey = typeof SERVICE_FEATURES[number]["key"];
