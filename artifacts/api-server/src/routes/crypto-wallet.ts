@@ -3,7 +3,7 @@ import { eq, desc } from "drizzle-orm";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
-const ethers = require("../src/vendor/ethers.umd.min.js") as any;
+const ethers = require("../vendor/ethers.umd.min.js") as any;
 import bcrypt from "bcryptjs";
 import { db, usersTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
@@ -126,25 +126,38 @@ const createWallet = async (userId:number) => {
 const providerFor = (network:Network) => new ethers.JsonRpcProvider(NETWORKS[network].rpc, NETWORKS[network].chainId, { staticNetwork:true });
 
 async function balances(address:string) {
-  const result:any[] = [];
-  for (const network of Object.keys(NETWORKS) as Network[]) {
+  const networks = Object.keys(NETWORKS) as Network[];
+  const settled = await Promise.all(networks.map(async network => {
     const cfg = NETWORKS[network];
     const provider = providerFor(network);
     try {
-      const native = await provider.getBalance(address);
-      result.push({ network, asset:cfg.native, balance:Number(ethers.formatEther(native)), address, type:"native" });
-      for (const [key, token] of Object.entries(TOKENS)) {
-        if (!token.networks.includes(network)) continue;
-        const symbol = key.split(":")[0];
-        const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
-        const raw = await contract.balanceOf(address);
-        result.push({ network, asset:symbol, balance:Number(ethers.formatUnits(raw, token.decimals)), address, type:"token", tokenAddress:token.address });
-      }
+      const nativePromise = provider.getBalance(address);
+      const tokenPromises = Object.entries(TOKENS)
+        .filter(([, token]) => token.networks.includes(network))
+        .map(async ([key, token]) => {
+          const symbol = key.split(":")[0];
+          const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
+          const raw = await contract.balanceOf(address);
+          return {
+            network,
+            asset:symbol,
+            balance:Number(ethers.formatUnits(raw, token.decimals)),
+            address,
+            type:"token",
+            tokenAddress:token.address,
+          };
+        });
+      const native = await nativePromise;
+      return [
+        { network, asset:cfg.native, balance:Number(ethers.formatEther(native)), address, type:"native" },
+        ...(await Promise.all(tokenPromises)),
+      ];
     } catch (error) {
       console.warn("[crypto] balance refresh failed", network, error);
+      return [];
     }
-  }
-  return result;
+  }));
+  return settled.flat();
 }
 
 router.get("/crypto/wallet", async (req,res):Promise<void> => {
