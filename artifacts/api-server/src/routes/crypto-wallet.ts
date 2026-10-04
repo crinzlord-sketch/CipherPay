@@ -84,10 +84,21 @@ const getWallet = async (userId:number) => {
 };
 
 const createWallet = async (userId:number) => {
-  if (!Wallet || typeof Wallet.createRandom !== "function") throw new Error("Crypto wallet engine failed to initialize");
   const existing = await getWallet(userId);
   if (existing) return existing;
-  const wallet = Wallet.createRandom();
+
+  // Generate the private key with Node's CSPRNG instead of ethers' browser-oriented
+  // random source. This avoids cold-start/runtime crypto issues on Render.
+  let wallet: Wallet;
+  for (;;) {
+    try {
+      wallet = new Wallet("0x" + randomBytes(32).toString("hex"));
+      break;
+    } catch {
+      // Extremely unlikely invalid secp256k1 key; generate another 32-byte value.
+    }
+  }
+
   await db.execute(sql`INSERT INTO crypto_wallets (user_id,address,encrypted_private_key) VALUES (${userId},${wallet.address},${encrypt(wallet.privateKey)}) ON CONFLICT (user_id) DO NOTHING`);
   return getWallet(userId);
 };
@@ -125,11 +136,26 @@ router.get("/crypto/wallet", async (req,res):Promise<void> => {
   try {
     await ensureTables();
     const wallet = await createWallet(userId);
-    const items = await balances(wallet.address);
-    res.json({ address:wallet.address, balances:items, networks:Object.entries(NETWORKS).map(([id,v])=>({id,chainId:v.chainId,native:v.native,explorer:v.explorer})) });
+    // Address creation is kept independent from slow public RPC calls so Receive
+    // never waits for blockchain balance providers to wake up.
+    res.json({ address:wallet.address, balances:[], networks:Object.entries(NETWORKS).map(([id,v])=>({id,chainId:v.chainId,native:v.native,explorer:v.explorer})) });
   } catch (error:any) {
     console.error("[crypto/wallet] request failed", error?.stack || error);
     res.status(500).json({error:error?.message || "Crypto wallet unavailable"});
+  }
+});
+
+router.get("/crypto/balances", async (req,res):Promise<void> => {
+  const userId = getUserId(req);
+  if (!userId) { res.status(401).json({error:"Unauthorized"}); return; }
+  try {
+    await ensureTables();
+    const wallet = await createWallet(userId);
+    const items = await balances(wallet.address);
+    res.json({ address:wallet.address, balances:items });
+  } catch (error:any) {
+    console.error("[crypto/balances] request failed", error?.stack || error);
+    res.status(500).json({error:error?.message || "Crypto balances unavailable"});
   }
 });
 
