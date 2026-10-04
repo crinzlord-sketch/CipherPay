@@ -154,7 +154,22 @@ router.get("/crypto/transactions", async (req,res):Promise<void> => {
   if (!userId) { res.status(401).json({error:"Unauthorized"}); return; }
   await ensureTables();
   const result = await db.execute(sql`SELECT id,network,asset,direction,amount,to_address,tx_hash,status,created_at FROM crypto_transactions WHERE user_id=${userId} ORDER BY created_at DESC LIMIT 50`);
-  res.json({transactions:result.rows});
+  const rows = result.rows as any[];
+  for (const row of rows) {
+    if (!row.tx_hash || row.status === "confirmed" || row.status === "failed") continue;
+    try {
+      const networkName = String(row.network) as Network;
+      if (!(networkName in NETWORKS)) continue;
+      const receipt = await providerFor(networkName).getTransactionReceipt(String(row.tx_hash));
+      if (!receipt) continue;
+      const nextStatus = Number(receipt.status) === 1 ? "confirmed" : "failed";
+      await db.execute(sql`UPDATE crypto_transactions SET status=${nextStatus} WHERE id=${Number(row.id)} AND user_id=${userId}`);
+      row.status = nextStatus;
+    } catch (error) {
+      console.warn("[crypto] transaction status refresh failed", row.tx_hash, error);
+    }
+  }
+  res.json({transactions:rows});
 });
 
 router.post("/crypto/send", async (req,res):Promise<void> => {
