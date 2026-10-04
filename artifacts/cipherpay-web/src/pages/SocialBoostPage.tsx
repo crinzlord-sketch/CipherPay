@@ -16,6 +16,15 @@ type SocialService = {
   description: string;
   deliveryTime: string;
   quality: string;
+  providerRate?: number;
+  platformFee?: number;
+  refill?: boolean;
+  cancel?: boolean;
+  dripfeed?: boolean;
+  refillDays?: number;
+  providerClaims?: string[];
+  providerServiceName?: string;
+  providerServiceId?: number;
 };
 
 type SocialOrder = {
@@ -115,7 +124,7 @@ export default function SocialBoostPage() {
     [platform, services],
   );
   const selectedService = services.find((service) => service.id === serviceId) ?? platformServices[0];
-  const total = selectedService ? selectedService.pricePerUnit * parseGroupedDigits(quantity || String(selectedService.minQuantity)) : 0;
+  const total = selectedService ? selectedService.pricePerUnit * parseGroupedDigits(quantity || String(selectedService.minQuantity)) + (selectedService.platformFee ?? 200) : 0;
 
   useEffect(() => {
     if (!platformServices.some((service) => service.id === serviceId)) {
@@ -171,10 +180,10 @@ export default function SocialBoostPage() {
 
   return <>
     <PageHeading
-      eyebrow="SERVICES / SOCIAL BOOST"
+      eyebrow="SOCIAL BOOST / LIVE PROVIDER CATALOGUE"
       title="Give your content more reach."
-      detail="Choose a platform service, add the public link, and pay securely from your CipherPay wallet."
-      actions={<Link href="/services" className="text-link"><ArrowLeft size={15} /> All services</Link>}
+      detail="Services, prices, limits and fulfilment capabilities are read from the connected provider catalogue. Provider claims are shown exactly as capabilities, not guaranteed results."
+      actions={undefined}
     />
     <div className="social-boost-layout">
       <section className="panel social-boost-form-panel">
@@ -182,9 +191,9 @@ export default function SocialBoostPage() {
         {loading ? <div className="loading-inline">Loading current services…</div> : <form className="service-form" onSubmit={submit}>
           <label className="field"><span>Platform</span><select value={platform} onChange={(event) => setPlatform(event.target.value)} required><option value="">Choose a platform</option>{platforms.map((item) => <option key={item} value={item}>{platformLabels[item] ?? item}</option>)}</select></label>
           <label className="field"><span>Service</span><select value={selectedService?.id ?? ''} onChange={(event) => setServiceId(event.target.value)} required><option value="">Choose a service</option>{platformServices.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
-          {selectedService && <div className="social-service-detail"><span>{selectedService.description}</span><small><Clock3 size={13} /> {selectedService.deliveryTime} · {selectedService.quality}</small></div>}
+          {selectedService && <div className="social-service-detail"><span>{selectedService.description}</span><small><Clock3 size={13} /> {selectedService.deliveryTime} · {selectedService.quality}</small><div className="social-provider-meta"><span><b>Provider service</b>{selectedService.providerServiceName ?? "Live provider match"}</span><span><b>Provider rate</b>{naira(selectedService.providerRate ?? 0)} / 1,000</span><span><b>Order limits</b>{formatGroupedDigits(selectedService.minQuantity)} – {formatGroupedDigits(selectedService.maxQuantity)}</span><span><b>Refill / drop</b>{selectedService.refillDays ? selectedService.refillDays + "-day refill" : selectedService.refill ? "Refill available" : "No refill flag"}</span><span><b>Cancel</b>{selectedService.cancel ? "Supported" : "Not supported"}</span><span><b>Delivery</b>{selectedService.dripfeed ? "Drip-feed available" : "Standard delivery"}</span></div>{!!selectedService.providerClaims?.length && <div className="social-provider-badges">{selectedService.providerClaims.map((claim) => <span key={claim}>{claim}</span>)}</div>}</div>}
           <label className="field"><span>Public post or profile link</span><input type="url" value={link} onChange={(event) => setLink(event.target.value)} required placeholder="https://…" /></label>
-          <div className="field-row"><label className="field"><span>Quantity</span><input type="text" inputMode="numeric" min={selectedService?.minQuantity} max={selectedService?.maxQuantity} value={quantity} onChange={(event) => setQuantity(formatGroupedDigits(event.target.value))} required /></label><div className="social-total"><span>Total</span><strong>{naira(total)}</strong><small>{selectedService ? `${naira(selectedService.pricePerUnit)} per ${selectedService.unit}` : 'Select a service'}</small></div></div>
+          <div className="field-row"><label className="field"><span>Quantity</span><input type="text" inputMode="numeric" min={selectedService?.minQuantity} max={selectedService?.maxQuantity} value={quantity} onChange={(event) => setQuantity(formatGroupedDigits(event.target.value))} required /></label><div className="social-total"><span>Total</span><strong>{naira(total)}</strong><small>{selectedService ? `${naira(selectedService.pricePerUnit)} per ${selectedService.unit} + ${naira(selectedService.platformFee ?? 200)} platform fee` : 'Select a service'}</small></div></div>
           {error && <div className="error-box" role="alert">{error}</div>}
           {success && <div className="success-box"><Check size={17} /><div><b>Order placed</b><span>{success}</span></div></div>}
           <button type="submit" className="btn btn-primary full-btn" disabled={submitting || !selectedService}>{submitting ? 'Placing order…' : 'Place boost order'} <ArrowRight size={17} /></button>
