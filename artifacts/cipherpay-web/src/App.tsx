@@ -746,7 +746,7 @@ function Login() {
        ? <form className="auth-form" onSubmit={verifyLogin}>
          <AuthBuddy key={`login-buddy-${faceReaction}`} field="idle" hasText gaze={{ x: 0, y: 0 }} mood={faceMood} buddyRef={buddyRef} />
         <div className="otp-notice" role="status">{otpNotice}</div>
-        <Field label="Six-digit code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={4} placeholder="000000" value={code} onChange={(event: any) => setCode(event.target.value.replace(/\D/g, '').slice(0, 4))} required data-testid="input-login-otp" />
+        <Field label="Six-digit code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} placeholder="000000" value={code} onChange={(event: any) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} required data-testid="input-login-otp" />
         {error && <div className="error-box" role="alert">{error}</div>}
         <Button type="submit" className="full-btn" disabled={otpPending || code.length !== 6} data-testid="button-verify-login-otp">{otpPending ? 'Verifying…' : 'Verify and sign in'} <ArrowRight size={17} /></Button>
         <button type="button" className="text-link back-to-login" onClick={() => void resendLogin()} disabled={otpResendPending || otpResendCooldown > 0}>{otpResendPending ? 'Sending…' : otpResendCooldown > 0 ? `Resend code in ${otpResendCooldown}s` : 'Resend code'}</button>
