@@ -8,6 +8,7 @@ const PUBLIC_KEY = () => process.env.OPAY_PUBLIC_KEY?.trim();
 const SECRET_KEY = () => process.env.OPAY_SECRET_KEY?.trim();
 const MERCHANT_ID = () => process.env.OPAY_MERCHANT_ID?.trim();
 
+function maskCredential(value?: string) { if (!value) return 'missing'; return value.slice(0, 8) + '…' + value.slice(-4) + ' (' + value.length + ')'; }
 function requireConfig() {
   const merchantId = MERCHANT_ID(), publicKey = PUBLIC_KEY(), secretKey = SECRET_KEY();
   if (!merchantId || !publicKey || !secretKey) throw new Error("OPay API credentials are not configured");
@@ -19,7 +20,11 @@ async function opayPost<T = any>(path: string, payload: Record<string, unknown>,
   const body = JSON.stringify(payload);
   const authorization = signed ? sign(payload, secretKey) : publicKey;
   const res = await undiciFetch(`${BASE}${path}`, { method:"POST", headers:{ "Content-Type":"application/json", Accept:"application/json", Authorization:`Bearer ${authorization}`, MerchantId:merchantId }, body });
-  return { status:res.status, body:await res.json().catch(()=>({})) as T };
+  const parsed = await res.json().catch(()=>({})) as T;
+  if ((res.status < 200 || res.status >= 300) || (parsed as any)?.code === '02000') {
+    console.error('[OPay] request rejected', { environment: (process.env.OPAY_ENV ?? 'sandbox').toLowerCase(), base: BASE, path, merchantId: maskCredential(merchantId), publicKey: maskCredential(publicKey), secretKey: maskCredential(secretKey), status: res.status, code: (parsed as any)?.code, message: (parsed as any)?.message });
+  }
+  return { status:res.status, body:parsed };
 }
 export function opayReference(suffix?: string) { return `CP-OPAY-${Date.now().toString(36)}-${suffix ?? Math.random().toString(36).slice(2,8)}`.slice(0,64); }
 
@@ -33,7 +38,7 @@ export async function createCashierPayment(params: { reference:string; amount:nu
 export async function createCardPayment(params: { reference:string; amount:number; cardNumber:string; cardHolderName:string; expiryMonth:string; expiryYear:string; cvv:string; callbackUrl:string; returnUrl:string; email?:string; name?:string; phone?:string; }) {
   const payload={amount:{currency:"NGN",total:Math.round(params.amount*100)},bankcard:{cardHolderName:params.cardHolderName,cardNumber:params.cardNumber,cvv:params.cvv,enable3DS:true,expiryMonth:params.expiryMonth,expiryYear:params.expiryYear},callbackUrl:params.callbackUrl,returnUrl:params.returnUrl,country:"NG",payMethod:"BankCard",product:{name:"CipherPay wallet funding",description:"Add money to your CipherPay wallet"},reference:params.reference,userInfo:{userEmail:params.email??"",userId:params.reference,userMobile:params.phone??"",userName:params.name??""}};
   const {status,body}=await opayPost<any>("/payment/create",payload,true);
-  if(status<200||status>=300||body?.code!=="00000") throw new Error(body?.message||"OPay could not create the card payment");
+  if(status<200||status>=300||body?.code!=="00000") throw new Error(`OPay ${body?.code ?? 'error'}: ${body?.message || 'could not create the card payment'}`);
   return {reference:String(body.data?.reference??params.reference),orderNo:String(body.data?.orderNo??""),cashierUrl:body.data?.cashierUrl?String(body.data.cashierUrl):null,redirectUrl:body.data?.nextAction?.redirectUrl?String(body.data.nextAction.redirectUrl):null,status:String(body.data?.status??"PENDING"),amount:Number(body.data?.amount?.total??Math.round(params.amount*100))/100};
 }
 
@@ -41,7 +46,7 @@ export async function createBankTransferPayment(params: { reference:string; amou
   const payload={amount:{currency:"NGN",total:Math.round(params.amount*100)},callbackUrl:params.callbackUrl,returnUrl:params.returnUrl,country:"NG",expireAt:30,payMethod:"BankTransfer",product:{name:"CipherPay wallet funding",description:"Add money to your CipherPay wallet"},reference:params.reference,customerName:params.name??"",userClientIP:"",userPhone:params.phone??"",userInfo:{userEmail:params.email??"",userId:params.reference,userMobile:params.phone??"",userName:params.name??""}};
   const {status,body}=await opayPost<any>("/payment/create",payload,true);
   const action=body?.data?.nextAction;
-  if(status<200||status>=300||body?.code!=="00000"||action?.actionType!=="TRANSFER_ACCOUNT") throw new Error(body?.message||"OPay could not create the transfer account");
+  if(status<200||status>=300||body?.code!=="00000"||action?.actionType!=="TRANSFER_ACCOUNT") throw new Error(`OPay ${body?.code ?? 'error'}: ${body?.message || 'could not create the transfer account'}`);
   return {reference:String(body.data.reference??params.reference),orderNo:String(body.data.orderNo??""),accountNumber:String(action.transferAccountNumber),bankName:String(action.transferBankName),expiresAt:action.expiredTimestamp?new Date(Number(action.expiredTimestamp)*1000).toISOString():null,amount:Number(body.data.amount?.total??Math.round(params.amount*100))/100};
 }
 
