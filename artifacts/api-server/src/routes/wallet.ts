@@ -68,6 +68,10 @@ router.get("/wallet", async (req, res): Promise<void> => {
   res.json(formatWallet(wallet));
 });
 
+export async function creditOpayFunding(reference: string, providerStatus?: { amount:number; currency:string; orderNo?:string }) {
+  return creditFlutterwaveFunding(reference, providerStatus);
+}
+
 router.post("/wallet/fund", async (req, res): Promise<void> => {
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
