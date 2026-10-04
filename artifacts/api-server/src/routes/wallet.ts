@@ -175,16 +175,8 @@ router.post("/wallet/fund", async (req, res): Promise<void> => {
     : `${proto}://${host}/api/checkout/callback`;
 
   try {
-    const init = await initiatePayment({
-      amount,
-      email: payerEmail,
-      reference,
-      redirectUrl,
-      name: user ? `${user.firstName} ${user.lastName}` : undefined,
-      meta: { userId },
-      paymentOptions,
-    });
-
+    // Persist the exact funding values first. The checksum returned below is
+    // generated from these server-controlled values, never from browser input.
     await db.insert(transactionsTable).values({
       userId,
       type: "fund",
@@ -196,6 +188,15 @@ router.post("/wallet/fund", async (req, res): Promise<void> => {
       flagReason,
       metadata: JSON.stringify({ provider: "flutterwave", email: payerEmail, channel: "card", heldForKyc: Boolean(flagReason) }),
     });
+
+    const init = await initiatePayment({
+      amount,
+      email: payerEmail,
+      reference,
+      name: user ? `${user.firstName} ${user.lastName}` : undefined,
+      meta: { userId },
+      paymentOptions,
+    });
     if (flagReason) {
       await notifyUser({
         userId, type: "warning", title: "Deposit held for KYC review",
@@ -204,16 +205,16 @@ router.post("/wallet/fund", async (req, res): Promise<void> => {
       }).catch(() => {});
     }
 
-    // authorizationUrl carries the Flutterwave hosted checkout link the client
-    // opens in a WebView. accessCode is unused by Flutterwave but kept on the
-    // response shape for backwards compatibility (we echo the reference).
+    // Inline checkout receives only server-generated values. There is no
+    // hosted authorization URL, so the customer stays inside CipherPay's flow.
     res.json({
-      reference,
-      authorizationUrl: init.link,
+      reference: init.reference,
       publicKey: init.publicKey,
       payloadHash: init.payloadHash,
+      amount: init.amount,
+      currency: init.currency,
       accessCode: reference,
-      customer: { email: payerEmail, name: user ? `${user.firstName} ${user.lastName}` : undefined },
+      customer: { email: init.email, name: user ? `${user.firstName} ${user.lastName}` : undefined },
     });
   } catch (e: any) {
     req.log?.warn?.({ err: e?.message }, "card/checkout fund init failed");
