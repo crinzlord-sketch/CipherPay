@@ -58,70 +58,52 @@ async function getFxRate(): Promise<number> {
   return 0;
 }
 
-async function getCoinMarketCapMarkets(): Promise<Market[]> {
-  // Use CMC's small Simple Price endpoint rather than the 100-asset listings
-  // response. It returns exactly the market fields this page needs and avoids
-  // the larger provider response that was failing in production.
-  const symbols = COINS.map(([, symbol]) => symbol).join(",");
+async function getCoinGeckoMarkets(): Promise<Market[]> {
+  const ids = COINS.map(([id]) => id).join(",");
   const url =
-    "https://pro-api.coinmarketcap.com/public-api/v2/simple/price" +
-    "?symbol=" + encodeURIComponent(symbols) +
-    "&convert=USD&include_all=true&skip_invalid=true";
+    "https://api.coingecko.com/api/v3/coins/markets" +
+    "?vs_currency=usd&ids=" + encodeURIComponent(ids) +
+    "&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h";
 
-  const response = await httpsJson<{
-    data?: Array<{
-      id:number;
-      name:string;
-      symbol:string;
-      slug:string;
-      quotes?: Array<{
-        symbol?:string;
-        price?:number;
-        market_cap?:number;
-        volume_24h?:number;
-        percent_change_24h?:number;
-      }>;
-    }>;
-    status?: { error_code?: number; error_message?: string };
-  }>(url, 10000);
+  const response = await httpsJson<Array<{
+    id:string;
+    name:string;
+    symbol:string;
+    image?:string;
+    current_price?:number;
+    market_cap?:number;
+    total_volume?:number;
+    price_change_percentage_24h?:number;
+  }>>(url, 10000);
 
   if (
     response.status < 200 ||
     response.status >= 300 ||
-    !Array.isArray(response.body?.data) ||
-    response.body.data.length < 6
+    !Array.isArray(response.body) ||
+    response.body.length < 6
   ) {
-    throw new Error(
-      "CoinMarketCap returned " +
-      response.status +
-      ": " +
-      (response.body?.status?.error_message || "insufficient market data"),
-    );
+    throw new Error("CoinGecko returned " + response.status + ": insufficient market data");
   }
 
   const fx = await getFxRate();
   if (!fx) throw new Error("Unable to get USD/NGN rate");
 
-  const bySymbol = new Map(
-    response.body.data.map(item => [String(item.symbol).toUpperCase(), item]),
-  );
+  const byId = new Map(response.body.map(item => [item.id, item]));
 
   const markets = COINS.map(([id, symbol, name]) => {
-    const item = bySymbol.get(symbol);
-    const quote = item?.quotes?.find(q => String(q.symbol ?? "").toUpperCase() === "USD")
-      ?? item?.quotes?.[0];
-    const priceUsd = numberOrZero(quote?.price);
+    const item = byId.get(id);
+    const priceUsd = numberOrZero(item?.current_price);
     if (!priceUsd) return null;
-    const marketCapUsd = numberOrZero(quote?.market_cap);
-    const volumeUsd = numberOrZero(quote?.volume_24h);
+    const marketCapUsd = numberOrZero(item?.market_cap);
+    const volumeUsd = numberOrZero(item?.total_volume);
     return {
       id,
       symbol,
       name,
-      image: "",
+      image: item?.image || "",
       priceUsd,
       priceNgn: priceUsd * fx,
-      change24h: numberOrZero(quote?.percent_change_24h),
+      change24h: numberOrZero(item?.price_change_percentage_24h),
       marketCapUsd,
       marketCapNgn: marketCapUsd * fx,
       volumeUsd,
@@ -175,16 +157,16 @@ async function getBinanceMarkets(): Promise<Market[]> {
 
 router.get("/crypto/markets", async (_req: Request, res: Response): Promise<void> => {
   try {
-    const data = await getCoinMarketCapMarkets();
+    const data = await getCoinGeckoMarkets();
     res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=120");
     res.json({
-      provider: "CoinMarketCap",
+      provider: "CoinGecko",
       updatedAt: new Date().toISOString(),
       data,
     });
     return;
   } catch (error) {
-    console.warn("[crypto/markets] CoinMarketCap failed; trying Binance", error);
+    console.warn("[crypto/markets] CoinGecko failed; trying Binance", error);
   }
 
   try {
