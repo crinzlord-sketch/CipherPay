@@ -7,12 +7,13 @@ import { sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-type Network = "ethereum" | "base" | "bsc" | "polygon";
+type Network = "ethereum" | "base" | "bsc" | "polygon" | "sepolia";
 const NETWORKS: Record<Network, { chainId:number; rpc:string; native:string; explorer:string }> = {
   ethereum: { chainId:1, rpc:process.env.CRYPTO_ETH_RPC || "https://ethereum-rpc.publicnode.com", native:"ETH", explorer:"https://etherscan.io/tx/" },
   base: { chainId:8453, rpc:process.env.CRYPTO_BASE_RPC || "https://base-rpc.publicnode.com", native:"ETH", explorer:"https://basescan.org/tx/" },
   bsc: { chainId:56, rpc:process.env.CRYPTO_BSC_RPC || "https://bsc-rpc.publicnode.com", native:"BNB", explorer:"https://bscscan.com/tx/" },
   polygon: { chainId:137, rpc:process.env.CRYPTO_POLYGON_RPC || "https://polygon-bor-rpc.publicnode.com", native:"POL", explorer:"https://polygonscan.com/tx/" },
+  sepolia: { chainId:11155111, rpc:process.env.CRYPTO_SEPOLIA_RPC || "https://eth-sepolia.g.alchemy.com/v2/demo", native:"ETH", explorer:"https://sepolia.etherscan.io/tx/" },
 };
 
 const TOKENS: Record<string, { address:string; decimals:number; networks:Network[] }> = {
@@ -65,6 +66,14 @@ const ensureTables = async () => {
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
   )`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS crypto_test_wallets (
+    id serial PRIMARY KEY,
+    user_id integer NOT NULL UNIQUE,
+    address text NOT NULL,
+    encrypted_private_key text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+  )`);
   await db.execute(sql`CREATE TABLE IF NOT EXISTS crypto_transactions (
     id serial PRIMARY KEY,
     user_id integer NOT NULL,
@@ -102,6 +111,28 @@ const createWallet = async (userId:number) => {
 
   await db.execute(sql`INSERT INTO crypto_wallets (user_id,address,encrypted_private_key) VALUES (${userId},${wallet.address},${encrypt(wallet.privateKey)}) ON CONFLICT (user_id) DO NOTHING`);
   return getWallet(userId);
+};
+
+const getTestWallet = async (userId:number) => {
+  const result = await db.execute(sql`SELECT id, user_id, address, encrypted_private_key FROM crypto_test_wallets WHERE user_id = ${userId} LIMIT 1`);
+  return (result.rows[0] as any) || null;
+};
+
+const createTestWallet = async (userId:number) => {
+  const existing = await getTestWallet(userId);
+  if (existing) return existing;
+  let wallet: Wallet;
+  for (;;) {
+    try { wallet = new Wallet("0x" + randomBytes(32).toString("hex")); break; } catch {}
+  }
+  await db.execute(sql`INSERT INTO crypto_test_wallets (user_id,address,encrypted_private_key) VALUES (${userId},${wallet.address},${encrypt(wallet.privateKey)}) ON CONFLICT (user_id) DO NOTHING`);
+  return getTestWallet(userId);
+};
+
+const testnetBalance = async (address:string) => {
+  const provider = providerFor("sepolia");
+  const raw = await provider.getBalance(address);
+  return [{ network:"sepolia", asset:"ETH", balance:Number(formatEther(raw)), address, type:"native" }];
 };
 
 const providerFor = (network:Network) => new JsonRpcProvider(NETWORKS[network].rpc, NETWORKS[network].chainId, { staticNetwork:true });
@@ -187,6 +218,7 @@ router.post("/crypto/send", async (req,res):Promise<void> => {
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({error:"Unauthorized"}); return; }
   const network = String(req.body?.network || "") as Network;
+  if (network === "sepolia") { res.status(400).json({error:"Sepolia is testnet-only. Switch to Testnet Mode."}); return; }
   const asset = String(req.body?.asset || "").toUpperCase();
   const to = String(req.body?.to || "").trim();
   const amount = Number(req.body?.amount);
@@ -217,6 +249,58 @@ router.post("/crypto/send", async (req,res):Promise<void> => {
     res.json({status:"submitted",txHash:tx.hash,explorer:NETWORKS[network].explorer + tx.hash});
   } catch (error:any) {
     res.status(502).json({error:error?.shortMessage || error?.reason || error?.message || "Blockchain transaction failed"});
+  }
+});
+
+// -------------------- Sepolia TESTNET --------------------
+router.get("/crypto/testnet/wallet", async (req,res):Promise<void> => {
+  const userId = getUserId(req);
+  if (!userId) { res.status(401).json({error:"Unauthorized"}); return; }
+  try {
+    await ensureTables();
+    const wallet = await createTestWallet(userId);
+    res.json({ address:wallet.address, network:"sepolia", chainId:11155111, native:"ETH", explorer:"https://sepolia.etherscan.io/tx/" });
+  } catch (error:any) {
+    console.error("[crypto/testnet/wallet] request failed", error?.stack || error);
+    res.status(500).json({error:error?.message || "Testnet wallet unavailable"});
+  }
+});
+
+router.get("/crypto/testnet/balances", async (req,res):Promise<void> => {
+  const userId = getUserId(req);
+  if (!userId) { res.status(401).json({error:"Unauthorized"}); return; }
+  try {
+    await ensureTables();
+    const wallet = await createTestWallet(userId);
+    const items = await testnetBalance(wallet.address);
+    res.json({address:wallet.address, balances:items});
+  } catch (error:any) {
+    console.error("[crypto/testnet/balances] request failed", error?.stack || error);
+    res.status(502).json({error:"Sepolia balance unavailable right now"});
+  }
+});
+
+router.post("/crypto/testnet/send", async (req,res):Promise<void> => {
+  const userId = getUserId(req);
+  if (!userId) { res.status(401).json({error:"Unauthorized"}); return; }
+  const network = String(req.body?.network || "") as Network;
+  const asset = String(req.body?.asset || "").toUpperCase();
+  const to = String(req.body?.to || "").trim();
+  const amount = Number(req.body?.amount);
+  if (network !== "sepolia" || asset !== "ETH" || !to || !isAddress(to) || !Number.isFinite(amount) || amount <= 0) {
+    res.status(400).json({error:"Testnet currently supports Sepolia ETH only."}); return;
+  }
+  await ensureTables();
+  const stored = await getTestWallet(userId);
+  if (!stored) { res.status(404).json({error:"Testnet wallet not found."}); return; }
+  try {
+    const provider = providerFor("sepolia");
+    const signer = new Wallet(decrypt(stored.encrypted_private_key), provider);
+    const tx = await signer.sendTransaction({to,value:parseEther(String(amount))});
+    await db.execute(sql`INSERT INTO crypto_transactions (user_id,network,asset,direction,amount,to_address,tx_hash,status) VALUES (${userId},'sepolia','ETH','outgoing',${String(amount)},${to},${tx.hash},'submitted')`);
+    res.json({status:"submitted",txHash:tx.hash,explorer:NETWORKS.sepolia.explorer + tx.hash});
+  } catch (error:any) {
+    res.status(502).json({error:error?.shortMessage || error?.reason || error?.message || "Sepolia transaction failed"});
   }
 });
 
