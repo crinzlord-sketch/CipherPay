@@ -1,5 +1,4 @@
 import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
@@ -13,8 +12,7 @@ const formatEther = ethers.formatEther;
 const parseUnits = ethers.parseUnits;
 const parseEther = ethers.parseEther;
 const isAddress = ethers.isAddress;
-import bcrypt from "bcryptjs";
-import { db, usersTable } from "@workspace/db";
+import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 const router: IRouter = Router();
@@ -28,41 +26,13 @@ const NETWORKS: Record<Network, { chainId:number; rpc:string; native:string; exp
 };
 
 const TOKENS: Record<string, { address:string; decimals:number; networks:Network[] }> = {
-  USDC: {
-    address: "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-    decimals: 6,
-    networks: ["ethereum"],
-  },
-  "USDC:base": {
-    address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    decimals: 6,
-    networks: ["base"],
-  },
-  USDT: {
-    address: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-    decimals: 6,
-    networks: ["ethereum"],
-  },
-  "USDT:bsc": {
-    address: "0x55d398326f99059fF775485246999027B3197955",
-    decimals: 18,
-    networks: ["bsc"],
-  },
-  "USDC:bsc": {
-    address: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
-    decimals: 18,
-    networks: ["bsc"],
-  },
-  "USDC:polygon": {
-    address: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
-    decimals: 6,
-    networks: ["polygon"],
-  },
-  "USDT:polygon": {
-    address: "0xc2132D05D31c914a87C6611C10748AaCbA0F3b9f",
-    decimals: 6,
-    networks: ["polygon"],
-  },
+  USDC: { address:"0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", decimals:6, networks:["ethereum"] },
+  "USDC:base": { address:"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", decimals:6, networks:["base"] },
+  USDT: { address:"0xdAC17F958D2ee523a2206206994597C13D831ec7", decimals:6, networks:["ethereum"] },
+  "USDT:bsc": { address:"0x55d398326f99059fF775485246999027B3197955", decimals:18, networks:["bsc"] },
+  "USDC:bsc": { address:"0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", decimals:18, networks:["bsc"] },
+  "USDC:polygon": { address:"0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", decimals:6, networks:["polygon"] },
+  "USDT:polygon": { address:"0xc2132D05D31c914a87C6611C10748AaCbA0F3b9f", decimals:6, networks:["polygon"] },
 };
 
 const ERC20_ABI = [
@@ -70,7 +40,7 @@ const ERC20_ABI = [
   "function transfer(address to,uint256 amount) returns (bool)",
 ];
 
-const getUserId = (req: any) => {
+const getUserId = (req:any) => {
   const raw = req.headers["x-user-id"];
   const id = Number(Array.isArray(raw) ? raw[0] : raw);
   return Number.isInteger(id) && id > 0 ? id : null;
@@ -125,9 +95,7 @@ const getWallet = async (userId:number) => {
 };
 
 const createWallet = async (userId:number) => {
-  if (!Wallet || typeof Wallet.createRandom !== "function") {
-    throw new Error("Crypto wallet engine failed to initialize");
-  }
+  if (!Wallet || typeof Wallet.createRandom !== "function") throw new Error("Crypto wallet engine failed to initialize");
   const existing = await getWallet(userId);
   if (existing) return existing;
   const wallet = Wallet.createRandom();
@@ -150,20 +118,10 @@ async function balances(address:string) {
           const symbol = key.split(":")[0];
           const contract = new Contract(token.address, ERC20_ABI, provider);
           const raw = await contract.balanceOf(address);
-          return {
-            network,
-            asset:symbol,
-            balance:Number(formatUnits(raw, token.decimals)),
-            address,
-            type:"token",
-            tokenAddress:token.address,
-          };
+          return { network, asset:symbol, balance:Number(formatUnits(raw, token.decimals)), address, type:"token", tokenAddress:token.address };
         });
       const native = await nativePromise;
-      return [
-        { network, asset:cfg.native, balance:Number(formatEther(native)), address, type:"native" },
-        ...(await Promise.all(tokenPromises)),
-      ];
+      return [{ network, asset:cfg.native, balance:Number(formatEther(native)), address, type:"native" }, ...(await Promise.all(tokenPromises))];
     } catch (error) {
       console.warn("[crypto] balance refresh failed", network, error);
       return [];
@@ -216,13 +174,9 @@ router.post("/crypto/send", async (req,res):Promise<void> => {
   const asset = String(req.body?.asset || "").toUpperCase();
   const to = String(req.body?.to || "").trim();
   const amount = Number(req.body?.amount);
-  const pin = String(req.body?.pin || "");
   if (!(network in NETWORKS) || !to || !isAddress(to) || !Number.isFinite(amount) || amount <= 0) {
     res.status(400).json({error:"Enter a valid network, destination address and amount."}); return;
   }
-  if (!/^\d{4}$/.test(pin)) { res.status(400).json({error:"Enter your 4-digit transfer PIN."}); return; }
-  const [user] = await db.select({pinHash:usersTable.pinHash}).from(usersTable).where(eq(usersTable.id,userId));
-  if (!user?.pinHash || !(await bcrypt.compare(pin,user.pinHash))) { res.status(401).json({error:"Incorrect transfer PIN."}); return; }
 
   await ensureTables();
   const stored = await getWallet(userId);
