@@ -58,26 +58,33 @@ async function getFxRate(): Promise<number> {
   return 0;
 }
 
-async function getCoinPaprikaMarkets(): Promise<Market[]> {
-  const response = await httpsJson<Array<{ symbol:string; name:string; quotes?: { USD?: { price?:number; market_cap?:number; volume_24h?:number; percent_change_24h?:number } } }>>("https://api.coinpaprika.com/v1/tickers?quotes=USD", 12000);
-  if (response.status < 200 || response.status >= 300 || !Array.isArray(response.body)) throw new Error("CoinPaprika returned " + response.status);
+async function getCoinCapMarkets(): Promise<Market[]> {
+  const response = await httpsJson<Array<{
+    id:string; symbol:string; name:string; priceUsd?:string; marketCapUsd?:string;
+    volumeUsd24Hr?:string; changePercent24Hr?:string;
+  }>>("https://api.coincap.io/v2/assets?limit=100", 10000);
+  if (response.status < 200 || response.status >= 300 || !Array.isArray(response.body)) {
+    throw new Error("CoinCap returned " + response.status);
+  }
   const fx = await getFxRate();
   if (!fx) throw new Error("Unable to get USD/NGN rate");
-  const bySymbol = new Map(response.body.map(item => [item.symbol.toUpperCase(), item]));
-  const logoBySymbol: Record<string,string> = {
-    BTC:"https://assets.coincap.io/assets/icons/btc@2x.png", ETH:"https://assets.coincap.io/assets/icons/eth@2x.png", SOL:"https://assets.coincap.io/assets/icons/sol@2x.png",
-    USDT:"https://assets.coincap.io/assets/icons/usdt@2x.png", USDC:"https://assets.coincap.io/assets/icons/usdc@2x.png", BNB:"https://assets.coincap.io/assets/icons/bnb@2x.png",
-    XRP:"https://assets.coincap.io/assets/icons/xrp@2x.png", DOGE:"https://assets.coincap.io/assets/icons/doge@2x.png", ADA:"https://assets.coincap.io/assets/icons/ada@2x.png",
-    AVAX:"https://assets.coincap.io/assets/icons/avax@2x.png", TRX:"https://assets.coincap.io/assets/icons/trx@2x.png", XLM:"https://assets.coincap.io/assets/icons/xlm@2x.png",
-  };
+  const byId = new Map(response.body.map(item => [item.id, item]));
   const markets = COINS.map(([id, symbol, name]) => {
-    const q = bySymbol.get(symbol)?.quotes?.USD;
-    const priceUsd = numberOrZero(q?.price);
+    const item = byId.get(id);
+    const priceUsd = numberOrZero(item?.priceUsd);
     if (!priceUsd) return null;
-    const marketCapUsd = numberOrZero(q?.market_cap), volumeUsd = numberOrZero(q?.volume_24h);
-    return { id, symbol, name, image:logoBySymbol[symbol] || "", priceUsd, priceNgn:priceUsd*fx, change24h:numberOrZero(q?.percent_change_24h), marketCapUsd, marketCapNgn:marketCapUsd*fx, volumeUsd, volumeNgn:volumeUsd*fx };
+    const marketCapUsd = numberOrZero(item?.marketCapUsd);
+    const volumeUsd = numberOrZero(item?.volumeUsd24Hr);
+    return {
+      id, symbol, name,
+      image: "https://assets.coincap.io/assets/icons/" + symbol.toLowerCase() + "@2x.png",
+      priceUsd, priceNgn: priceUsd * fx,
+      change24h: numberOrZero(item?.changePercent24Hr),
+      marketCapUsd, marketCapNgn: marketCapUsd * fx,
+      volumeUsd, volumeNgn: volumeUsd * fx,
+    };
   }).filter((item): item is Market => Boolean(item));
-  if (markets.length < 6) throw new Error("CoinPaprika returned only " + markets.length + " supported assets");
+  if (markets.length < 6) throw new Error("CoinCap returned only " + markets.length + " supported assets");
   return markets;
 }
 
@@ -179,44 +186,22 @@ async function getBinanceMarkets(): Promise<Market[]> {
 }
 
 router.get("/crypto/markets", async (_req: Request, res: Response): Promise<void> => {
-  try {
-    const data = await getCoinPaprikaMarkets();
-    res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=120");
-    res.json({ provider:"CoinPaprika", updatedAt:new Date().toISOString(), data });
-    return;
-  } catch (error) {
-    console.warn("[crypto/markets] CoinPaprika failed; trying CoinGecko", error);
+  const providers = [
+    ["CoinCap", getCoinCapMarkets],
+    ["CoinGecko", getCoinGeckoMarkets],
+    ["Binance", getBinanceMarkets],
+  ] as const;
+  for (const [provider, loader] of providers) {
+    try {
+      const data = await loader();
+      res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=120");
+      res.json({ provider, updatedAt: new Date().toISOString(), data });
+      return;
+    } catch (error) {
+      console.warn("[crypto/markets] " + provider + " failed", error);
+    }
   }
-
-  try {
-    const data = await getCoinGeckoMarkets();
-    res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=120");
-    res.json({
-      provider: "CoinGecko",
-      updatedAt: new Date().toISOString(),
-      data,
-    });
-    return;
-  } catch (error) {
-    console.warn("[crypto/markets] CoinGecko failed; trying Binance", error);
-  }
-
-  try {
-    const data = await getBinanceMarkets();
-    res.setHeader("Cache-Control", "public, max-age=20, stale-while-revalidate=60");
-    res.json({
-      provider: "Binance",
-      updatedAt: new Date().toISOString(),
-      data,
-    });
-    return;
-  } catch (error) {
-    console.error("[crypto/markets] Binance fallback failed", error);
-  }
-
-  res.status(502).json({
-    error: "Live crypto market data is temporarily unavailable. Please try again.",
-  });
+  res.status(502).json({ error: "Live crypto market data is temporarily unavailable. Please try again." });
 });
 
 export default router;
