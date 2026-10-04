@@ -149,3 +149,19 @@ html.dark .cp-modal-field{
 .cp-coin-icon{position:relative;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;background:rgba(117,87,240,.08);overflow:hidden}.cp-coin-icon img{width:100%;height:100%;object-fit:contain;position:relative;z-index:2}.cp-coin-icon b{position:absolute;font-size:10px;letter-spacing:-.04em;color:#7557f0}.cp-coin-picker{margin:14px 0}.cp-picker-label{display:block;font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#77737f;margin:0 0 8px}.cp-coin-picker-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.cp-coin-picker-grid button{display:flex;align-items:center;gap:9px;text-align:left;padding:10px;border:1px solid rgba(20,20,30,.08);border-radius:16px;background:rgba(248,247,252,.78);cursor:pointer;transition:.18s}.cp-coin-picker-grid button:hover,.cp-coin-picker-grid button.active{border-color:rgba(117,87,240,.4);background:rgba(117,87,240,.08);transform:translateY(-1px)}.cp-coin-picker-grid button>span:not(.cp-coin-icon){display:grid;gap:2px;min-width:0;flex:1}.cp-coin-picker-grid button b{font-size:11px}.cp-coin-picker-grid button small{font-size:8px;color:#858390;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cp-coin-picker-grid button>svg{color:#7557f0}.cp-send-available{margin:-4px 0 10px;padding:9px 11px;border-radius:12px;background:rgba(117,87,240,.06);font-size:9px;color:#77737f}.cp-send-available b{color:#222}.cp-modal-asset .cp-coin-icon{margin-right:2px}
 html.dark .cp-picker-label{color:rgba(247,243,251,.58)}html.dark .cp-coin-picker-grid button{background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.1);color:#f7f3fb}html.dark .cp-coin-picker-grid button:hover,html.dark .cp-coin-picker-grid button.active{background:rgba(117,87,240,.16);border-color:rgba(117,87,240,.45)}html.dark .cp-coin-picker-grid button small,html.dark .cp-send-available{color:rgba(247,243,251,.55)}html.dark .cp-send-available{background:rgba(117,87,240,.1)}html.dark .cp-send-available b{color:#fff}
 @media(max-width:420px){.cp-coin-picker-grid{grid-template-columns:1fr}.cp-coin-picker-grid button{padding:9px}}
+
+
+/* Mobile crypto receive modal — keep long wallet addresses inside the viewport */
+.cp-receive-address{display:grid;grid-template-columns:minmax(0,1fr) 42px;align-items:center;gap:8px;width:100%;max-width:100%;box-sizing:border-box;margin:12px 0;padding:10px 10px 10px 13px;border-radius:15px;background:rgba(245,244,250,.7);border:1px solid rgba(20,20,30,.08);overflow:hidden}
+.cp-receive-address code{display:block;min-width:0;max-width:100%;font-size:10px;line-height:1.45;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
+.cp-receive-address button{width:42px;height:38px;display:grid;place-items:center;border:0;border-radius:11px;background:rgba(255,255,255,.78);cursor:pointer}
+.cp-crypto-modal-backdrop{box-sizing:border-box;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
+.cp-crypto-modal{box-sizing:border-box;width:100%;max-width:480px;min-width:0;max-height:calc(100dvh - 28px);overflow-y:auto;overflow-x:hidden}
+.cp-crypto-modal *{box-sizing:border-box;min-width:0;max-width:100%}
+@media(max-width:600px){
+  .cp-crypto-modal-backdrop{place-items:center;padding:12px}
+  .cp-crypto-modal{width:min(100%,480px);max-width:calc(100vw - 24px);padding:22px 17px;border-radius:24px;max-height:calc(100dvh - 24px)}
+  .cp-receive-address code{font-size:9px}
+}
+html.dark .cp-receive-address{background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.10)}
+html.dark .cp-receive-address button{background:rgba(255,255,255,.08);color:#f7f3fb}
