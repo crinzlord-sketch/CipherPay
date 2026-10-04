@@ -42,11 +42,27 @@ router.use(async (req, res, next) => {
   if (!feature) return next();
   try {
     const status = await getServiceFeatureStatus();
-    if (!status[feature]) {
-      res.status(503).json({ error: "This service is temporarily unavailable.", code: "SERVICE_DISABLED", feature });
+    if (status[feature]) {
+      next();
       return;
     }
-    next();
+
+    // Admin accounts bypass service toggles so the admin can still access,
+    // test, and manage a service while it is disabled for normal users.
+    const userId = getUserId(req);
+    if (userId) {
+      const [account] = await db.select({ isAdmin: usersTable.isAdmin })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId))
+        .limit(1);
+      if (account?.isAdmin) {
+        next();
+        return;
+      }
+    }
+
+    res.status(503).json({ error: "This service is temporarily unavailable.", code: "SERVICE_DISABLED", feature });
+    return;
   } catch (e) {
     next(e);
   }
