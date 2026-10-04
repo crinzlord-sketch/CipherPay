@@ -44,9 +44,20 @@ export default function CryptoPage(){
       const response=await fetch(apiUrl('/api/crypto/wallet'),{headers:authHeaders(),cache:'no-store'});
       const body=await response.json();
       if(!response.ok) throw new Error(body?.error||'Crypto wallet unavailable');
-      setWalletAddress(body.address||''); setBalances(Array.isArray(body.balances)?body.balances:[]);
+      setWalletAddress(body.address||'');
     }catch(error:any){setWalletError(error?.message||'Crypto wallet unavailable.');}
     finally{setWalletLoading(false);}
+  };
+
+  const loadBalances=async()=>{
+    try{
+      const response=await fetch(apiUrl('/api/crypto/balances'),{headers:authHeaders(),cache:'no-store'});
+      if(response.ok){
+        const body=await response.json();
+        setBalances(Array.isArray(body.balances)?body.balances:[]);
+        if(body.address&&!walletAddress)setWalletAddress(body.address);
+      }
+    }catch{}
   };
   const loadTransactions=async()=>{
     try{
@@ -55,18 +66,31 @@ export default function CryptoPage(){
     }catch{}
   };
 
-  useEffect(()=>{void loadWallet();void loadTransactions();},[]);
+  useEffect(()=>{
+    void loadWallet();
+    void loadBalances();
+    void loadTransactions();
+  },[]);
   useEffect(()=>{
     let active=true;
     const load=async()=>{
-      try{
-        setMarketError('');
-        const response=await fetch(apiUrl('/api/crypto/markets'),{headers:authHeaders(),cache:'no-store'});
-        if(!response.ok) throw new Error('Market data unavailable');
-        const body=await response.json();
-        if(active)setMarkets(Array.isArray(body?.data)?body.data:[]);
-      }catch(error:any){if(active)setMarketError(error?.message??'Live prices are temporarily unavailable.');}
-      finally{if(active)setMarketLoading(false);}
+      const delays=[0,700,1800,3500];
+      for(let attempt=0;attempt<delays.length;attempt++){
+        if(delays[attempt]) await new Promise(r=>window.setTimeout(r,delays[attempt]));
+        try{
+          const response=await fetch(apiUrl('/api/crypto/markets'),{headers:authHeaders(),cache:'no-store'});
+          if(!response.ok) throw new Error('market request failed');
+          const body=await response.json();
+          if(active&&Array.isArray(body?.data)&&body.data.length){
+            setMarkets(body.data);
+            setMarketError('');
+            setMarketLoading(false);
+            return;
+          }
+        }catch{}
+      }
+      if(active)setMarketError('');
+      if(active)setMarketLoading(false);
     };
     void load(); const timer=window.setInterval(load,30000);
     return()=>{active=false;window.clearInterval(timer);};
@@ -140,7 +164,7 @@ export default function CryptoPage(){
         </div>
       </div>
     </section>
-    {walletError&&<div className="cp-market-error">{walletError}</div>}
+
     <section className="cp-crypto-market-section">
       <div className="cp-crypto-section-title"><div><span>YOUR ASSETS</span><b>On-chain balances</b></div><small>Live blockchain balances</small></div>
       <div className="cp-live-market-grid">
@@ -153,7 +177,7 @@ export default function CryptoPage(){
     </section>
     <section className="cp-crypto-market-section">
       <div className="cp-crypto-section-title"><div><span>LIVE MARKETS</span><b>Supported assets & real-time prices</b></div><small>Refreshes every 30 seconds</small></div>
-      {marketError&&<div className="cp-market-error">{marketError}</div>}
+
       <div className="cp-live-market-grid">
         {topMarkets.map((item,index)=><button type="button" key={item.id} className={`cp-live-market ${selected===item.symbol?'selected':''}`} onClick={()=>setSelected(item.symbol)}>
           <span className="cp-market-rank">{String(index+1).padStart(2,'0')}</span><img src={icon(item.symbol.toLowerCase())} alt=""/><span className="cp-market-name"><b>{item.name}</b><small>{item.symbol} · {compact.format(currency==='USD'?item.marketCapUsd:item.marketCapNgn)} mcap</small></span><span className="cp-market-price"><b>{money(item.priceUsd,item.priceNgn)}</b><em className={item.change24h<0?'down':''}>{item.change24h>=0?'+':''}{item.change24h.toFixed(2)}%</em></span>
