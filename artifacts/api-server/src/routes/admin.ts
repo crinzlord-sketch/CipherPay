@@ -852,9 +852,7 @@ router.post("/admin/users/:id/reset-activity", requireAdmin, async (req: AdminRe
   const [u] = await db.select().from(usersTable).where(eq(usersTable.id, id));
   if (!u) { res.status(404).json({ error: "User not found" }); return; }
 
-  // Revoke every active device session before removing the account. The JWT itself may remain in a browser, but the API will reject it immediately on the next request.
-  await revokeAllExcept(id, null);
-
+  // Resetting activity must not affect authentication. Keep every active device session alive.
   await db.transaction(async (trx) => {
     await trx.delete(transactionsTable).where(eq(transactionsTable.userId, id));
     await trx.delete(socialOrdersTable).where(eq(socialOrdersTable.userId, id));
