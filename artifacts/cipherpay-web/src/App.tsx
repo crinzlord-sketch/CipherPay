@@ -7,6 +7,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { AnimatedDialogProvider, useAnimatedDialog } from './components/animated-dialog';
 import SmsVerification from './pages/SmsVerification';
 import SmsPoolExtrasPage from './pages/SmsPoolExtrasPage';
+import LongTermNumbersPage from './pages/LongTermNumbersPage';
 import TemporaryEmail from './pages/TemporaryEmail';
 import { KycPage } from './pages/KycPage';
 import { SupportPage } from './pages/SupportPage';
@@ -39,7 +40,7 @@ import {
   Activity, ArrowDownLeft, ArrowLeft, ArrowRight, ArrowUpRight, Banknote, BarChart3, CalendarDays,
   Bell, Bolt, Check, CircleHelp, Copy, CreditCard, FileText,
   Fingerprint, Globe2, Home, Landmark, LockKeyhole, LogOut, Menu, MessageSquare,
-  Layers3, MoreHorizontal, Coins, Network as NetworkIcon, Plus, Receipt, RefreshCw, Send as SendIcon,
+  Layers3, MoreHorizontal, Coins, Network as NetworkIcon, Plus, Receipt, RefreshCw, Send as SendIcon, Megaphone,
   Settings, ShieldCheck, Smartphone, Target, Tv, UserRound, WalletCards, Wifi, X, Eye, EyeOff, Gift,
 } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
@@ -64,7 +65,9 @@ const nav = [
   { href: '/chat', label: 'Find & chat', icon: MessageSquare },
   { href: '/data', label: 'Data bundles', icon: Wifi },
   { href: '/sms', label: 'SMS verification', icon: MessageSquare },
-  { href: '/sms-extras', label: 'International eSIM & rentals', icon: Globe2 },
+  { href: '/sms-extras', label: 'International eSIM', icon: Globe2 },
+  { href: '/long-term-numbers', label: 'Long-term numbers', icon: Smartphone },
+  { href: '/social-boost', label: 'Social Boost', icon: Megaphone },
   { href: '/temporary-email', label: 'Temporary email', icon: Globe2 },
   { href: '/services', label: 'Services', icon: Layers3 },
   { href: '/crypto', label: 'Crypto', icon: Coins },
@@ -1978,6 +1981,7 @@ function App() {
             <Route path="/data"><ProtectedArea><DataBundlesPage /></ProtectedArea></Route>
             <Route path="/sms"><ProtectedArea><SmsVerification /></ProtectedArea></Route>
             <Route path="/sms-extras"><ProtectedArea><SmsPoolExtrasPage /></ProtectedArea></Route>
+            <Route path="/long-term-numbers"><ProtectedArea><LongTermNumbersPage /></ProtectedArea></Route>
             <Route path="/temporary-email"><ProtectedArea><TemporaryEmail /></ProtectedArea></Route>
             <Route path="/services"><ProtectedArea><ServicesPage /></ProtectedArea></Route>
             <Route path="/social-boost"><ProtectedArea><SocialBoostPage /></ProtectedArea></Route>
