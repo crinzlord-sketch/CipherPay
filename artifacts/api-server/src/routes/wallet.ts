@@ -132,9 +132,9 @@ export function internalTransferFee(amount: number): number {
 
 
 async function requireTransferPin(userId: number, pin: unknown): Promise<string | null> {
-  if (typeof pin !== "string" || !/^\d{6}$/.test(pin)) return "Enter your 6-digit transfer PIN.";
+  if (typeof pin !== "string" || !/^\d{4}$/.test(pin)) return "Enter your 4-digit transfer PIN.";
   const [user] = await db.select({ pinHash: usersTable.pinHash }).from(usersTable).where(eq(usersTable.id, userId));
-  if (!user?.pinHash) return "Set your 6-digit transfer PIN in Security settings before making a transfer.";
+  if (!user?.pinHash) return "Create your 4-digit transfer PIN before making a transfer.";
   if (!(await bcrypt.compare(pin, user.pinHash))) return "Incorrect transfer PIN.";
   return null;
 }
@@ -837,7 +837,7 @@ router.get("/transactions", async (req, res): Promise<void> => {
   const limit = params.success ? (params.data.limit ?? 20) : 20;
   const offset = (page - 1) * limit;
 
-  const conditions = [eq(transactionsTable.userId, userId)];
+  const conditions = [eq(transactionsTable.userId, userId), eq(transactionsTable.status, "success")];
   // Support comma-separated types e.g. "fund,transfer_in" for merged filter chips
   const rawType = params.success ? (params.data.type ?? "") : "";
   if (rawType) {
@@ -848,11 +848,8 @@ router.get("/transactions", async (req, res): Promise<void> => {
       conditions.push(inArray(transactionsTable.type, types));
     }
   }
-  if (params.success && params.data.status) {
-    conditions.push(eq(transactionsTable.status, params.data.status));
-  }
-  // No default status filter — show all statuses (success, pending, failed) so
-  // failed/refunded purchases and pending withdrawals all appear in history.
+  // User history exposes only successful/settled entries. Pending and failed attempts remain
+  // stored for reconciliation and support but are never shown in user activity/history.
 
   const [{ total }] = await db.select({ total: sql<number>`count(*)` })
     .from(transactionsTable).where(and(...conditions));
@@ -884,7 +881,7 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
 
   const wallet = await getOrCreateWallet(userId);
   const recentTxs = await db.select().from(transactionsTable)
-    .where(and(eq(transactionsTable.userId, userId), inArray(transactionsTable.status, ["success", "pending"])))
+    .where(and(eq(transactionsTable.userId, userId), eq(transactionsTable.status, "success")))
     .orderBy(desc(transactionsTable.createdAt)).limit(2);
 
   const allTxs = await db.select().from(transactionsTable)
