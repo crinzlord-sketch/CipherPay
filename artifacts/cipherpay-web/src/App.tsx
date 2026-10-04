@@ -59,6 +59,7 @@ const parseGroupedDigits = (value: string) => Number(value.replace(/,/g, '')) ||
 const nav = [
   { href: '/', label: 'Overview', icon: Home },
   { href: '/fund', label: 'Fund wallet', icon: Plus },
+  { href: '/send', label: 'Send money', icon: SendIcon },
   { href: '/chat', label: 'Find & chat', icon: MessageSquare },
   { href: '/data', label: 'Data bundles', icon: Wifi },
   { href: '/sms', label: 'SMS verification', icon: MessageSquare },
@@ -307,6 +308,7 @@ function Shell({ children }: { children: ReactNode }) {
         const maintenance = Boolean(featureKey && serviceFeatures && serviceFeatures[featureKey] === false);
         const labels: Record<string, string> = {
           transfers: 'Transfers',
+          data: 'Data bundles',
           wallet_funding: 'Wallet funding',
           airtime: 'Airtime',
           bills: 'Bill payments',
