@@ -259,7 +259,7 @@ export default function SmsVerification() {
       </div>
       <div className="sms-layout">
         <form className="panel sms-order-panel" onSubmit={buy}>
-          <div className="form-section-title"><span className="step">01</span><div><h2>Choose a country</h2><p>Availability and prices update from SMSPool.</p></div></div>          <div className="form-section-title"><span className="step">03</span><div><h2>How should the code arrive?</h2><p>SMSPool supports SMS, Voice OTP and Flash Call where the selected pool/service supports it.</p></div></div>
+          <div className="form-section-title"><span className="step">01</span><div><h2>Choose a country</h2><p>Availability and prices update automatically.</p></div></div>          <div className="form-section-title"><span className="step">03</span><div><h2>How should the code arrive?</h2><p>Choose SMS, Voice OTP or Flash Call when the selected pool/service supports it.</p></div></div>
           <div className="tabs send-tabs" role="tablist" aria-label="Activation type">
             {(['SMS','VOICE','FLASH'] as const).map((type) => (
               <button key={type} type="button" className={`tab ${activationType === type ? 'active' : ''}`} onClick={() => setActivationType(type)}>
