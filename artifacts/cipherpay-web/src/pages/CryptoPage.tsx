@@ -190,7 +190,7 @@ export default function CryptoPage(){
           <div className="cp-receive-address"><code>{walletAddress||'Preparing wallet…'}</code><button onClick={copyAddress} disabled={!walletAddress}>{copied?<Check size={17}/>:<Copy size={17}/>}</button></div>
           <div className="cp-receive-networks"><b>On-chain wallet</b><span>{sendAsset} · {network==='bsc'?'BNB Smart Chain':network==='base'?'Base':'Ethereum'}</span><small>Only send {sendAsset} on this exact network. Sending on another network can permanently lose funds.</small></div>
           <button type="button" className="cp-modal-disabled" onClick={copyAddress} disabled={!walletAddress}>{copied?'Copied':'Copy address'}</button>
-        </div>
+        </div>}
 
         {panel==='send'&&<div>
           <label className="cp-modal-field">Network<select value={network} onChange={e=>setNetwork(e.target.value)}><option value="ethereum">Ethereum</option><option value="base">Base</option><option value="bsc">BNB Smart Chain</option></select></label>
