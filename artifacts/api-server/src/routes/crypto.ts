@@ -58,6 +58,29 @@ async function getFxRate(): Promise<number> {
   return 0;
 }
 
+async function getCoinPaprikaMarkets(): Promise<Market[]> {
+  const response = await httpsJson<Array<{ symbol:string; name:string; quotes?: { USD?: { price?:number; market_cap?:number; volume_24h?:number; percent_change_24h?:number } } }>>("https://api.coinpaprika.com/v1/tickers?quotes=USD", 12000);
+  if (response.status < 200 || response.status >= 300 || !Array.isArray(response.body)) throw new Error("CoinPaprika returned " + response.status);
+  const fx = await getFxRate();
+  if (!fx) throw new Error("Unable to get USD/NGN rate");
+  const bySymbol = new Map(response.body.map(item => [item.symbol.toUpperCase(), item]));
+  const logoBySymbol: Record<string,string> = {
+    BTC:"https://assets.coincap.io/assets/icons/btc@2x.png", ETH:"https://assets.coincap.io/assets/icons/eth@2x.png", SOL:"https://assets.coincap.io/assets/icons/sol@2x.png",
+    USDT:"https://assets.coincap.io/assets/icons/usdt@2x.png", USDC:"https://assets.coincap.io/assets/icons/usdc@2x.png", BNB:"https://assets.coincap.io/assets/icons/bnb@2x.png",
+    XRP:"https://assets.coincap.io/assets/icons/xrp@2x.png", DOGE:"https://assets.coincap.io/assets/icons/doge@2x.png", ADA:"https://assets.coincap.io/assets/icons/ada@2x.png",
+    AVAX:"https://assets.coincap.io/assets/icons/avax@2x.png", TRX:"https://assets.coincap.io/assets/icons/trx@2x.png", XLM:"https://assets.coincap.io/assets/icons/xlm@2x.png",
+  };
+  const markets = COINS.map(([id, symbol, name]) => {
+    const q = bySymbol.get(symbol)?.quotes?.USD;
+    const priceUsd = numberOrZero(q?.price);
+    if (!priceUsd) return null;
+    const marketCapUsd = numberOrZero(q?.market_cap), volumeUsd = numberOrZero(q?.volume_24h);
+    return { id, symbol, name, image:logoBySymbol[symbol] || "", priceUsd, priceNgn:priceUsd*fx, change24h:numberOrZero(q?.percent_change_24h), marketCapUsd, marketCapNgn:marketCapUsd*fx, volumeUsd, volumeNgn:volumeUsd*fx };
+  }).filter((item): item is Market => Boolean(item));
+  if (markets.length < 6) throw new Error("CoinPaprika returned only " + markets.length + " supported assets");
+  return markets;
+}
+
 async function getCoinGeckoMarkets(): Promise<Market[]> {
   const ids = COINS.map(([id]) => id).join(",");
   const url =
@@ -156,6 +179,15 @@ async function getBinanceMarkets(): Promise<Market[]> {
 }
 
 router.get("/crypto/markets", async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const data = await getCoinPaprikaMarkets();
+    res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=120");
+    res.json({ provider:"CoinPaprika", updatedAt:new Date().toISOString(), data });
+    return;
+  } catch (error) {
+    console.warn("[crypto/markets] CoinPaprika failed; trying CoinGecko", error);
+  }
+
   try {
     const data = await getCoinGeckoMarkets();
     res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=120");
