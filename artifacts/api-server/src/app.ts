@@ -140,12 +140,17 @@ app.post("/api/webhooks/flutterwave", flutterwaveWebhookHandler);
 app.get("/api/checkout/callback", (req: Request, res: Response): void => {
   const status = String(req.query.status ?? "");
   res.setHeader("Cache-Control", "no-store");
+  const successful = status === "successful" || status === "completed";
+  const cancelled = ["cancelled", "canceled", "failed", "error"].includes(status.toLowerCase());
+  const title = successful ? "Payment complete" : cancelled ? "Payment cancelled" : "Payment not completed";
+  const message = successful ? "Returning you to the CipherPay app…" : cancelled ? "The card payment was cancelled. You were not charged." : "The card payment was not completed. Returning you to CipherPay…";
   res.status(200).send(
     `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">` +
       `<title>CipherPay</title></head>` +
       `<body style="font-family:system-ui;text-align:center;padding:48px;color:#1f2937">` +
-      `<h2 style="color:#7c3aed">Payment ${status === "successful" || status === "completed" ? "complete" : "received"}</h2>` +
-      `<p>Returning you to the CipherPay app…</p></body></html>`,
+      `<h2 style="color:#7c3aed">${title}</h2><p>${message}</p>` +
+      `<script>try{window.parent.postMessage({type:"cipherpay:checkout-callback",status:"${status.replace(/"/g,"")}",tx_ref:"${String(req.query.tx_ref ?? "").replace(/"/g,"")}",transaction_id:"${String(req.query.transaction_id ?? "").replace(/"/g,"")}"}, "*")}catch(e){}</script>` +
+      `</body></html>`,
   );
 });
 
