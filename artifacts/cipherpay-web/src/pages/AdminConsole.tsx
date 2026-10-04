@@ -64,7 +64,9 @@ function AdminAvatar({ user, large = false }: { user: any; large?: boolean }) {
   const className = large ? 'admin-avatar admin-avatar-large' : 'admin-avatar';
   const rawSrc = typeof user?.avatarUrl === 'string' ? user.avatarUrl.trim() : '';
   const src = rawSrc
-    ? (/^(data:|https?:\\/\\/)/i.test(rawSrc) ? rawSrc : apiUrl(rawSrc.startsWith('/') ? rawSrc : `/${rawSrc}`))
+    ? (rawSrc.startsWith('data:') || rawSrc.startsWith('http://') || rawSrc.startsWith('https://')
+      ? rawSrc
+      : apiUrl(rawSrc.startsWith('/') ? rawSrc : `/${rawSrc}`))
     : '';
   if (src && !failed) {
     return <img className={`${className} admin-avatar-image`} src={src} alt="" onError={() => setFailed(true)} />;
