@@ -5,7 +5,7 @@ import { db, walletsTable, transactionsTable, usersTable } from "@workspace/db";
 import { FundWalletBody, VerifyFundingBody, WalletTransferBody, WithdrawFundsBody, ListTransactionsQueryParams, ClaimDepositBody } from "@workspace/api-zod";
 import { getOrCreateWallet, creditWallet, debitWallet, formatWallet, formatTransaction } from "../lib/wallet";
 import { generateReference } from "../lib/auth";
-import { createTransfer, initiateBankTransfer, friendlyFlwError } from "../lib/flutterwave";
+import { createTransfer, initiateBankTransfer, friendlyFlwError, createHostedPayment, createBankTransferCharge, verifyByReference } from "../lib/flutterwave";
 
 import { ensureUserPayoutWallet } from "../lib/payout-wallet";
 import { notifyUser } from "../lib/notifications";
