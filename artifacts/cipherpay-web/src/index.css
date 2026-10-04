@@ -6985,6 +6985,46 @@ html.dark .cp-chat-list-row.has-unread .cp-chat-list-copy span{color:#f7f3fb!imp
 }
 
 
+/* Chat viewport repair — keep the mobile conversation flush to the visible app area.
+ * The mobile topbar is 62px tall; the previous chat shell used 100px,
+ * leaving an unnecessary blank strip beneath the composer on phones.
+ */
+@media (max-width: 760px) {
+  .main-area:has(.cp-chat-page) {
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .main-area:has(.cp-chat-page) > .content {
+    height: calc(100dvh - 62px) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+  }
+
+  .cp-chat-page {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .cp-chat-shell {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+
+  .cp-chat-messages {
+    min-height: 0 !important;
+    padding-bottom: 12px !important;
+  }
+
+  .cp-chat-composer {
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+  }
+}
+
 /* Desktop service ambient glow */
 @media (min-width: 901px) {
   .main-area {
