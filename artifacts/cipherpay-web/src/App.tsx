@@ -1147,6 +1147,7 @@ function ErrorPage({ retry }: { retry: () => void }) { return <div className="ce
 
 function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose, onReset }: { result: any; requestedAmount: number; paymentStatus: 'waiting' | 'success' | 'failed'; onClose: () => void; onReset: () => void }) {
   const [copiedField, setCopiedField] = useState('');
+  const [claiming, setClaiming] = useState(false);
   const account = result.account;
   const permanent = Boolean(account.permanent);
   const amount = Number(account.amount ?? requestedAmount);
@@ -1254,6 +1255,24 @@ function TransferAccountPanel({ result, requestedAmount, paymentStatus, onClose,
             </ol>
           </div>
           <div className="transfer-warning"><ShieldCheck size={16} /><p>{account.note || (permanent ? 'This account belongs to your CipherPay wallet. Use it for future deposits too.' : 'Only send the exact amount shown. Do not send money to this account after it expires.')}</p></div>
+          {result.external && <button type="button" className="primary-button" disabled={claiming} onClick={async () => {
+            setClaiming(true);
+            try {
+              const token = useToken();
+              const response = await fetch(apiUrl('/api/wallet/deposit/claim'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                credentials: 'include',
+                body: JSON.stringify({ amount }),
+              });
+              const payload = await response.json().catch(() => null);
+              if (!response.ok) throw new Error(payload?.error || 'Could not submit the deposit.');
+              setPaymentStatus('waiting');
+              window.alert('Deposit submitted. We will confirm the bank transfer and credit your wallet.');
+            } catch (e: any) {
+              window.alert(e?.message || 'Could not submit the deposit.');
+            } finally { setClaiming(false); }
+          }}>{claiming ? 'Submitting…' : 'I’ve sent the transfer'}</button>}
         </>
       )}
 
