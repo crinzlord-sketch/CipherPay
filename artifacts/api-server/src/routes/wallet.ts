@@ -6,7 +6,7 @@ import { FundWalletBody, VerifyFundingBody, WalletTransferBody, WithdrawFundsBod
 import { getOrCreateWallet, creditWallet, debitWallet, formatWallet, formatTransaction } from "../lib/wallet";
 import { generateReference } from "../lib/auth";
 import { createTransfer, initiateBankTransfer, friendlyFlwError } from "../lib/flutterwave";
-import { createCashierPayment, createBankTransferPayment, friendlyOpayError, opayReference, queryPaymentStatus } from "../lib/opay";
+import { createCashierPayment, createCardPayment, createBankTransferPayment, friendlyOpayError, opayReference, queryPaymentStatus } from "../lib/opay";
 import { ensureUserPayoutWallet } from "../lib/payout-wallet";
 import { notifyUser } from "../lib/notifications";
 import { checkDepositLimit, checkPerTxLimitSync, getDepositFlagReason } from "../lib/kycLimits";
@@ -258,6 +258,39 @@ router.post("/wallet/fund", async (req, res): Promise<void> => {
     await db.update(transactionsTable).set({ status: "failed" }).where(and(eq(transactionsTable.reference, reference), eq(transactionsTable.status, "pending")));
     req.log?.warn?.({ err: e?.message, reference }, "OPay funding init failed");
     res.status(502).json({ error: friendlyOpayError(e?.message) });
+  }
+});
+
+router.post("/wallet/fund/card", async (req, res): Promise<void> => {
+  const userId = getUserId(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const amount = Number(req.body?.amount);
+  const cardNumber = String(req.body?.cardNumber ?? "").replace(/\s+/g, "");
+  const cardHolderName = String(req.body?.cardHolderName ?? "").trim().slice(0, 80);
+  const expiryMonth = String(req.body?.expiryMonth ?? "").padStart(2, "0");
+  const expiryYear = String(req.body?.expiryYear ?? "");
+  const cvv = String(req.body?.cvv ?? "").trim();
+  if (!Number.isFinite(amount) || amount < 100) { res.status(400).json({ error: "Amount must be at least ₦100" }); return; }
+  if (!/^\d{12,19}$/.test(cardNumber)) { res.status(400).json({ error: "Enter a valid card number" }); return; }
+  if (!/^\d{2}$/.test(expiryMonth) || Number(expiryMonth) < 1 || Number(expiryMonth) > 12) { res.status(400).json({ error: "Enter a valid expiry month" }); return; }
+  if (!/^\d{2,4}$/.test(expiryYear)) { res.status(400).json({ error: "Enter a valid expiry year" }); return; }
+  if (!/^\d{3,4}$/.test(cvv)) { res.status(400).json({ error: "Enter a valid CVV" }); return; }
+  if (!cardHolderName) { res.status(400).json({ error: "Enter the cardholder name" }); return; }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+  if (!user?.email) { res.status(400).json({ error: "Email is required for payment" }); return; }
+  const limitError = await checkDepositLimit(userId, user.kycLevel ?? 0, amount);
+  if (limitError) { res.status(400).json({ error: limitError }); return; }
+  const flagReason = getDepositFlagReason(user.kycLevel ?? 0, amount);
+  const reference = opayReference(String(userId));
+  await db.insert(transactionsTable).values({ userId, type:"fund", amount:amount.toFixed(2), status:"pending", reference, description:flagReason ? "Wallet funding via card — held for KYC review" : "Wallet funding via card", isFlagged:Boolean(flagReason), flagReason, metadata:JSON.stringify({provider:"opay",channel:"card",heldForKyc:Boolean(flagReason)}) });
+  const configuredApiUrl = process.env.PUBLIC_API_URL?.replace(/\/+$/, "") || `${req.protocol}://${req.get("host")}`;
+  try {
+    const payment = await createCardPayment({ reference, amount, cardNumber, cardHolderName, expiryMonth, expiryYear, cvv, callbackUrl:`${configuredApiUrl}/api/webhooks/opay`, returnUrl:`${configuredApiUrl}/api/opay/return`, email:user.email, name:`${user.firstName} ${user.lastName}`, phone:user.phone ?? undefined });
+    res.json({ reference:payment.reference, orderNo:payment.orderNo, status:payment.status, amount:payment.amount, currency:"NGN", redirectUrl:payment.redirectUrl, cashierUrl:payment.cashierUrl });
+  } catch (e:any) {
+    await db.update(transactionsTable).set({status:"failed"}).where(and(eq(transactionsTable.reference,reference),eq(transactionsTable.status,"pending")));
+    req.log?.warn?.({err:e?.message,reference},"OPay card funding init failed");
+    res.status(502).json({error:friendlyOpayError(e?.message)});
   }
 });
 
