@@ -10,6 +10,17 @@ type CryptoBalance = { network:string; asset:string; balance:number; address:str
 type CryptoTx = { id:number; network:string; asset:string; direction:string; amount:string; to_address?:string; tx_hash:string; status:string; created_at:string };
 
 const icon=(code:string)=>`https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons/svg/color/${code}.svg`;
+const ASSET_META:Record<string,{name:string;logo:string}> = {
+  ETH:{name:'Ethereum',logo:'eth'}, BNB:{name:'BNB',logo:'bnb'}, POL:{name:'Polygon',logo:'pol'},
+  USDC:{name:'USD Coin',logo:'usdc'}, USDT:{name:'Tether USD',logo:'usdt'}
+};
+const CoinIcon=({asset,size=36}:{asset:string;size?:number})=>{
+  const meta=ASSET_META[asset]||{name:asset,logo:asset.toLowerCase()};
+  return <span className="cp-coin-icon" style={{width:size,height:size}}>
+    <img src={icon(meta.logo)} alt="" onError={e=>{(e.currentTarget as HTMLImageElement).style.display='none';}}/>
+    <b>{asset.slice(0,2)}</b>
+  </span>;
+};
 const usd=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2});
 const ngn=new Intl.NumberFormat('en-NG',{style:'currency',currency:'NGN',maximumFractionDigits:2});
 const compact=new Intl.NumberFormat('en-NG',{notation:'compact',maximumFractionDigits:1});
@@ -114,7 +125,9 @@ export default function CryptoPage(){
     if(asset==='USDT')return ['ethereum','bsc','polygon'].includes(net);
     return false;
   };
-  const sendableAssets=Array.from(new Set(balances.filter(b=>supportedForNetwork(b.asset,network)).map(b=>b.asset)));
+  const receiveAssets=['ETH','USDC','USDT','BNB','POL'].filter(asset=>supportedForNetwork(asset,network));
+  const sendableAssets=['ETH','USDC','USDT','BNB','POL'].filter(asset=>supportedForNetwork(asset,network));
+  const selectedSendBalance=balances.find(b=>b.asset===sendAsset&&b.network===network)?.balance||0;
   const [sendAsset,setSendAsset]=useState('ETH');
 
   useEffect(()=>{if(sendableAssets.length&&!sendableAssets.includes(sendAsset))setSendAsset(sendableAssets[0]);},[network,balances]);
@@ -204,8 +217,9 @@ export default function CryptoPage(){
         <h2>{panel==='sell'?'Sell to NGN':panel==='swap'?'Swap crypto':panel==='send'?'Send crypto':'Receive crypto'}</h2>
 
         {panel==='receive'&&<div className="cp-crypto-receive">
-          <div className="cp-modal-asset"><span><b>Receive {sendAsset}</b><small>Your CipherPay self-custody EVM address works on the selected network.</small></span></div>
           <label className="cp-modal-field">Network<select value={network} onChange={e=>setNetwork(e.target.value)}><option value="ethereum">Ethereum</option><option value="base">Base</option><option value="bsc">BNB Smart Chain</option><option value="polygon">Polygon</option></select></label>
+          <div className="cp-coin-picker"><span className="cp-picker-label">Choose asset to receive</span><div className="cp-coin-picker-grid">{receiveAssets.map(asset=><button type="button" key={asset} className={sendAsset===asset?'active':''} onClick={()=>setSendAsset(asset)}><CoinIcon asset={asset}/><span><b>{asset}</b><small>{ASSET_META[asset]?.name}</small></span>{sendAsset===asset&&<Check size={15}/>}</button>)}</div></div>
+          <div className="cp-modal-asset"><CoinIcon asset={sendAsset} size={40}/><span><b>Receive {ASSET_META[sendAsset]?.name||sendAsset}</b><small>Real on-chain address. Your funds go to this blockchain account.</small></span></div>
           <div className="cp-receive-address"><code>{walletAddress||'Preparing wallet…'}</code><button onClick={copyAddress} disabled={!walletAddress}>{copied?<Check size={17}/>:<Copy size={17}/>}</button></div>
           <div className="cp-receive-networks"><b>On-chain wallet</b><span>{sendAsset} · {network==='bsc'?'BNB Smart Chain':network==='base'?'Base':network==='polygon'?'Polygon':'Ethereum'}</span><small>Only send {sendAsset} on this exact network. Sending on another network can permanently lose funds.</small></div>
           <button type="button" className="cp-modal-disabled" onClick={copyAddress} disabled={!walletAddress}>{copied?'Copied':'Copy address'}</button>
@@ -213,11 +227,12 @@ export default function CryptoPage(){
 
         {panel==='send'&&<div>
           <label className="cp-modal-field">Network<select value={network} onChange={e=>setNetwork(e.target.value)}><option value="ethereum">Ethereum</option><option value="base">Base</option><option value="bsc">BNB Smart Chain</option><option value="polygon">Polygon</option></select></label>
-          <label className="cp-modal-field">Asset<select value={sendAsset} onChange={e=>setSendAsset(e.target.value)}>{sendableAssets.map(a=><option key={a}>{a}</option>)}</select></label>
+          <div className="cp-coin-picker"><span className="cp-picker-label">Choose asset to send</span><div className="cp-coin-picker-grid">{sendableAssets.map(asset=><button type="button" key={asset} className={sendAsset===asset?'active':''} onClick={()=>setSendAsset(asset)}><CoinIcon asset={asset}/><span><b>{asset}</b><small>{ASSET_META[asset]?.name} · {balances.find(b=>b.asset===asset&&b.network===network)?.balance||0} available</small></span>{sendAsset===asset&&<Check size={15}/>}</button>)}</div></div>
+          <div className="cp-send-available">Available on {network==='bsc'?'BNB Smart Chain':network==='base'?'Base':network==='polygon'?'Polygon':'Ethereum'}: <b>{selectedSendBalance} {sendAsset}</b></div>
           <label className="cp-modal-field">Destination address<input value={sendTo} onChange={e=>setSendTo(e.target.value)} placeholder="0x…" autoCapitalize="none"/></label>
           <label className="cp-modal-field">Amount<input value={sendAmount} onChange={e=>setSendAmount(e.target.value)} inputMode="decimal" placeholder="0.00"/></label>
           {sendError&&<div className="cp-market-error">{sendError}</div>}{sendSuccess&&<div className="cp-receive-networks"><b>Transaction submitted</b><small>{sendSuccess}</small></div>}
-          <button type="button" className="cp-modal-disabled" onClick={()=>setConfirmSend(true)} disabled={sending||!sendableAssets.length||!sendTo||!sendAmount}>{sending?<><Loader2 size={16} className="animate-spin"/> Sending…</>:<>Review transaction</>}</button>
+          <button type="button" className="cp-modal-disabled" onClick={()=>setConfirmSend(true)} disabled={sending||!sendableAssets.length||selectedSendBalance<=0||!sendTo||!sendAmount||Number(sendAmount)>selectedSendBalance}>{sending?<><Loader2 size={16} className="animate-spin"/> Sending…</>:<>Review transaction</>}</button>
         </div>}
 
         {(panel==='swap'||panel==='sell')&&<div><div className="cp-receive-networks"><b>Coming next</b><small>The on-chain wallet is live first. Swap and NGN conversion stay separate until the compliant exchange/on-ramp layer is connected.</small></div><button type="button" className="cp-modal-disabled" onClick={closePanel}>Close</button></div>}
