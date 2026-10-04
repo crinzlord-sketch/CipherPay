@@ -63,45 +63,141 @@ async function getBinanceMarkets(): Promise<Market[]> {
   }).filter((item): item is Market => Boolean(item));
 }
 
+async function getCoinMarketCapMarkets(): Promise<Market[]> {
+  const symbols = COINS.map(([, symbol]) => symbol).join(",");
+  const url = "https://pro-api.coinmarketcap.com/public-api/v1/cryptocurrency/quotes/latest?symbol="
+    + encodeURIComponent(symbols) + "&convert=USD&skip_invalid=true";
+  const response = await httpsJson<{
+    data?: Record<string, { id:number; name:string; symbol:string; quote?: { USD?: { price?:number; volume_24h?:number; market_cap?:number; percent_change_24h?:number } } }>
+  }>(url, 10000);
+
+  if (response.status < 200 || response.status >= 300 || !response.body?.data) {
+    throw new Error("CoinMarketCap returned " + response.status);
+  }
+
+  return COINS.map(([id, symbol, name]) => {
+    const item = response.body.data?.[symbol];
+    const quote = item?.quote?.USD;
+    const priceUsd = numberOrZero(quote?.price);
+    const volumeUsd = numberOrZero(quote?.volume_24h);
+    const marketCapUsd = numberOrZero(quote?.market_cap);
+    if (!priceUsd) return null;
+
+    return {
+      id,
+      symbol,
+      name,
+      image: "",
+      priceUsd,
+      priceNgn: 0,
+      change24h: numberOrZero(quote?.percent_change_24h),
+      marketCapUsd,
+      marketCapNgn: 0,
+      volumeUsd,
+      volumeNgn: 0,
+    };
+  }).filter((item): item is Market => Boolean(item));
+}
+
 router.get("/crypto/markets", async (_req: Request, res: Response): Promise<void> => {
-  // Binance is the fast direct market source. CoinGecko is only enrichment/fallback.
-  // Neither path uses a proxy.
+  // Use CoinMarketCap's keyless public market endpoint first. It avoids exposing
+  // API keys in the browser and provides price, 24h change, volume and market cap.
+  // Binance and CoinGecko remain fallbacks so a temporary provider outage does
+  // not blank the Crypto page.
+  try {
+    const [marketResult, fx] = await Promise.all([getCoinMarketCapMarkets(), getFxRate()]);
+    if (marketResult.length && fx > 0) {
+      const data = marketResult.map(item => ({
+        ...item,
+        priceNgn: item.priceUsd * fx,
+        marketCapNgn: item.marketCapUsd * fx,
+        volumeNgn: item.volumeUsd * fx,
+      }));
+      res.setHeader("Cache-Control", "public, max-age=20, stale-while-revalidate=30");
+      res.json({
+        provider: "CoinMarketCap",
+        updatedAt: new Date().toISOString(),
+        usdNgnRate: fx,
+        data,
+      });
+      return;
+    }
+    throw new Error("CoinMarketCap returned no usable market data");
+  } catch (error) {
+    console.warn("[crypto/markets] CoinMarketCap request failed; trying Binance", error);
+  }
+
   try {
     const [binanceResult, fx] = await Promise.all([getBinanceMarkets(), getFxRate()]);
-    if (binanceResult.length) {
-      const data = binanceResult.map(item => ({ ...item, priceNgn: fx > 0 ? item.priceUsd * fx : item.priceNgn, volumeNgn: fx > 0 ? item.volumeUsd * fx : item.volumeNgn }));
-      res.setHeader("Cache-Control","public, max-age=10, stale-while-revalidate=20");
-      res.json({provider:"Binance direct",updatedAt:new Date().toISOString(),usdNgnRate:fx || (data[0]?.priceNgn && data[0]?.priceUsd ? data[0].priceNgn/data[0].priceUsd : 0),data});
+    if (binanceResult.length && fx > 0) {
+      const data = binanceResult.map(item => ({
+        ...item,
+        priceNgn: item.priceUsd * fx,
+        marketCapNgn: item.marketCapUsd * fx,
+        volumeNgn: item.volumeUsd * fx,
+      }));
+      res.setHeader("Cache-Control", "public, max-age=10, stale-while-revalidate=20");
+      res.json({
+        provider: "Binance",
+        updatedAt: new Date().toISOString(),
+        usdNgnRate: fx,
+        data,
+      });
       return;
     }
   } catch (error) {
-    console.warn("[crypto/markets] direct Binance request failed; trying CoinGecko", error);
+    console.warn("[crypto/markets] Binance fallback failed; trying CoinGecko", error);
   }
 
   try {
     const ids = COINS.map(([id]) => id).join(",");
     const key = process.env.COINGECKO_API_KEY?.trim();
-    const host = key && process.env.COINGECKO_API_PLAN === "pro" ? "https://pro-api.coingecko.com/api/v3" : "https://api.coingecko.com/api/v3";
+    const host = key && process.env.COINGECKO_API_PLAN === "pro"
+      ? "https://pro-api.coingecko.com/api/v3"
+      : "https://api.coingecko.com/api/v3";
     const headers: Record<string,string> = { accept:"application/json" };
-    if (key) headers[process.env.COINGECKO_API_PLAN === "pro" ? "x-cg-pro-api-key" : "x-cg-demo-api-key"] = key;
-    const marketResponse = await httpsJson<Array<{id:string;image:string;current_price:number|null;market_cap:number|null;total_volume:number|null;price_change_percentage_24h:number|null}>>(host + "/coins/markets?vs_currency=usd&ids=" + encodeURIComponent(ids) + "&order=market_cap_desc&per_page=" + COINS.length + "&page=1&sparkline=false&price_change_percentage=24h", 8000);
+    if (key) {
+      headers[process.env.COINGECKO_API_PLAN === "pro" ? "x-cg-pro-api-key" : "x-cg-demo-api-key"] = key;
+    }
+
+    // httpsJson intentionally keeps headers fixed, so use the public CoinGecko
+    // endpoint only when no API key is configured. Keyed CoinGecko requests are
+    // better handled by a dedicated fetch helper when credentials are available.
+    const marketResponse = await httpsJson<Array<{
+      id:string; image:string; current_price:number|null; market_cap:number|null;
+      total_volume:number|null; price_change_percentage_24h:number|null
+    }>>(host + "/coins/markets?vs_currency=usd&ids=" + encodeURIComponent(ids)
+      + "&order=market_cap_desc&per_page=" + COINS.length
+      + "&page=1&sparkline=false&price_change_percentage=24h", 8000);
+
     const fx = await getFxRate();
     if (marketResponse.status >= 200 && marketResponse.status < 300 && fx > 0 && Array.isArray(marketResponse.body)) {
       const byId = new Map(marketResponse.body.map(item => [item.id,item]));
       const data = COINS.map(([id,symbol,name]) => {
-        const item = byId.get(id), priceUsd=numberOrZero(item?.current_price), marketCapUsd=numberOrZero(item?.market_cap), volumeUsd=numberOrZero(item?.total_volume);
-        return {id,symbol,name,image:item?.image??"",priceUsd,priceNgn:priceUsd*fx,change24h:numberOrZero(item?.price_change_percentage_24h),marketCapUsd,marketCapNgn:marketCapUsd*fx,volumeUsd,volumeNgn:volumeUsd*fx};
+        const item = byId.get(id);
+        const priceUsd = numberOrZero(item?.current_price);
+        const marketCapUsd = numberOrZero(item?.market_cap);
+        const volumeUsd = numberOrZero(item?.total_volume);
+        return {
+          id,symbol,name,image:item?.image??"",priceUsd,priceNgn:priceUsd*fx,
+          change24h:numberOrZero(item?.price_change_percentage_24h),
+          marketCapUsd,marketCapNgn:marketCapUsd*fx,
+          volumeUsd,volumeNgn:volumeUsd*fx
+        };
       }).filter(item=>item.priceUsd>0);
+
       if (data.length) {
         res.setHeader("Cache-Control","public, max-age=20, stale-while-revalidate=30");
-        res.json({provider:key?"CoinGecko direct":"CoinGecko direct",updatedAt:new Date().toISOString(),usdNgnRate:fx,data});
+        res.json({provider:"CoinGecko",updatedAt:new Date().toISOString(),usdNgnRate:fx,data});
         return;
       }
     }
   } catch (error) {
-    console.error("[crypto/markets] direct market fallback failed", error);
+    console.error("[crypto/markets] CoinGecko fallback failed", error);
   }
+
   res.status(502).json({ error:"Live crypto market data is temporarily unavailable. Please try again." });
 });
+
 
 export default router;
