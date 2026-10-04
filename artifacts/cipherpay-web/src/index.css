@@ -6974,3 +6974,48 @@ html.dark .cp-chat-list-row.has-unread .cp-chat-list-copy span{color:#f7f3fb!imp
     z-index: 1;
   }
 }
+
+
+.card-checkout-shell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid hsl(var(--card-border));
+  border-radius: 16px;
+  background: hsl(var(--card));
+}
+.card-checkout-shell span { display:block; margin-top:4px; color:hsl(var(--muted-foreground)); font-size:.78rem; }
+.card-checkout-backdrop { z-index: 1000; }
+.card-checkout-modal {
+  width: min(680px, calc(100vw - 28px));
+  height: min(760px, calc(100vh - 28px));
+  overflow: hidden;
+  border: 1px solid hsl(var(--card-border));
+  border-radius: 22px;
+  background: hsl(var(--background));
+  box-shadow: 0 30px 90px rgba(0,0,0,.28);
+}
+.card-checkout-header {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  padding:18px 18px 14px;
+  border-bottom:1px solid hsl(var(--card-border));
+}
+.card-checkout-header h2 { margin:4px 0 5px; font-size:1.05rem; }
+.card-checkout-header p { margin:0; color:hsl(var(--muted-foreground)); font-size:.78rem; line-height:1.45; }
+.card-checkout-frame {
+  display:block;
+  width:100%;
+  height:calc(100% - 106px);
+  border:0;
+  background:#fff;
+}
+@media (max-width: 640px) {
+  .card-checkout-modal { width:calc(100vw - 16px); height:calc(100vh - 16px); border-radius:18px; }
+  .card-checkout-header { padding:15px; }
+}
