@@ -7,3 +7,13 @@
 .rental-purchase-review h3{margin:5px 0 2px;font-size:20px}.rental-purchase-review p{margin:0;color:var(--muted);font-size:13px}
 .rental-review-total{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;border-radius:12px;background:var(--panel);border:1px solid var(--border)}
 .rental-review-total b{font-size:20px}.rental-review-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:10px}
+
+/* Make rental stock and purchase choices visibly interactive. */
+.stock-row{position:relative;min-height:66px;padding:13px 12px!important;background:var(--panel-2)!important}
+.stock-row:before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:99px;background:transparent;transition:background .16s ease}
+.stock-row:hover,.stock-row.selected{background:rgba(124,92,255,.09)!important;border-color:rgba(124,92,255,.55)!important;box-shadow:0 8px 22px rgba(124,92,255,.1);transform:translateY(-1px)}
+.stock-row:hover:before,.stock-row.selected:before{background:#7c5cff}
+.stock-row em{color:#8f7fff;font-weight:800}.stock-row>svg{color:#8f7fff}
+.rental-purchase-review{scroll-margin-top:90px}.rental-purchase-review:before{content:"No charge has been made";display:inline-flex;width:max-content;padding:5px 8px;border-radius:999px;background:rgba(159,224,189,.12);color:#72c99a;font-size:10px;font-weight:900;letter-spacing:.04em}
+.rental-confirm-btn{box-shadow:0 8px 20px rgba(124,92,255,.22)}
+@media(max-width:850px){.rental-purchase-review:before{width:auto;justify-content:center}}
