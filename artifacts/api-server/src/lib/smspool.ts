@@ -312,8 +312,29 @@ export async function esimTopup(esim: string, plan: string): Promise<any> {
   return request<any>("/esim/topup", { esim, plan });
 }
 
-export async function rentalStock(): Promise<any> {
-  return request<any>("/rental/retrieve_stock");
+export async function rentalStock(): Promise<any[]> {
+  // SMSPool's current rental catalogue endpoint is retrieve_all. It returns
+  // an object keyed by rental ID, so normalize it for the web app.
+  const raw = await request<unknown>("/rental/retrieve_all");
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === "object") {
+    return Object.entries(raw as Record<string, unknown>).map(([id, value]) => {
+      const item = value && typeof value === "object" ? value as Record<string, unknown> : {};
+      let pricing: Record<string, unknown> = {};
+      if (typeof item.pricing === "string") {
+        try { pricing = JSON.parse(item.pricing) as Record<string, unknown>; } catch { /* ignore malformed provider pricing */ }
+      } else if (item.pricing && typeof item.pricing === "object") {
+        pricing = item.pricing as Record<string, unknown>;
+      }
+      return {
+        id,
+        name: String(item.name ?? item.country ?? item.country_name ?? "International"),
+        region: String(item.region ?? ""),
+        pricing,
+      };
+    });
+  }
+  return [];
 }
 
 export async function rentalPricing(id: string): Promise<any> {
