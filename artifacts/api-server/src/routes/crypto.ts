@@ -64,23 +64,50 @@ async function getBinanceMarkets(): Promise<Market[]> {
 }
 
 async function getCoinMarketCapMarkets(): Promise<Market[]> {
-  const symbols = COINS.map(([, symbol]) => symbol).join(",");
-  const url = "https://pro-api.coinmarketcap.com/public-api/v3/cryptocurrency/quotes/latest?symbol="
-    + encodeURIComponent(symbols) + "&convert=USD&skip_invalid=true";
+  const ids = COINS.map(([id]) => id).join(",");
+  const url = "https://pro-api.coinmarketcap.com/public-api/v3/cryptocurrency/quotes/latest?slug="
+    + encodeURIComponent(ids) + "&convert=USD&skip_invalid=true";
+
   const response = await httpsJson<{
-    data?: Record<string, { id:number; name:string; symbol:string; quote?: { USD?: { price?:number; volume_24h?:number; market_cap?:number; percent_change_24h?:number } } }>
+    data?: Array<{
+      id:number;
+      name:string;
+      symbol:string;
+      slug:string;
+      quote?: Array<{
+        symbol?:string;
+        price?:number;
+        volume_24h?:number;
+        market_cap?:number;
+        percent_change_24h?:number;
+      }>;
+    }> | Record<string, {
+      id:number;
+      name:string;
+      symbol:string;
+      slug:string;
+      quote?: Array<{
+        symbol?:string;
+        price?:number;
+        volume_24h?:number;
+        market_cap?:number;
+        percent_change_24h?:number;
+      }>;
+    }>
   }>(url, 10000);
 
   if (response.status < 200 || response.status >= 300 || !response.body?.data) {
     throw new Error("CoinMarketCap returned " + response.status);
   }
 
+  const rawData = response.body.data;
+  const items = Array.isArray(rawData) ? rawData : Object.values(rawData);
+  const bySymbol = new Map(items.map(item => [item.symbol, item]));
+
   return COINS.map(([id, symbol, name]) => {
-    const item = response.body.data?.[symbol];
-    const quote = item?.quote?.USD;
+    const item = bySymbol.get(symbol);
+    const quote = item?.quote?.find(entry => entry.symbol === "USD") ?? item?.quote?.[0];
     const priceUsd = numberOrZero(quote?.price);
-    const volumeUsd = numberOrZero(quote?.volume_24h);
-    const marketCapUsd = numberOrZero(quote?.market_cap);
     if (!priceUsd) return null;
 
     return {
@@ -91,9 +118,9 @@ async function getCoinMarketCapMarkets(): Promise<Market[]> {
       priceUsd,
       priceNgn: 0,
       change24h: numberOrZero(quote?.percent_change_24h),
-      marketCapUsd,
+      marketCapUsd: numberOrZero(quote?.market_cap),
       marketCapNgn: 0,
-      volumeUsd,
+      volumeUsd: numberOrZero(quote?.volume_24h),
       volumeNgn: 0,
     };
   }).filter((item): item is Market => Boolean(item));
