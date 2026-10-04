@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
-import { Wallet, JsonRpcProvider, Contract, formatUnits, formatEther, parseUnits, parseEther, isAddress } from "ethers";
+import ethers from "../vendor/ethers.umd.min.cjs";
+const { Wallet, JsonRpcProvider, Contract, formatUnits, formatEther, parseUnits, parseEther, isAddress } = ethers as any;
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
