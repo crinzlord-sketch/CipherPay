@@ -72,6 +72,9 @@ export default function LongTermNumbersPage() {
   const requestPurchase = (days: number, amount: number) => {
     if (!selectedStock || !days || buying) return;
     setConfirmPurchase({ days, amount });
+    requestAnimationFrame(() => {
+      document.getElementById("rental-purchase-review")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
   };
 
   const buyRental = async (days: number) => {
@@ -145,27 +148,17 @@ export default function LongTermNumbersPage() {
 
       <aside className="rentals-side">
         <section className="panel rental-stock"><div className="rentals-head"><div><span className="rentals-kicker">02 / AVAILABILITY</span><h2>Rental stock</h2></div></div>
-          {stock.length ? <div className="stock-list">{stock.slice(0, 12).map((item: any, index) => <button type="button" className={selectedStock === item ? "stock-row selected" : "stock-row"} key={String(item.id ?? item.code ?? index)} onClick={() => void selectStock(item)}><span><b>{item.country ?? item.name ?? item.country_name ?? "International"}</b><small>{item.region ?? "Long-term number"}</small></span><em>{Number.isFinite(Number(item.stock ?? item.available ?? item.quantity ?? item.count)) ? `${Number(item.stock ?? item.available ?? item.quantity ?? item.count)} in stock` : "View availability"}</em><ChevronRight size={15} /></button>)}</div> : <p className="stock-empty">Live rental stock will appear here when available.</p>}
+          {stock.length ? <div className="stock-list">{stock.slice(0, 12).map((item: any, index) => <button type="button" className={selectedStock === item ? "stock-row selected" : "stock-row"} key={String(item.id ?? item.code ?? index)} onClick={() => void selectStock(item)}><span><b>{item.country ?? item.name ?? item.country_name ?? "International"}</b><small>{item.region ?? "Long-term number"}</small></span><em>{Number.isFinite(Number(item.stock ?? item.available ?? item.quantity ?? item.count)) ? `${Number(item.stock ?? item.available ?? item.quantity ?? item.count)} available` : "Available to select"}</em><ChevronRight size={15} /></button>)}</div> : <p className="stock-empty">Live rental stock will appear here when available.</p>}
         </section>
-        <section className="panel rental-purchase"><div className="rentals-head"><div><span className="rentals-kicker">03 / PURCHASE</span><h2>{selectedStock ? (selectedStock.country ?? selectedStock.name ?? "Long-term number") : "Select a number"}</h2></div></div>{!selectedStock ? <p className="stock-empty">Click a country above to view available rental durations and purchase.</p> : pricingLoading ? <div className="rentals-empty"><LoaderCircle className="spin" /> Loading rental options…</div> : pricing.length ? <div className="rental-pricing-grid">{pricing.map((option) => <button type="button" key={option.days} className="rental-price-option" disabled={buying} onClick={() => requestPurchase(option.days, Number(option.amount))}><span>{option.days} days</span><b>₦{Number(option.amount).toLocaleString("en-NG")}</b><small>Click to select · Continue to review</small></button>)}</div> : <p className="stock-empty">No rental durations are available for this number right now.</p>}</section>
+        <section className="panel rental-purchase"><div className="rentals-head"><div><span className="rentals-kicker">03 / PURCHASE</span><h2>{selectedStock ? (selectedStock.country ?? selectedStock.name ?? "Long-term number") : "Select a number"}</h2></div></div>{!selectedStock ? <p className="stock-empty">Click a country above to view available rental durations and purchase.</p> : pricingLoading ? <div className="rentals-empty"><LoaderCircle className="spin" /> Loading rental options…</div> : pricing.length ? <div className="rental-pricing-grid">{pricing.map((option) => <button type="button" key={option.days} className={confirmPurchase?.days === option.days ? "rental-price-option selected" : "rental-price-option"} disabled={buying} onClick={() => requestPurchase(option.days, Number(option.amount))}><span>{option.days} days</span><b>₦{Number(option.amount).toLocaleString("en-NG")}</b><small>{confirmPurchase?.days === option.days ? "Selected" : "Select duration"}</small></button>)}</div>
+            {confirmPurchase && <div className="rental-purchase-review" id="rental-purchase-review"><div><span className="rentals-kicker">REVIEW BEFORE PAYMENT</span><h3>{selectedStock.country ?? selectedStock.name ?? "Long-term number"}</h3><p>{confirmPurchase.days} days rental</p></div><div className="rental-review-total"><span>Total to charge</span><b>₦{confirmPurchase.amount.toLocaleString("en-NG")}</b></div><div className="rental-review-actions"><button type="button" className="rental-cancel-btn" disabled={buying} onClick={() => setConfirmPurchase(null)}>Change</button><button type="button" className="rental-confirm-btn" disabled={buying} onClick={() => void buyRental(confirmPurchase.days)}>{buying ? "Processing…" : "Confirm & buy"}</button></div></div>}
+          </> : <p className="stock-empty">No rental durations are available for this number right now.</p>}</section>
       </aside>
     </section>
 
     {selected && <section className="panel rental-messages"><div className="rentals-head"><div><span className="rentals-kicker">04 / MESSAGES</span><h2>{selected.number ?? "Rental messages"}</h2></div><button onClick={() => setSelected(null)}>Close</button></div>{messages.length ? messages.map((message, i) => <div className="message-row" key={String(message.id ?? i)}><b>{message.code ?? message.sms ?? message.message ?? "Message"}</b><small>{message.created_at ?? message.createdAt ?? ""}</small></div>) : <div className="rentals-empty"><MessageSquare size={22} /><p>No messages returned for this rental.</p></div>}</section>}
 
 
-    {confirmPurchase && selectedStock && <div className="rental-confirm-backdrop" role="dialog" aria-modal="true" aria-labelledby="rental-confirm-title" onClick={() => !buying && setConfirmPurchase(null)}>
-      <div className="rental-confirm" onClick={(event) => event.stopPropagation()}>
-        <span className="rentals-kicker">CONFIRM PURCHASE</span>
-        <h3 id="rental-confirm-title">{selectedStock.country ?? selectedStock.name ?? "Long-term number"}</h3>
-        <p>You are about to purchase this long-term number for {confirmPurchase.days} days. Your wallet will only be charged after you confirm.</p>
-        <div className="rental-confirm-total"><span>Total</span><b>₦{confirmPurchase.amount.toLocaleString("en-NG")}</b></div>
-        <div className="rental-confirm-actions">
-          <button type="button" className="rental-cancel-btn" disabled={buying} onClick={() => setConfirmPurchase(null)}>Cancel</button>
-          <button type="button" className="rental-confirm-btn" disabled={buying} onClick={() => void buyRental(confirmPurchase.days)}>{buying ? "Processing…" : "Confirm & buy"}</button>
-        </div>
-      </div>
-    </div>}
     {(notice || error) && <div className={notice ? "rental-notice" : "rental-notice error"}>{notice || error}</div>}
   </div>;
 }
