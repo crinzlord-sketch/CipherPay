@@ -195,7 +195,10 @@ router.get("/crypto/transactions", async (req,res):Promise<void> => {
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({error:"Unauthorized"}); return; }
   await ensureTables();
-  const result = await db.execute(sql`SELECT id,network,asset,direction,amount,to_address,tx_hash,status,created_at FROM crypto_transactions WHERE user_id=${userId} ORDER BY created_at DESC LIMIT 50`);
+  const mode = String(req.query?.mode || "mainnet");
+  const result = mode === "testnet"
+    ? await db.execute(sql`SELECT id,network,asset,direction,amount,to_address,tx_hash,status,created_at FROM crypto_transactions WHERE user_id=${userId} AND network='sepolia' ORDER BY created_at DESC LIMIT 50`)
+    : await db.execute(sql`SELECT id,network,asset,direction,amount,to_address,tx_hash,status,created_at FROM crypto_transactions WHERE user_id=${userId} AND network<>'sepolia' ORDER BY created_at DESC LIMIT 50`);
   const rows = result.rows as any[];
   for (const row of rows) {
     if (!row.tx_hash || row.status === "confirmed" || row.status === "failed") continue;
