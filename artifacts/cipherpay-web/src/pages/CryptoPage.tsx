@@ -29,11 +29,11 @@ export default function CryptoPage(){
   const [network,setNetwork]=useState('ethereum');
   const [sendTo,setSendTo]=useState('');
   const [sendAmount,setSendAmount]=useState('');
-  const [sendPin,setSendPin]=useState('');
   const [sending,setSending]=useState(false);
   const [sendError,setSendError]=useState('');
   const [sendSuccess,setSendSuccess]=useState('');
   const [copied,setCopied]=useState(false);
+  const [confirmSend,setConfirmSend]=useState(false);
 
   const token=()=>window.localStorage.getItem('cipherpay_token');
   const authHeaders=()=>{const t=token(); return t?{Authorization:`Bearer ${t}`}:{};};
@@ -97,22 +97,22 @@ export default function CryptoPage(){
   useEffect(()=>{if(selected==='BTC'&&!markets.find(m=>m.symbol==='BTC'))setSelected(markets[0]?.symbol||'BTC');},[markets]);
 
   const openPanel=(next:'send'|'receive'|'swap'|'sell')=>{
-    setSendError('');setSendSuccess('');setPanel(next);
+    setSendError('');setSendSuccess('');setConfirmSend(false);setPanel(next);
     if(next==='send' && !sendableAssets.includes(sendAsset) && sendableAssets[0])setSendAsset(sendableAssets[0]);
   };
-  const closePanel=()=>setPanel(null);
+  const closePanel=()=>{setConfirmSend(false);setPanel(null);};
 
   const submitSend=async()=>{
-    setSending(true);setSendError('');setSendSuccess('');
+    setSending(true);setSendError('');setSendSuccess('');setConfirmSend(false);
     try{
       const response=await fetch(apiUrl('/api/crypto/send'),{
         method:'POST',headers:{...authHeaders(),'Content-Type':'application/json'},
-        body:JSON.stringify({network,asset:sendAsset,to:sendTo,amount:Number(sendAmount),pin:sendPin}),
+        body:JSON.stringify({network,asset:sendAsset,to:sendTo,amount:Number(sendAmount)}),
       });
       const body=await response.json();
       if(!response.ok)throw new Error(body?.error||'Transaction failed');
       setSendSuccess(body.txHash||'Transaction submitted');
-      setSendTo('');setSendAmount('');setSendPin('');
+      setSendTo('');setSendAmount('');
       await loadWallet();await loadTransactions();
     }catch(error:any){setSendError(error?.message||'Transaction failed.');}
     finally{setSending(false);}
@@ -125,7 +125,6 @@ export default function CryptoPage(){
 
   return <div className="cp-crypto-page">
     <div className="cp-crypto-top"><Link href="/" className="cp-crypto-back"><ArrowLeft size={15}/> Back</Link><span className="cp-crypto-live"><i/> Live market data</span></div>
-
     <section className="cp-crypto-dashboard">
       <div className="cp-crypto-dashboard-copy">
         <div className="cp-crypto-balance-hero">
@@ -141,9 +140,7 @@ export default function CryptoPage(){
         </div>
       </div>
     </section>
-
     {walletError&&<div className="cp-market-error">{walletError}</div>}
-
     <section className="cp-crypto-market-section">
       <div className="cp-crypto-section-title"><div><span>YOUR ASSETS</span><b>On-chain balances</b></div><small>Live blockchain balances</small></div>
       <div className="cp-live-market-grid">
@@ -154,7 +151,6 @@ export default function CryptoPage(){
         {walletLoading&&<div className="cp-market-loading"><Loader2 className="animate-spin" size={18}/> Preparing your blockchain wallet…</div>}
       </div>
     </section>
-
     <section className="cp-crypto-market-section">
       <div className="cp-crypto-section-title"><div><span>LIVE MARKETS</span><b>Supported assets & real-time prices</b></div><small>Refreshes every 30 seconds</small></div>
       {marketError&&<div className="cp-market-error">{marketError}</div>}
@@ -165,14 +161,12 @@ export default function CryptoPage(){
         {marketLoading&&!markets.length&&<div className="cp-market-loading">Loading live prices…</div>}
       </div>
     </section>
-
     <section className="cp-crypto-overview-grid">
       <article className="cp-crypto-glass cp-crypto-market-card">
         <div className="cp-card-heading"><span><BarChart3 size={16}/> MARKET SNAPSHOT</span><b>{markets.length||12} ASSETS</b></div>
         {selectedMarket?<div className="cp-selected-market"><img src={icon(selectedMarket.symbol.toLowerCase())}/><div><b>{selectedMarket.name} · {selectedMarket.symbol}</b><small>Live {currency} price</small></div><strong>{money(selectedMarket.priceUsd,selectedMarket.priceNgn)}</strong><em className={selectedMarket.change24h<0?'down':''}>{selectedMarket.change24h>=0?'+':''}{selectedMarket.change24h.toFixed(2)}%</em></div>:<div className="cp-market-loading">Select an asset below.</div>}
       </article>
     </section>
-
     <section className="cp-crypto-detail-grid">
       <article className="cp-crypto-glass cp-detail-card"><span className="cp-kicker">RECENT ON-CHAIN ACTIVITY</span><h2>{transactions.length?'Your crypto transactions':'Ready for your first transaction'}</h2>
         {transactions.length?<div className="cp-crypto-tx-list">{transactions.map(tx=><a key={tx.id} href={`${tx.network==='base'?'https://basescan.org/tx/':tx.network==='bsc'?'https://bscscan.com/tx/':tx.network==='polygon'?'https://polygonscan.com/tx/':'https://etherscan.io/tx/'}${tx.tx_hash}`} target="_blank" rel="noreferrer"><span><b>{tx.direction==='outgoing'?'Sent':'Received'} {tx.amount} {tx.asset}</b><small>{tx.network} · {tx.status} · {new Date(tx.created_at).toLocaleString()}</small></span><ExternalLink size={15}/></a>)}</div>:<p>Your blockchain activity will appear here after you send or receive crypto.</p>}
@@ -198,13 +192,28 @@ export default function CryptoPage(){
           <label className="cp-modal-field">Asset<select value={sendAsset} onChange={e=>setSendAsset(e.target.value)}>{sendableAssets.map(a=><option key={a}>{a}</option>)}</select></label>
           <label className="cp-modal-field">Destination address<input value={sendTo} onChange={e=>setSendTo(e.target.value)} placeholder="0x…" autoCapitalize="none"/></label>
           <label className="cp-modal-field">Amount<input value={sendAmount} onChange={e=>setSendAmount(e.target.value)} inputMode="decimal" placeholder="0.00"/></label>
-          <label className="cp-modal-field">Transfer PIN<input value={sendPin} onChange={e=>setSendPin(e.target.value.replace(/\D/g,'').slice(0,4))} inputMode="numeric" type="password" placeholder="4 digits"/></label>
           {sendError&&<div className="cp-market-error">{sendError}</div>}{sendSuccess&&<div className="cp-receive-networks"><b>Transaction submitted</b><small>{sendSuccess}</small></div>}
-          <button type="button" className="cp-modal-disabled" onClick={()=>void submitSend()} disabled={sending||!sendableAssets.length}>{sending?<><Loader2 size={16} className="animate-spin"/> Sending…</>:<>Send {sendAsset}</>}</button>
+          <button type="button" className="cp-modal-disabled" onClick={()=>setConfirmSend(true)} disabled={sending||!sendableAssets.length||!sendTo||!sendAmount}>{sending?<><Loader2 size={16} className="animate-spin"/> Sending…</>:<>Review transaction</>}</button>
         </div>}
 
         {(panel==='swap'||panel==='sell')&&<div><div className="cp-receive-networks"><b>Coming next</b><small>The on-chain wallet is live first. Swap and NGN conversion stay separate until the compliant exchange/on-ramp layer is connected.</small></div><button type="button" className="cp-modal-disabled" onClick={closePanel}>Close</button></div>}
       </div>
+
+      {confirmSend&&panel==='send'&&<div className="cp-crypto-confirm-backdrop" role="presentation" onMouseDown={e=>e.target===e.currentTarget&&setConfirmSend(false)}>
+        <div className="cp-crypto-confirm" role="dialog" aria-modal="true">
+          <button type="button" className="cp-crypto-close" onClick={()=>setConfirmSend(false)} aria-label="Close"><X size={18}/></button>
+          <span className="cp-kicker">CONFIRM TRANSACTION</span>
+          <h2>Confirm crypto transfer</h2>
+          <p>Please check the details carefully. Blockchain transfers are irreversible.</p>
+          <div className="cp-receive-networks">
+            <b>{sendAmount} {sendAsset}</b>
+            <span>{network==='bsc'?'BNB Smart Chain':network==='base'?'Base':network==='polygon'?'Polygon':'Ethereum'}</span>
+            <small>{sendTo}</small>
+          </div>
+          <button type="button" className="cp-modal-disabled" onClick={()=>void submitSend()} disabled={sending}>{sending?<><Loader2 size={16} className="animate-spin"/> Confirming…</>:<>Confirm & Send</>}</button>
+          <button type="button" className="cp-modal-secondary" onClick={()=>setConfirmSend(false)} disabled={sending}>Cancel</button>
+        </div>
+      </div>}
     </div>,document.body)}
   </div>;
 }
