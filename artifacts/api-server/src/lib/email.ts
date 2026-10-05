@@ -60,6 +60,14 @@ export async function verifyEmailTransport(): Promise<void> {
   await transporter().verify();
 }
 
+const CIPHERPAY_SITE_URL = "https://cipherpay.it.com";
+
+// Keep every CipherPay website link in outbound email on the real public domain.
+// This also protects older templates/callers that still pass a Render URL.
+function canonicalizeSiteLinks(value: string): string {
+  return value.replace(/https?:\\/\\/(?:www\\.)?cipherpay(?:-[a-z0-9-]+)?\\.onrender\\.com/gi, CIPHERPAY_SITE_URL);
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -114,7 +122,7 @@ function brandWrap(title: string, contentHtml: string, previewText: string): str
 </html>`;
 }
 
-export async function sendMail(to: string, subject: string, html: string, text?: string): Promise<void> {
+export async function sendMail(to: string, subject: string, html: string, text?: string): Promise<void> {\n  html = canonicalizeSiteLinks(html);\n  text = text ? canonicalizeSiteLinks(text) : text;
   if (!isEmailConfigured()) {
     logger.warn({ to, subject }, "Email skipped — no email provider configured");
     throw new Error("Email service not configured. Please contact support.");
