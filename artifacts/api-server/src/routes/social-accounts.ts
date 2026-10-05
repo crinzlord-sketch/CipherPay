@@ -28,17 +28,16 @@ async function tables(){
 void tables().catch(e=>console.error("Social account tables setup failed",e));
 
 router.get("/social-accounts/catalog",async(req,res)=>{
- if(!await requireSocialAccountsService(res)) return;
  try{
   await tables();
-  const r=await db.execute(sql`SELECT MIN(id) FILTER(WHERE status='available')::int AS "listingId",platform,country,title,MIN(price) AS price,COUNT(*) FILTER(WHERE status='available')::int AS stock FROM social_account_inventory GROUP BY platform,country,title ORDER BY platform,country,title`);
+  const r=await db.execute(sql`SELECT MIN(id)::int AS "listingId",platform,TRIM(country) AS country,title,MIN(price) AS price,COUNT(*)::int AS stock FROM social_account_inventory WHERE status='available' GROUP BY platform,TRIM(country),title ORDER BY platform,TRIM(country),title`);
   res.json({data:r.rows});
  }catch(error:any){
   req.log?.error?.({err:error?.message},"Social accounts catalog failed");
   res.status(500).json({error:"Social accounts inventory could not be loaded."});
  }
 });
-router.get("/social-accounts/orders",async(req,res)=>{if(!await requireSocialAccountsService(res)) return;const userId=uid(req);if(!userId){res.status(401).json({error:"Unauthorized"});return}await tables();const r=await db.execute(sql`SELECT o.id,o.platform,o.country,o.title,o.amount,o.reference,o.status,o.created_at AS "createdAt",i.username FROM social_account_orders o JOIN social_account_inventory i ON i.id=o.inventory_id WHERE o.user_id=${userId} ORDER BY o.created_at DESC LIMIT 50`);res.json({data:r.rows})});
+router.get("/social-accounts/orders",async(req,res)=>{const userId=uid(req);if(!userId){res.status(401).json({error:"Unauthorized"});return}await tables();const r=await db.execute(sql`SELECT o.id,o.platform,o.country,o.title,o.amount,o.reference,o.status,o.created_at AS "createdAt",i.username FROM social_account_orders o JOIN social_account_inventory i ON i.id=o.inventory_id WHERE o.user_id=${userId} ORDER BY o.created_at DESC LIMIT 50`);res.json({data:r.rows})});
 
 router.post("/social-accounts/purchase/:listingId",async(req,res)=>{
  if(!await requireSocialAccountsService(res)) return;
