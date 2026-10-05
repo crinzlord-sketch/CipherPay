@@ -87,6 +87,52 @@ function StatCard({ icon: Icon, label, value, detail, tone = 'orange' }: { icon:
   return <div className={`admin-stat admin-stat-${tone}`}><span className="admin-stat-icon"><Icon size={18} /></span><div><small>{label}</small><strong>{value}</strong>{detail && <span>{detail}</span>}</div></div>;
 }
 
+
+function AdminSellers({ token, onNotice, onError }: { token: string; onNotice: (message: string) => void; onError: (message: string) => void }) {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadSellers = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const result = await adminRequest<any>('/api/admin/sellers', token);
+      setRows(Array.isArray(result.data) ? result.data : []);
+      onError('');
+    } catch (caught) {
+      onError(caught instanceof Error ? caught.message : 'The sellers could not be loaded.');
+    } finally {
+      setLoading(false);
+    }
+  }, [token, onError]);
+
+  useEffect(() => { void loadSellers(); }, [loadSellers]);
+
+  return <section className="admin-section">
+    <section className="cp-card cp-card-pad">
+      <div className="admin-card-title">
+        <div><span className="cp-kicker">Seller accounts</span><h2>Approved sellers</h2><p>Manage users who have been approved to operate as sellers.</p></div>
+        <AdminButton onClick={() => void loadSellers()} disabled={loading}><RefreshCw size={15} className={loading ? 'admin-spin' : ''} /> Refresh</AdminButton>
+      </div>
+      <div className="admin-table-wrap">
+        <table className="admin-table">
+          <thead><tr><th>Seller</th><th>Country</th><th>Approved</th><th>Application IP</th></tr></thead>
+          <tbody>
+            {rows.map((row) => <tr key={row.userId}>
+              <td><b>{row.sellerName || 'Unnamed seller'}</b><small>{row.email} · User #{row.userId}</small></td>
+              <td><small>{row.country || '—'}</small></td>
+              <td><small>{formatWhen(row.approvedAt)}</small></td>
+              <td><small className="admin-mono">{row.applicationIp || '—'}</small></td>
+            </tr>)}
+          </tbody>
+        </table>
+        {!loading && !rows.length && <div className="admin-empty"><ShieldCheck size={22} />No approved sellers yet.</div>}
+        {loading && <div className="admin-empty"><RefreshCw size={22} className="admin-spin" />Loading sellers…</div>}
+      </div>
+    </section>
+  </section>;
+}
+
 export default function AdminConsole() {
   const { confirm, prompt } = useAnimatedDialog();
   const [token, setToken] = useState(() => typeof window === 'undefined' ? '' : localStorage.getItem('cipherpay_token') ?? '');
