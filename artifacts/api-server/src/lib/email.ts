@@ -126,7 +126,26 @@ export async function sendMail(to: string, subject: string, html: string, text?:
     .replace(/\s+/g, " ")
     .trim();
 
-  // Mailjet uses HTTPS, so it works from Render Free without SMTP ports.
+  // Prefer the configured Gmail/SMTP transport whenever EMAIL_USER + EMAIL_PASS are present.
+  // This lets CipherPay move off a disabled third-party provider without leaving
+  // stale provider variables able to hijack delivery.
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    try {
+      const { from } = emailConfig();
+      const info = await transporter().sendMail({
+        from,
+        to, subject, html,
+        text: plainText,
+      });
+      logger.info({ to, subject, messageId: info.messageId }, "email sent via SMTP");
+      return;
+    } catch (e: any) {
+      logger.error({ err: e?.message, to, subject }, "SMTP email send failed");
+      throw new Error(`Could not send email: ${e?.message ?? "unknown"}`);
+    }
+  }
+
+  // Legacy HTTP providers are only used when SMTP is not configured.
   if (process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY) {
     try {
       const configuredFrom = process.env.MAILJET_FROM?.trim() || process.env.EMAIL_FROM?.trim();
@@ -226,19 +245,6 @@ export async function sendMail(to: string, subject: string, html: string, text?:
     }
   }
 
-  try {
-    const { from } = emailConfig();
-    const info = await transporter().sendMail({
-      from,
-      to, subject, html,
-      text: plainText,
-    });
-    logger.info({ to, subject, messageId: info.messageId }, "email sent via SMTP");
-  } catch (e: any) {
-    logger.error({ err: e?.message, to, subject }, "email send failed");
-    throw new Error(`Could not send email: ${e?.message ?? "unknown"}`);
-  }
-}
 
 export async function sendOtpEmail(to: string, code: string, purpose: "verification" | "withdraw" | "password_reset" | "login"): Promise<void> {
   const map = {
