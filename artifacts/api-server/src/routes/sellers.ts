@@ -11,6 +11,15 @@ const router: IRouter = Router();
 const platforms = new Set(["instagram","tiktok","facebook","discord","twitter","youtube","telegram","snapchat","linkedin"]);
 const SELLER_FEE_RATE = 5;
 const SELLER_WITHDRAWAL_MIN = 1000;
+const flutterwaveSecret=()=>process.env.FLW_SECRET_KEY||process.env.FLUTTERWAVE_SECRET_KEY||"";
+async function flutterwave(path:string,init:RequestInit={}){
+  const secret=flutterwaveSecret();
+  if(!secret) throw new Error("Bank verification is not configured yet.");
+  const r=await fetch("https://api.flutterwave.com/v3"+path,{...init,headers:{"Authorization":`Bearer ${secret}`,"Content-Type":"application/json",...(init.headers||{})}});
+  const body=await r.json().catch(()=>({}));
+  if(!r.ok||body?.status!=="success") throw new Error(body?.message||"Bank verification failed.");
+  return body;
+}
 
 const uid = (req: any) => {
   const n = Number(req.headers["x-user-id"]);
@@ -239,6 +248,32 @@ router.delete("/seller/listings/:id", async (req, res): Promise<void> => {
   res.json({ success: true });
 });
 
+router.get("/seller/banks", async (_req,res): Promise<void> => {
+  try {
+    const body=await flutterwave("/banks/NG",{method:"GET"});
+    res.json({data:(body.data||[]).map((b:any)=>({id:b.id,code:String(b.code),name:b.name}))});
+  } catch(e:any) {
+    res.status(503).json({error:e?.message||"Bank list is unavailable."});
+  }
+});
+
+router.post("/seller/verify-bank", async (req,res): Promise<void> => {
+  const userId=uid(req);
+  if(!userId){res.status(401).json({error:"Unauthorized"});return;}
+  if(!(await approvedSeller(userId))){res.status(403).json({error:"Seller access has not been approved."});return;}
+  const accountNumber=String(req.body?.accountNumber??"").replace(/\D/g,"");
+  const bankCode=String(req.body?.bankCode??"").trim();
+  if(!/^\d{10}$/.test(accountNumber)||!bankCode){res.status(400).json({error:"Enter a valid bank and 10-digit account number."});return;}
+  try {
+    const body=await flutterwave("/accounts/resolve",{method:"POST",body:JSON.stringify({account_number:accountNumber,account_bank:bankCode})});
+    const name=String(body?.data?.account_name??"").trim();
+    if(!name) throw new Error("We could not resolve the account name.");
+    res.json({verified:true,accountNumber,bankCode,accountName:name});
+  } catch(e:any) {
+    res.status(422).json({verified:false,error:e?.message||"We could not verify that bank account."});
+  }
+});
+
 router.post("/seller/withdrawals", async (req, res): Promise<void> => {
   const userId = uid(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -250,13 +285,24 @@ router.post("/seller/withdrawals", async (req, res): Promise<void> => {
   const bankCode = String(req.body?.bankCode ?? "").trim().slice(0, 30) || null;
   const accountNumber = String(req.body?.accountNumber ?? "").replace(/\D/g, "").slice(0, 20);
   const accountName = String(req.body?.accountName ?? "").trim().slice(0, 160);
+  const verifiedAccountName = String(req.body?.verifiedAccountName ?? "").trim().slice(0, 160);
   const narration = String(req.body?.narration ?? "").trim().slice(0, 200) || null;
 
   if (!Number.isFinite(amount) || amount < SELLER_WITHDRAWAL_MIN) {
     res.status(400).json({ error: `Minimum seller withdrawal is ₦${SELLER_WITHDRAWAL_MIN.toLocaleString()}.` }); return;
   }
-  if (!bankName || !/^\d{10}$/.test(accountNumber) || !accountName) {
+  if (!bankName || !/^\d{10}$/.test(accountNumber) || !accountName || !verifiedAccountName || !bankCode) {
     res.status(400).json({ error: "Enter the bank name, 10-digit account number and account name." }); return;
+  }
+
+  try {
+    const check=await flutterwave("/accounts/resolve",{method:"POST",body:JSON.stringify({account_number:accountNumber,account_bank:bankCode})});
+    const resolved=String(check?.data?.account_name??"").trim();
+    if(!resolved || resolved.toLowerCase()!==verifiedAccountName.toLowerCase() || resolved.toLowerCase()!==accountName.toLowerCase()){
+      res.status(422).json({error:"The bank account details changed or no longer match the verified account name. Please verify again."}); return;
+    }
+  } catch(e:any) {
+    res.status(422).json({error:e?.message||"Bank account verification failed. Please verify again."}); return;
   }
 
   const bcrypt = await import("bcryptjs");
