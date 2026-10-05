@@ -55,3 +55,15 @@ html.dark .social-purchases-list .social-order-card{background:#211d27}
  .social-account-toolbar{display:flex;align-items:flex-start}
  .social-account-filters{flex-basis:100%}
 }
+
+@media(max-width:600px){
+  .social-modal-backdrop{padding:12px 14px calc(12px + env(safe-area-inset-bottom))}
+  .social-modal{width:min(100%,470px);max-height:calc(100dvh - 110px);padding:18px 18px 16px;border-radius:22px}
+  .social-modal h2{font-size:28px;line-height:1.12}
+  .social-modal p{font-size:15px;line-height:1.45}
+  .social-modal-icon{width:52px;height:52px}
+  .social-request-grid{gap:10px}
+  .social-request-grid input,.social-request-grid select,.social-request-grid textarea{min-height:50px;padding:13px 15px}
+  .social-request-grid textarea{min-height:105px}
+  .social-modal-actions{gap:8px}
+}
