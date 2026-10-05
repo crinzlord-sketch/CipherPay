@@ -95,3 +95,10 @@ html.dark .social-modal-close{background:#2a2530;color:#fff}
 /* Seller application is portaled to document.body so transformed mobile app shells cannot offset the fixed overlay. */
 .seller-modal-portal{z-index:5000}
 .seller-modal-portal .seller-apply-modal{position:relative;transform:none}
+
+/* Live inventory logos use their own icon box so the platform-pill sizing rules cannot affect them. */
+.social-orb-grid .social-orb-icon{width:42px;height:42px;padding:0;border-radius:13px;background:#fff;display:grid;place-items:center;position:relative;overflow:hidden}
+.social-orb-grid .social-orb-icon img{width:42px!important;height:42px!important;padding:9px!important;box-sizing:border-box;object-fit:contain;background:#fff}
+.social-orb-grid .social-orb-icon b{display:none;position:absolute;font-size:10px;font-weight:900;color:#6251a8}
+.social-orb-grid .social-orb-icon.logo-fallback img{display:none!important}
+.social-orb-grid .social-orb-icon.logo-fallback b{display:block}
