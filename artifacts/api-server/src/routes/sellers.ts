@@ -176,9 +176,9 @@ router.get("/seller/dashboard", async (req, res): Promise<void> => {
 
   const listings = await db.execute(sql`SELECT id,platform,country,title,price,username,status,created_at AS "createdAt",purchased_at AS "purchasedAt" FROM social_account_inventory WHERE seller_user_id=${userId} ORDER BY created_at DESC LIMIT 300`);
   const sales = await db.execute(sql`SELECT o.id,o.platform,o.country,o.title,o.amount,o.reference,o.created_at AS "createdAt",i.seller_fee_rate AS "feeRate",ROUND(o.amount*(1-i.seller_fee_rate/100),2) AS "sellerNet" FROM social_account_orders o JOIN social_account_inventory i ON i.id=o.inventory_id WHERE i.seller_user_id=${userId} ORDER BY o.created_at DESC LIMIT 100`);
-  const [available] = await db.execute(sql`SELECT COUNT(*)::int AS count FROM social_account_inventory WHERE seller_user_id=${userId} AND status='available'`);
-  const [sold] = await db.execute(sql`SELECT COUNT(*)::int AS count FROM social_account_inventory WHERE seller_user_id=${userId} AND status='sold'`);
-  res.json({ seller, feeRate: SELLER_FEE_RATE, listings: listings.rows, sales: sales.rows, stats: { available: Number((available as any)?.rows?.[0]?.count ?? 0), sold: Number((sold as any)?.rows?.[0]?.count ?? 0) } });
+  const available = await db.execute(sql`SELECT COUNT(*)::int AS count FROM social_account_inventory WHERE seller_user_id=${userId} AND status='available'`);
+  const sold = await db.execute(sql`SELECT COUNT(*)::int AS count FROM social_account_inventory WHERE seller_user_id=${userId} AND status='sold'`);
+  res.json({ seller, feeRate: SELLER_FEE_RATE, listings: listings.rows, sales: sales.rows, stats: { available: Number((available.rows[0] as any)?.count ?? 0), sold: Number((sold.rows[0] as any)?.count ?? 0) } });
 });
 
 router.post("/seller/listings", async (req, res): Promise<void> => {
