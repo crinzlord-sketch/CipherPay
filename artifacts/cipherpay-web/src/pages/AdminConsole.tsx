@@ -2,7 +2,7 @@ import {
   AlertTriangle, ArrowDownLeft, Ban, Check, CheckCircle2, ChevronRight, CircleDollarSign,
   ClipboardCheck, CreditCard, Database, FileText, Flag, Headphones, LifeBuoy,
   Image as ImageIcon, Mail, MessageCircle, Paperclip, RefreshCw, Search, Send, ShieldCheck, Smartphone,
-  Trash2, UserCheck, Users, WalletCards, X, Zap, Activity, PackagePlus,
+  Trash2, UserCheck, Users, WalletCards, X, Zap, Activity, PackagePlus, Gift,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useAnimatedDialog } from '../components/animated-dialog';
