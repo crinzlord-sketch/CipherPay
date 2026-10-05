@@ -37,7 +37,7 @@ router.use(async (req, res, next) => {
   else if (path.startsWith("/sms/rentals")) feature = "sms_rentals";
   else if (path.startsWith("/sms")) feature = "sms";
   else if (path.startsWith("/temporary-email")) feature = "temporary_email";
-  else if (path.startsWith("/social")) feature = "social_boost";
+  else if (path === "/social-boost" || path.startsWith("/social-boost/")) feature = "social_boost";
   else if (path.startsWith("/email-pro") || path.startsWith("/email")) feature = "email_pro";
   if (!feature) return next();
   try {
