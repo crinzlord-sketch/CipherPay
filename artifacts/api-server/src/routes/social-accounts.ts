@@ -12,15 +12,29 @@ const key=()=>createHash("sha256").update(process.env.SOCIAL_ACCOUNT_ENCRYPTION_
 const enc=(v:string)=>{const iv=randomBytes(12),c=createCipheriv("aes-256-gcm",key(),iv);const d=Buffer.concat([c.update(v,"utf8"),c.final()]);return iv.toString("base64url")+"."+c.getAuthTag().toString("base64url")+"."+d.toString("base64url")};
 const dec=(v:string)=>{const [i,t,d]=v.split("."),c=createDecipheriv("aes-256-gcm",key(),Buffer.from(i,"base64url"));c.setAuthTag(Buffer.from(t,"base64url"));return Buffer.concat([c.update(Buffer.from(d,"base64url")),c.final()]).toString("utf8")};
 
+let tablesPromise: Promise<void> | null = null;
 async function tables(){
- await db.execute(sql`CREATE TABLE IF NOT EXISTS social_account_inventory(id serial PRIMARY KEY,platform text NOT NULL,country text NOT NULL,title text NOT NULL,price numeric(18,2) NOT NULL,username text,encrypted_details text NOT NULL,status text NOT NULL DEFAULT 'available',purchased_by integer,purchased_at timestamptz,created_at timestamptz NOT NULL DEFAULT now())`);
- await db.execute(sql`CREATE INDEX IF NOT EXISTS social_account_inventory_lookup ON social_account_inventory(platform,country,status)`);
- await db.execute(sql`CREATE TABLE IF NOT EXISTS social_account_orders(id serial PRIMARY KEY,user_id integer NOT NULL,inventory_id integer NOT NULL UNIQUE,platform text NOT NULL,country text NOT NULL,title text NOT NULL,amount numeric(18,2) NOT NULL,reference text NOT NULL UNIQUE,status text NOT NULL DEFAULT 'fulfilled',revealed_at timestamptz,created_at timestamptz NOT NULL DEFAULT now())`);
- await db.execute(sql`CREATE TABLE IF NOT EXISTS social_account_requests(id serial PRIMARY KEY,user_id integer NOT NULL,platform text NOT NULL,country text,description text NOT NULL,budget numeric(18,2),contact_method text NOT NULL DEFAULT 'support',contact_value text,status text NOT NULL DEFAULT 'new',admin_note text,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now())`);
+ if (tablesPromise) return tablesPromise;
+ tablesPromise=(async()=>{
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS social_account_inventory(id serial PRIMARY KEY,platform text NOT NULL,country text NOT NULL,title text NOT NULL,price numeric(18,2) NOT NULL,username text,encrypted_details text NOT NULL,status text NOT NULL DEFAULT 'available',purchased_by integer,purchased_at timestamptz,created_at timestamptz NOT NULL DEFAULT now())`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS social_account_inventory_lookup ON social_account_inventory(platform,country,status)`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS social_account_orders(id serial PRIMARY KEY,user_id integer NOT NULL,inventory_id integer NOT NULL UNIQUE,platform text NOT NULL,country text NOT NULL,title text NOT NULL,amount numeric(18,2) NOT NULL,reference text NOT NULL UNIQUE,status text NOT NULL DEFAULT 'fulfilled',revealed_at timestamptz,created_at timestamptz NOT NULL DEFAULT now())`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS social_account_requests(id serial PRIMARY KEY,user_id integer NOT NULL,platform text NOT NULL,country text,description text NOT NULL,budget numeric(18,2),contact_method text NOT NULL DEFAULT 'support',contact_value text,status text NOT NULL DEFAULT 'new',admin_note text,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now())`);
+ })().catch(error=>{tablesPromise=null; throw error});
+ return tablesPromise;
 }
 void tables().catch(e=>console.error("Social account tables setup failed",e));
 
-router.get("/social-accounts/catalog",async(_req,res)=>{await tables();const r=await db.execute(sql`SELECT MIN(id) FILTER(WHERE status='available')::int AS "listingId",platform,country,title,MIN(price) AS price,COUNT(*) FILTER(WHERE status='available')::int AS stock FROM social_account_inventory GROUP BY platform,country,title ORDER BY platform,country,title`);res.json({data:r.rows})});
+router.get("/social-accounts/catalog",async(req,res)=>{
+ try{
+  await tables();
+  const r=await db.execute(sql`SELECT MIN(id) FILTER(WHERE status='available')::int AS "listingId",platform,country,title,MIN(price) AS price,COUNT(*) FILTER(WHERE status='available')::int AS stock FROM social_account_inventory GROUP BY platform,country,title ORDER BY platform,country,title`);
+  res.json({data:r.rows});
+ }catch(error:any){
+  req.log?.error?.({err:error?.message},"Social accounts catalog failed");
+  res.status(500).json({error:"Social accounts inventory could not be loaded."});
+ }
+});
 router.get("/social-accounts/orders",async(req,res)=>{const userId=uid(req);if(!userId){res.status(401).json({error:"Unauthorized"});return}await tables();const r=await db.execute(sql`SELECT o.id,o.platform,o.country,o.title,o.amount,o.reference,o.status,o.created_at AS "createdAt",i.username FROM social_account_orders o JOIN social_account_inventory i ON i.id=o.inventory_id WHERE o.user_id=${userId} ORDER BY o.created_at DESC LIMIT 50`);res.json({data:r.rows})});
 
 router.post("/social-accounts/purchase/:listingId",async(req,res)=>{
