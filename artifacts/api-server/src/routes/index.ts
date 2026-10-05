@@ -18,6 +18,7 @@ import cryptoRouter from "./crypto";
 import cryptoWalletRouter from "./crypto-wallet";
 import socialAccountsRouter from "./social-accounts";
 import sellersRouter from "./sellers";
+import googleEmailRouter from "./google-email";
 
 const router: IRouter = Router();
 
@@ -40,5 +41,6 @@ router.use(cryptoRouter);
 router.use(cryptoWalletRouter);
 router.use(socialAccountsRouter);
 router.use(sellersRouter);
+router.use(googleEmailRouter);
 
 export default router;
