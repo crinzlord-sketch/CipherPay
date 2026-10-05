@@ -3,3 +3,33 @@
 .social-modal-backdrop{display:flex;align-items:center;justify-content:center;min-height:100dvh;height:100dvh;overflow:auto;padding:12px;box-sizing:border-box}
 .social-modal{margin:auto;min-height:0;max-height:calc(100dvh - 24px);overflow-y:auto;-webkit-overflow-scrolling:touch}
 @media(max-width:600px){.social-modal-backdrop{min-height:100dvh;height:100dvh;padding:10px 12px calc(10px + env(safe-area-inset-bottom));align-items:center}.social-modal{width:100%;max-height:calc(100dvh - 20px);padding:20px}}
+
+/* Social Accounts: dark-mode controls and readable inventory UI. */
+html.dark .social-account-page{color:#f7f4fa}
+html.dark .social-account-hero{background:linear-gradient(135deg,#17141d,#211b29);border-color:rgba(255,255,255,.09);box-shadow:0 22px 70px rgba(0,0,0,.28)}
+html.dark .social-account-hero p,html.dark .social-account-card p,html.dark .social-modal p{color:#aaa3b2}
+html.dark .social-account-hero-actions a{background:#f7f5fa;color:#17141d;border-color:rgba(255,255,255,.08)}
+html.dark .social-platform-pills button{background:#17141d;color:#eeeaf2;border-color:rgba(255,255,255,.1)}
+html.dark .social-platform-pills button.active{background:#f7f5fa;color:#17141d;border-color:#f7f5fa}
+html.dark .social-account-filters label{background:#17141d;border-color:rgba(255,255,255,.1);color:#aaa3b2}
+html.dark .social-account-filters input{color:#f7f4fa}
+html.dark .social-account-filters input::placeholder{color:#817989}
+html.dark .social-account-card{background:#17141d;border-color:rgba(255,255,255,.09);box-shadow:0 12px 35px rgba(0,0,0,.2)}
+html.dark .social-brand-mark{background:#24202c}
+html.dark .social-card-country{color:#aaa3b2}
+html.dark .social-account-card h2,html.dark .social-card-bottom strong{color:#f7f4fa}
+html.dark .social-order-card{background:#17141d;border-color:rgba(255,255,255,.09)}
+html.dark .social-order-card button{color:#f7f4fa}
+html.dark .social-account-empty{border-color:rgba(255,255,255,.12);color:#9c95a5}
+html.dark .social-account-message{background:#2b2418;color:#f0c875}
+html.dark .social-modal{background:#17141d;border-color:rgba(255,255,255,.08);color:#f7f4fa}
+html.dark .social-modal-actions .ghost{background:#29242f;color:#f7f4fa}
+html.dark .social-review-line{background:#24202b}
+html.dark .social-request-grid label{color:#aaa3b2}
+html.dark .social-request-grid input,html.dark .social-request-grid select,html.dark .social-request-grid textarea{background:#211d27;border-color:rgba(255,255,255,.1);color:#f7f4fa}
+html.dark .social-request-grid input::placeholder,html.dark .social-request-grid textarea::placeholder{color:#817989}
+html.dark .social-detail-list div{border-color:rgba(255,255,255,.1)}
+html.dark .social-detail-list span{color:#9c95a5}
+html.dark .social-detail-list button{background:#29242f;color:#f7f4fa}
+.country-search{min-width:190px}
+@media(max-width:600px){.social-account-filters{width:100%;display:grid;grid-template-columns:1fr 1fr}.social-account-filters label{min-width:0}.country-search{min-width:0}.social-account-filters input{width:100%;min-width:0}}
