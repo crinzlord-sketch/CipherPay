@@ -317,6 +317,7 @@ const serviceRouteFeature = (path: string): ServiceFeatureKey | null => {
   if (path.startsWith("/temporary-email")) return "temporary_email";
   if (path.startsWith("/email")) return "email_pro";
   if (path.startsWith("/social-boost")) return "social_boost";
+  if (path.startsWith("/social-accounts")) return "social_accounts";
   if (path.startsWith("/crypto")) return "crypto";
   return null;
 };
