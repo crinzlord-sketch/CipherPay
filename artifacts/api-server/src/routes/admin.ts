@@ -849,6 +849,37 @@ router.post("/admin/users/:id/set-kyc", requireAdmin, async (req: AdminRequest, 
 });
 
 // Reset user activity: wipe activity records while preserving the user wallet balance.
+router.post("/admin/users/:id/set-kyc-verified", requireAdmin, async (req: AdminRequest, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (!Number.isFinite(id)) { res.status(400).json({ error: "Invalid user id" }); return; }
+
+  const verified = req.body?.verified === true;
+  const [target] = await db.select({ id: usersTable.id, kycLevel: usersTable.kycLevel })
+    .from(usersTable)
+    .where(eq(usersTable.id, id));
+
+  if (!target) { res.status(404).json({ error: "User not found" }); return; }
+
+  // KYC level 1+ is the app's verified KYC state. Preserve an existing
+  // higher level when manually confirming verification.
+  const nextLevel = verified ? Math.max(Number(target.kycLevel ?? 0), 1) : 0;
+  const [u] = await db.update(usersTable)
+    .set({ kycLevel: nextLevel })
+    .where(eq(usersTable.id, id))
+    .returning({ kycLevel: usersTable.kycLevel });
+
+  await notifyUser({
+    userId: id,
+    type: verified ? "success" : "warning",
+    title: verified ? "KYC verified" : "KYC verification removed",
+    body: verified
+      ? "An administrator has marked your KYC as verified."
+      : "An administrator has removed your KYC verified status.",
+  }).catch(() => {});
+
+  res.json({ success: true, kycVerified: nextLevel > 0, kycLevel: u?.kycLevel ?? nextLevel });
+});
+
 router.post("/admin/users/:id/reset-activity", requireAdmin, async (req: AdminRequest, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   const [u] = await db.select().from(usersTable).where(eq(usersTable.id, id));
