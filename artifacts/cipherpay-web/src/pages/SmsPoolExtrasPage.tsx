@@ -23,6 +23,7 @@ export default function SmsPoolExtrasPage() {
   const [buying, setBuying] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const plansRef = useRef<HTMLElement | null>(null);
   const checkoutRef = useRef<HTMLElement | null>(null);
 
   const loadCountries = async () => {
@@ -101,7 +102,7 @@ export default function SmsPoolExtrasPage() {
         </div>
       </div>
 
-      <div className="esim-plans panel">
+      <div ref={plansRef} className="esim-plans panel">
         <div className="esim-panel-head"><div><span className="esim-kicker">02 / PLAN</span><h2>{country ? `Plans for ${country.name}` : "Choose a destination"}</h2></div>{country && <span className="esim-live"><i /> LIVE</span>}</div>
         {plansLoading ? <div className="esim-empty"><LoaderCircle className="spin" /> Loading plans…</div> :
         !country ? <div className="esim-empty"><MapPin size={25} /><p>Select a country to see available plans.</p></div> :
@@ -119,7 +120,7 @@ export default function SmsPoolExtrasPage() {
     </section>
 
     <section ref={checkoutRef} className="esim-checkout panel">
-      <div><span className="esim-kicker">03 / CHECKOUT</span><h2>{selected ? `${selected.dataInGb >= 1 ? selected.dataInGb + " GB" : Math.round(selected.dataInGb * 1000) + " MB"} · ${country?.name}` : "Your eSIM plan"}</h2><p>{selected ? `Live provider price: ${usd.format(selected.priceUsd)}. CipherPay will show the final wallet charge before purchase.` : "Choose a destination and plan above."}</p></div>
+      <div className="esim-checkout-copy"><span className="esim-kicker">03 / CHECKOUT</span><h2>{selected ? `${selected.dataInGb >= 1 ? selected.dataInGb + " GB" : Math.round(selected.dataInGb * 1000) + " MB"} · ${country?.name}` : "Your eSIM plan"}</h2><p>{selected ? `Live provider price: ${usd.format(selected.priceUsd)}. CipherPay will show the final wallet charge before purchase.` : "Choose a destination and plan above."}</p><div className="esim-selected-meta">{selected ? <><span>Selected plan</span><b>{usd.format(selected.priceUsd)}</b></> : <span>Select a plan above</span>}</div></div>
       <button className="esim-buy" disabled={!selected || buying} onClick={() => void buy()}>{buying ? <><LoaderCircle className="spin" size={17} /> Processing…</> : <>Purchase eSIM <ChevronRight size={17} /></>}</button>
     </section>
 
