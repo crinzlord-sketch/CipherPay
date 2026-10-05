@@ -96,8 +96,8 @@ export default function SmsPoolExtrasPage() {
         <div className="esim-country-list">
           {loading ? <div className="esim-empty"><LoaderCircle className="spin" /> Loading live countries…</div> :
           error && !countries.length ? <div className="esim-empty esim-error"><p>{error}</p><button onClick={() => void loadCountries()}>Try again</button></div> :
-          filteredCountries.map((item) => <button className={country?.code === item.code ? "esim-country active" : "esim-country"} key={item.code} onClick={() => setCountry(item)}>
-            <span className="esim-country-icon">{item.code}</span><span className="esim-country-copy"><b>{item.name}</b><small>{item.planCount} plan{item.planCount === 1 ? "" : "s"} · from {usd.format(item.minPriceUsd)}</small></span><ChevronRight size={16} />
+          filteredCountries.map((item) => <button className={country?.code === item.code ? "esim-country active" : "esim-country"} key={item.code} onClick={() => { setCountry(item); requestAnimationFrame(() => plansRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })); }}>
+            <span className="esim-country-index">{String(filteredCountries.indexOf(item) + 1).padStart(2, "0")}</span><span className="esim-country-icon">{item.code}</span><span className="esim-country-copy"><b>{item.name}</b><small>{item.planCount} plan{item.planCount === 1 ? "" : "s"} · from {usd.format(item.minPriceUsd)}</small></span><ChevronRight size={16} />
           </button>)}
         </div>
       </div>
