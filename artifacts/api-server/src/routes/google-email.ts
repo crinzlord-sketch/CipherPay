@@ -26,8 +26,8 @@ function validState(state: string) {
 }
 
 router.get("/admin/google-email/start", (_req: Request, res: Response): void => {
-  const clientId = process.env.GMAIL_CLIENT_ID;
-  const sender = process.env.GMAIL_SENDER_EMAIL;
+  const clientId = process.env.GMAIL_CLIENT_ID?.trim();
+  const sender = process.env.GMAIL_SENDER_EMAIL?.trim();
   if (!clientId || !process.env.GMAIL_CLIENT_SECRET || !sender) {
     res.status(503).json({ error: "Gmail API OAuth is not configured yet." });
     return;
@@ -53,8 +53,8 @@ router.get("/admin/google-email/callback", async (req: Request, res: Response): 
     return;
   }
   try {
-    const clientId = String(process.env.GMAIL_CLIENT_ID || "");
-    const clientSecret = String(process.env.GMAIL_CLIENT_SECRET || "");
+    const clientId = String(process.env.GMAIL_CLIENT_ID || "").trim();
+    const clientSecret = String(process.env.GMAIL_CLIENT_SECRET || "").trim();
     const redirectUri = `${process.env.PUBLIC_API_URL || "https://cipherpay-api.onrender.com"}${CALLBACK_PATH}`;
     const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
