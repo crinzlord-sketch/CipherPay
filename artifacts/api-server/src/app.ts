@@ -13,7 +13,6 @@ import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { LOGOS_DIR } from "./lib/logos";
 import { getServiceFeatureStatus, type ServiceFeatureKey } from "./lib/service-features";
-import { handleSogoGiftCardWebhook } from "./routes/gift-cards";
 
 
 function cipherPayPngChunk(type: string, data: Buffer): Buffer {
@@ -203,8 +202,6 @@ app.get("/api/checkout/callback", (req: Request, res: Response): void => {
       `</body></html>`,
   );
 });
-
-app.post("/api/webhooks/sogo/gift-cards", handleSogoGiftCardWebhook);
 
 // Authenticated KYC file streaming. Files are NOT publicly accessible:
 // the requester must present a valid user JWT (owns the file, encoded as
