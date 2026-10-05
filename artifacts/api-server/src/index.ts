@@ -59,7 +59,7 @@ const start = async () => {
   void renewDueEmailProSubscriptions();
   setInterval(() => void renewDueEmailProSubscriptions(), 60_000);
   if (process.env.MAILJET_RUN_TEST_ON_BOOT === "true") {
-    const recipient = process.env.MAILJET_TEST_RECIPIENT?.trim();
+    const recipient = process.env.MAILJET_TEST_RECIPIENT?.trim() || process.env.EMAIL_USER?.trim();
     if (recipient) {
       void import("./lib/email").then(async ({ sendMail }) => {
         await sendMail(
