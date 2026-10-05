@@ -315,11 +315,8 @@ router.post("/auth/login", async (req, res): Promise<void> => {
       await db.insert(otpTable).values({ target: user.email, code, purpose: "verification", expiresAt });
       if (isEmailConfigured()) {
         otpDelivery = "email";
-        // Return as soon as the OTP is stored. Email delivery should never make
-        // the login request hang while the mail provider connects or responds.
-        void sendOtpEmail(user.email, code, "verification").catch((e: any) => {
-          req.log.error({ err: e?.message, userId: user.id }, "login verification OTP delivery failed");
-        });
+        // Do not mint a session until the user proves control of the inbox.
+        await sendOtpEmail(user.email, code, "verification");
       } else {
         req.log.info({ target: user.email, code }, "login verification OTP generated (email not configured)");
       }
@@ -361,11 +358,10 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     await db.insert(otpTable).values({ target: user.email, code, purpose: "login", expiresAt });
     if (isEmailConfigured()) {
       otpDelivery = "email";
-      // Do not make the login request wait on the mail provider. The OTP is
-      // already stored and valid; email delivery can happen independently.
-      void sendOtpEmail(user.email, code, "login").catch((e: any) => {
-        req.log.error({ err: e?.message, userId: user.id }, "login OTP email delivery failed");
-      });
+      // Login is not complete until the OTP has been delivered. Keep the request
+      // pending while the provider accepts the message so the client only shows
+      // the OTP screen once the code has actually been sent.
+      await sendOtpEmail(user.email, code, "login");
     } else req.log.info({ target: user.email, code }, "login OTP generated (email not configured)");
   } catch (e: any) {
     req.log.error({ err: e?.message, userId: user.id }, "login OTP email failed");
@@ -432,13 +428,11 @@ router.post("/auth/verify-login-otp", async (req, res): Promise<void> => {
   }
   loginOtpAttempts.delete(email);
 
-  // Wallet provisioning is not part of authentication. Create the session
-  // immediately so OTP verification is fast; the dashboard can provision/load
-  // the wallet after the user is authenticated.
+  const wallet = await getOrCreateWallet(user.id);
   const dev = deviceInfo(req);
   const sid = await createSession(user.id, dev.name, dev.platform, dev.ip);
   const token = signToken(user.id, sid);
-  res.json({ token, ...(user.isAdmin ? { adminToken: signAdminToken(user.id) } : {}) });
+  res.json({ user: formatUser(user, parseFloat(wallet.balance)), token, ...(user.isAdmin ? { adminToken: signAdminToken(user.id) } : {}) });
 });
 
 router.post("/auth/send-otp", async (req, res): Promise<void> => {
@@ -657,7 +651,7 @@ router.post("/auth/verify-otp", async (req, res): Promise<void> => {
       res.json({
         message: "OTP verified successfully",
         token,
-        user: formatUser(verifiedUser ?? user),
+        user: formatUser(verifiedUser ?? user, parseFloat(wallet.balance)),
         ...(user.isAdmin ? { adminToken: signAdminToken(user.id) } : {}),
       });
       return;
