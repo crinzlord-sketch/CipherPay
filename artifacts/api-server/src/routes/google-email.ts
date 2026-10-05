@@ -38,10 +38,9 @@ router.get("/admin/google-email/start", (_req: Request, res: Response): void => 
     redirect_uri: redirectUri,
     response_type: "code",
     access_type: "offline",
-    prompt: "consent",
+    prompt: "select_account",
     scope: SCOPES,
     state: makeState(),
-    login_hint: sender,
   });
   res.redirect(302, `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
 });
