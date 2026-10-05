@@ -93,6 +93,7 @@ const serviceFeatureForPath = (path: string) => {
   if (path === '/long-term-numbers' || path.startsWith('/long-term-numbers/')) return 'sms_rentals';
   if (path === '/temporary-email' || path.startsWith('/temporary-email/')) return 'temporary_email';
   if (path === '/social-boost' || path.startsWith('/social-boost/')) return 'social_boost';
+  if (path === '/social-accounts' || path.startsWith('/social-accounts/')) return 'social_accounts';
   if (path === '/email-pro' || path.startsWith('/email-pro/')) return 'email_pro';
   if (path === '/crypto' || path.startsWith('/crypto/')) return 'crypto';
   return null;
@@ -329,6 +330,7 @@ function Shell({ children }: { children: ReactNode }) {
           sms: 'SMS verification',
           temporary_email: 'Temporary email',
           social_boost: 'Social Boost',
+          social_accounts: 'Social Accounts',
           email_pro: 'Email Pro',
           crypto: 'Crypto',
         };
@@ -419,6 +421,7 @@ function LandingPage() {
     { icon: SendIcon, title: 'CipherPay transfers.', text: 'Send money to other CipherPay users with a protected transfer flow.' },
     { icon: MessageSquare, title: 'Find & chat.', text: 'Find people by CipherPay code and chat with text, images, GIFs and replies.' },
     { icon: Smartphone, title: 'Digital services.', text: 'Use SMS verification, international eSIM, long-term numbers, data bundles and Social Boost from one account.' },
+    { icon: ShoppingBag, title: 'Social Accounts.', text: 'Buy social media accounts by platform and country, pay from your CipherPay balance, and receive the account details after purchase.' },
   ];
   return <div className={`cp-landing ${authNavigating ? 'cp-auth-exit' : ''}`}>
     <div className="cp-landing-grid" aria-hidden="true" />
@@ -491,7 +494,7 @@ function LandingPage() {
         <article className="cp-show-card"><span className="cp-kicker">A BETTER DEFAULT</span><h3>Small details. Big difference.</h3><p>Animated states, clear confirmations and focused screens make the platform feel responsive instead of mechanical.</p>
         <div className="cp-toggle-demo"><span>Stay in control</span><span className="cp-toggle"><i/></span></div>
         <div className="cp-mini-list"><div className="cp-mini-row"><ShieldCheck size={16}/><span>Protected account</span><span>Ready</span></div><div className="cp-mini-row"><RefreshCw size={16}/><span>Live service flow</span><span>Active</span></div></div></article>
-        <article className="cp-show-card large cp-clean-security" id="security"><div className="cp-security-intro"><span className="cp-kicker">ONE ACCOUNT / MANY TOOLS</span><span className="cp-security-badge"><ShieldCheck size={14}/> Built around control</span></div><h3>Everything you use.<br/><span>One place to manage it.</span></h3><p>Fund your wallet, send to other CipherPay users, use digital services and stay connected without bouncing between different apps.</p><div className="cp-security-grid"><div className="cp-security-item"><WalletCards size={18}/><div><b>Wallet & transfers</b><small>Fund, send and track activity.</small></div><span>01</span></div><div className="cp-security-item"><Globe2 size={18}/><div><b>eSIM & long-term numbers</b><small>Travel data and provider-connected rentals.</small></div><span>02</span></div><div className="cp-security-item"><MessageSquare size={18}/><div><b>Find & chat</b><small>Connect with people on CipherPay.</small></div><span>03</span></div><div className="cp-security-item"><Megaphone size={18}/><div><b>Social Boost</b><small>Order supported social services through the connected provider.</small></div><span>04</span></div></div></article>
+        <article className="cp-show-card large cp-clean-security" id="security"><div className="cp-security-intro"><span className="cp-kicker">ONE ACCOUNT / MANY TOOLS</span><span className="cp-security-badge"><ShieldCheck size={14}/> Built around control</span></div><h3>Everything you use.<br/><span>One place to manage it.</span></h3><p>Fund your wallet, send to other CipherPay users, use digital services and stay connected without bouncing between different apps.</p><div className="cp-security-grid"><div className="cp-security-item"><WalletCards size={18}/><div><b>Wallet & transfers</b><small>Fund, send and track activity.</small></div><span>01</span></div><div className="cp-security-item"><Globe2 size={18}/><div><b>eSIM & long-term numbers</b><small>Travel data and provider-connected rentals.</small></div><span>02</span></div><div className="cp-security-item"><MessageSquare size={18}/><div><b>Find & chat</b><small>Connect with people on CipherPay.</small></div><span>03</span></div><div className="cp-security-item"><Megaphone size={18}/><div><b>Social Boost</b><small>Order supported social services through the connected provider.</small></div><span>04</span></div><div className="cp-security-item"><ShoppingBag size={18}/><div><b>Social Accounts</b><small>Buy available social media accounts by platform and country.</small></div><span>05</span></div></div></article>
       </div>
       <div className="cp-scatter cp-scatter-experience" aria-hidden="true">
         <div className="cp-mockup scatter-g"><div className="mock-screen"><b>Messages</b><strong>You're all set.</strong><span>Just now</span><i>Reply</i></div></div>
