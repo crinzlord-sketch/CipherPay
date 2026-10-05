@@ -2,7 +2,7 @@ import {
   AlertTriangle, ArrowDownLeft, Ban, Check, CheckCircle2, ChevronRight, CircleDollarSign,
   ClipboardCheck, CreditCard, Database, FileText, Flag, Headphones, LifeBuoy,
   Image as ImageIcon, Mail, MessageCircle, Paperclip, RefreshCw, Search, Send, ShieldCheck, Smartphone,
-  Trash2, UserCheck, Users, WalletCards, X, Zap, Activity,
+  Trash2, UserCheck, Users, WalletCards, X, Zap, Activity, PackagePlus,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useAnimatedDialog } from '../components/animated-dialog';
@@ -10,8 +10,9 @@ import { apiUrl, formatWhen } from './page-api';
 import './admin.css';
 import UserDetailView from './UserDetailView';
 import { avatarDataUrl } from '../components/CipherAvatar';
+import AdminSocialAccounts from './AdminSocialAccounts';
 
-type Tab = 'overview' | 'users' | 'admins' | 'support' | 'money' | 'verification' | 'activity' | 'services';
+type Tab = 'overview' | 'users' | 'admins' | 'support' | 'money' | 'verification' | 'activity' | 'services' | 'social-accounts';
 type AdminOptions = { method?: string; body?: unknown; headers?: Record<string, string> };
 
 async function adminRequest<T>(path: string, token: string, options: AdminOptions = {}): Promise<T> {
@@ -602,7 +603,7 @@ export default function AdminConsole() {
     {notice && <div className="cp-notice cp-notice-success admin-notice"><CheckCircle2 size={16} />{notice}<button type="button" onClick={() => setNotice('')} aria-label="Dismiss notice"><X size={15} /></button></div>}
     <nav className="admin-tabs" aria-label="Admin areas">{([
        ['overview', 'Overview', Zap], ['users', 'Users', Users], ['support', 'Support inbox', LifeBuoy],
-      ['money', 'Transactions', Activity], ['verification', 'Verification', ClipboardCheck],  ['services', 'Service controls', Zap], ['admins', 'Add admin', ShieldCheck],
+      ['money', 'Transactions', Activity], ['verification', 'Verification', ClipboardCheck], ['social-accounts', 'Social accounts', PackagePlus], ['services', 'Service controls', Zap], ['admins', 'Add admin', ShieldCheck],
     ] as const).map(([key, label, Icon]) => {
       const unread = key === 'verification'
         ? adminAlertCounts.verification
@@ -628,6 +629,8 @@ export default function AdminConsole() {
     </section>}
 
        {tab === 'admins' && <section className="admin-section"><div className="admin-grid-two"><section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">Team access</span><h2>Current admins</h2><p>{admins.length} account{admins.length === 1 ? '' : 's'} can access the admin console.</p></div><ShieldCheck size={20} /></div><div className="admin-list">{admins.map((admin) => <div className="admin-list-row" key={admin.id}><div><b>{[admin.firstName, admin.lastName].filter(Boolean).join(' ') || 'CipherPay Admin'}</b><small>{admin.email}{admin.isMaster ? ' · Master admin' : admin.id === currentAdminId ? ' · You' : ''}</small></div><div className="admin-list-actions"><span className={statusClass(admin.isSuspended ? 'suspended' : 'active')}>{admin.isSuspended ? 'Suspended' : 'Active'}</span>{admin.isMaster ? <span className="admin-protected-label">Protected</span> : admin.id === currentAdminId ? <span className="admin-protected-label">Current session</span> : <AdminButton variant="danger" onClick={() => void removeAdmin(admin)}><Trash2 size={13} /> Remove</AdminButton>}</div></div>)}{!admins.length && <div className="admin-empty"><Users size={22} />No admin accounts found.</div>}</div></section><section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">Team access</span><h2>Create another admin</h2><p>New admins can sign in with their own email and password and review the same operations console.</p></div><UserCheck size={20} /></div><form className="cp-form admin-form" onSubmit={createAdmin}><div className="admin-form-row"><label className="cp-field"><span>Admin email</span><input type="email" value={newAdmin.email} onChange={(event) => setNewAdmin({ ...newAdmin, email: event.target.value })} required placeholder="operator@example.com" /></label><label className="cp-field"><span>Password</span><input type="password" value={newAdmin.password} onChange={(event) => setNewAdmin({ ...newAdmin, password: event.target.value })} required minLength={8} placeholder="At least 8 characters" /></label></div><AdminButton variant="primary" disabled={creatingAdmin}>{creatingAdmin ? 'Creating…' : 'Create admin'} <UserCheck size={15} /></AdminButton></form></section></div></section>}
+     {tab === 'social-accounts' && <AdminSocialAccounts />}
+
      {tab === 'services' && <section className="admin-section">
        <section className="cp-card cp-card-pad">
          <div className="admin-card-title">
