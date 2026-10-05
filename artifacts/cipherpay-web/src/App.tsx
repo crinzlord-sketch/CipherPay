@@ -394,15 +394,20 @@ function LandingPage() {
       });
     }, { threshold: 0.14, rootMargin: '-8% 0px -8% 0px' });
     items.forEach((item) => observer.observe(item));
+    let raf = 0;
     const onScroll = () => {
-      const y = window.scrollY;
-      root.style.setProperty('--cp-scroll', String(y));
+      if (raf) return;
+      raf = window.requestAnimationFrame(() => {
+        raf = 0;
+        root.style.setProperty('--cp-scroll', String(window.scrollY));
+      });
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => {
       observer.disconnect();
       window.removeEventListener('scroll', onScroll);
+      if (raf) window.cancelAnimationFrame(raf);
     };
   }, []);
   const scrollToSection = (id: string) => {
