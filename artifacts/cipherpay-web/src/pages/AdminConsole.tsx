@@ -2,7 +2,7 @@ import {
   AlertTriangle, ArrowDownLeft, Ban, Check, CheckCircle2, ChevronRight, CircleDollarSign,
   ClipboardCheck, CreditCard, Database, FileText, Flag, Headphones, LifeBuoy,
   Image as ImageIcon, Mail, MessageCircle, Paperclip, RefreshCw, Search, Send, ShieldCheck, Smartphone,
-  Trash2, UserCheck, Users, WalletCards, X, Zap, Activity, PackagePlus, Gift,
+  Trash2, UserCheck, Users, WalletCards, X, Zap, Activity, PackagePlus,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useAnimatedDialog } from '../components/animated-dialog';
@@ -12,7 +12,7 @@ import UserDetailView from './UserDetailView';
 import { avatarDataUrl } from '../components/CipherAvatar';
 import AdminSocialAccounts from './AdminSocialAccounts';
 
-type Tab = 'overview' | 'users' | 'admins' | 'support' | 'money' | 'verification' | 'activity' | 'services' | 'social-accounts' | 'sellers' | 'gift-cards';
+type Tab = 'overview' | 'users' | 'admins' | 'support' | 'money' | 'verification' | 'activity' | 'services' | 'social-accounts' | 'sellers';
 type AdminOptions = { method?: string; body?: unknown; headers?: Record<string, string> };
 
 async function adminRequest<T>(path: string, token: string, options: AdminOptions = {}): Promise<T> {
@@ -88,7 +88,7 @@ function StatCard({ icon: Icon, label, value, detail, tone = 'orange' }: { icon:
 }
 
 
-function AdminGiftCards({ token, onNotice, onError, prompt }: { token: string; onNotice: (message: string) => void; onError: (message: string) => void; prompt: any }) {\n  const [rows,setRows]=useState<any[]>([]); const [loading,setLoading]=useState(true);\n  const load=useCallback(async()=>{ if(!token)return; setLoading(true); try{ const result=await adminRequest<any>('/api/admin/gift-card-orders',token); setRows(result.data??[]); onError(''); }catch(e){onError(e instanceof Error?e.message:'Gift card orders could not be loaded.');}finally{setLoading(false);} },[token,onError]);\n  useEffect(()=>{void load();},[load]);\n  const complete=async(row:any)=>{ const raw=await prompt({title:'Complete gift card payout',description:row.payoutDestination==='bank'?'Confirm that you have sent the money to the bank account shown below.':'Confirm that the payout should be credited to the user wallet.',defaultValue:String(Number(row.netPayout??0).toFixed(2)),placeholder:'Net payout in NGN',confirmLabel:'Mark completed'}); if(raw===null)return; const amount=Number(String(raw).replace(/,/g,'')); if(!Number.isFinite(amount)||amount<=0){onError('Enter a valid payout amount.');return;} try{await adminRequest('/api/admin/gift-card-orders/'+row.id+'/complete',token,{method:'POST',body:{netPayout:amount}});onNotice('Gift card payout marked completed.');await load();}catch(e){onError(e instanceof Error?e.message:'Could not complete the payout.');} };\n  const reject=async(row:any)=>{const reason=await prompt({title:'Reject gift card payout',defaultValue:'Gift card payout rejected after admin review.',placeholder:'Reason',confirmLabel:'Reject',destructive:true});if(!reason)return;try{await adminRequest('/api/admin/gift-card-orders/'+row.id+'/reject',token,{method:'POST',body:{reason}});onNotice('Gift card order rejected.');await load();}catch(e){onError(e instanceof Error?e.message:'Could not reject the order.');}};\n  return <section className="admin-section"><section className="cp-card cp-card-pad"><div className="admin-card-title"><div><span className="cp-kicker">GIFT CARD PAYOUT DESK</span><h2>Gift card redemptions</h2><p>Verified cards stay here until an admin prepares the user's payout. Target turnaround is 10 minutes.</p></div><AdminButton onClick={()=>void load()} disabled={loading}><RefreshCw size={15} className={loading?'admin-spin':''}/> Refresh</AdminButton></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Customer</th><th>Card</th><th>Verified value</th><th>Fee</th><th>User receives</th><th>Destination</th><th>Status</th><th>Action</th></tr></thead><tbody>{rows.map(row=><tr key={row.id}><td><b>{row.userFirst} {row.userLast}</b><small>{row.userEmail} · User #{row.userId}</small></td><td><b>{row.productName}</b><small>{row.currencyCode} · {row.countryCode}<br/>{row.sogoReference||'No provider reference'}</small></td><td><b>{naira(row.payoutAmount)}</b></td><td><small>{naira(row.fee)}</small></td><td><b>{naira(row.netPayout)}</b></td><td><small>{row.payoutDestination==='bank'?((row.payoutAccount?.bankName||'Bank')+' · '+(row.payoutAccount?.accountNumber||'')):'CipherPay wallet'}</small></td><td><span className={statusClass(row.status)}>{row.status}</span></td><td><div className="admin-actions">{['processing','verified'].includes(row.status)&&<><AdminButton variant="primary" onClick={()=>void complete(row)}>Mark completed</AdminButton><AdminButton variant="danger" onClick={()=>void reject(row)}>Reject</AdminButton></>}{row.status==='completed'&&<span className="admin-protected-label">Completed</span>}</div></td></tr>)}</tbody></table>{!rows.length&&!loading&&<div className="admin-empty"><Gift size={22}/>No gift card payouts waiting.</div>}{loading&&<div className="admin-empty"><RefreshCw size={22} className="admin-spin"/>Loading gift card orders…</div>}</div></section></section>;\n}\n\nfunction AdminSellers({ token, onNotice, onError }: { token: string; onNotice: (message: string) => void; onError: (message: string) => void }) {
+function AdminSellers({ token, onNotice, onError }: { token: string; onNotice: (message: string) => void; onError: (message: string) => void }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -140,7 +140,7 @@ export default function AdminConsole() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [adminAlertCounts, setAdminAlertCounts] = useState({ verification: 0, support: 0, sellers: 0, giftCards: 0 });
+  const [adminAlertCounts, setAdminAlertCounts] = useState({ verification: 0, support: 0, sellers: 0 });
   const [serviceFeatures, setServiceFeatures] = useState<any[]>([]);
   const [serviceUpdating, setServiceUpdating] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
@@ -216,7 +216,7 @@ export default function AdminConsole() {
       setSmsActivations(smsResult.data ?? []);
       setSocialOrders(socialResult.data ?? []);
       setAdmins(adminsResult.data ?? []);
-      setAdminAlertCounts({ verification: Number(alertsResult.verification ?? 0), support: Number(alertsResult.support ?? 0), sellers: Number(alertsResult.sellers ?? 0), giftCards: Number(alertsResult.giftCards ?? 0) });
+      setAdminAlertCounts({ verification: Number(alertsResult.verification ?? 0), support: Number(alertsResult.support ?? 0), sellers: Number(alertsResult.sellers ?? 0) });
       setServiceFeatures(serviceFeaturesResult.data ?? []);
     } catch (caught) {
       if (caught instanceof Error && /token|admin|unauthorized|expired/i.test(caught.message)) {
@@ -234,10 +234,10 @@ export default function AdminConsole() {
   // Opening a queue tab marks its admin alerts as seen. New submissions that
   // arrive afterwards create a fresh unread badge.
   useEffect(() => {
-    if (!token || !['verification', 'support', 'sellers', 'gift-cards'].includes(tab)) return;
-    const type = tab === 'verification' ? 'admin_kyc' : tab === 'support' ? 'admin_support' : tab === 'sellers' ? 'admin_seller' : 'admin_gift_card';
+    if (!token || !['verification', 'support', 'sellers'].includes(tab)) return;
+    const type = tab === 'verification' ? 'admin_kyc' : tab === 'support' ? 'admin_support' : 'admin_seller';
     void adminRequest('/api/admin/alerts/read', token, { method: 'POST', body: { type } })
-      .then(() => setAdminAlertCounts((current) => ({ ...current, [tab === 'gift-cards' ? 'giftCards' : tab]: 0 })))
+      .then(() => setAdminAlertCounts((current) => ({ ...current, [tab]: 0 })))
       .catch(() => {});
   }, [tab, token]);
 
@@ -657,13 +657,13 @@ export default function AdminConsole() {
     {notice && <div className="cp-notice cp-notice-success admin-notice"><CheckCircle2 size={16} />{notice}<button type="button" onClick={() => setNotice('')} aria-label="Dismiss notice"><X size={15} /></button></div>}
     <nav className="admin-tabs" aria-label="Admin areas">{([
        ['overview', 'Overview', Zap], ['users', 'Users', Users], ['support', 'Support inbox', LifeBuoy],
-      ['money', 'Transactions', Activity], ['verification', 'Verification', ClipboardCheck], ['social-accounts', 'Social accounts', PackagePlus], ['sellers', 'Sellers', ShieldCheck], ['gift-cards', 'Gift cards', Gift], ['services', 'Service controls', Zap], ['admins', 'Add admin', ShieldCheck],
+      ['money', 'Transactions', Activity], ['verification', 'Verification', ClipboardCheck], ['social-accounts', 'Social accounts', PackagePlus], ['sellers', 'Sellers', ShieldCheck], ['services', 'Service controls', Zap], ['admins', 'Add admin', ShieldCheck],
     ] as const).map(([key, label, Icon]) => {
       const unread = key === 'verification'
         ? adminAlertCounts.verification
         : key === 'support'
           ? Math.max(adminAlertCounts.support, supportChats.filter((chat) => chat.unreadForAdmin > 0).length)
-          : key === 'sellers' ? adminAlertCounts.sellers : key === 'gift-cards' ? adminAlertCounts.giftCards : 0;
+          : key === 'sellers' ? adminAlertCounts.sellers : 0;
       return <button type="button" key={key} className={`admin-tab ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}><Icon size={16} />{label}{unread > 0 && <span className="admin-tab-unread" aria-label={`${unread} unread`}>{unread > 99 ? '99+' : unread}</span>}</button>;
     })}</nav>
 
