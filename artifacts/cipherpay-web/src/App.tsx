@@ -46,6 +46,7 @@ import {
 import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
 import './landing.css';
 import LandingExtras from './components/LandingExtras';
+import SellerPage from './pages/SellerPage';
 
 const queryClient = new QueryClient();
 setBaseUrl((import.meta.env.VITE_API_URL ?? '').trim() || null);
@@ -139,6 +140,7 @@ function Shell({ children }: { children: ReactNode }) {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [unreadChats, setUnreadChats] = useState(0);
   const [serviceFeatures, setServiceFeatures] = useState<Record<string, boolean> | null>(null);
+  const [sellerAccess, setSellerAccess] = useState(false);
   const { confirm } = useAnimatedDialog();
   const me = useGetMe({ query: { enabled: !!useToken(), queryKey: ['/api/auth/me'] } });
   const user = me.data as any;
@@ -197,6 +199,20 @@ function Shell({ children }: { children: ReactNode }) {
     };
   }, [setLocation]);
 
+  useEffect(() => {
+    let active = true;
+    const loadSellerAccess = async () => {
+      if (!useToken()) { if (active) setSellerAccess(false); return; }
+      try {
+        const response = await apiRequest<any>('/api/sellers/status');
+        if (active) setSellerAccess(response?.approved === true);
+      } catch {
+        if (active) setSellerAccess(false);
+      }
+    };
+    void loadSellerAccess();
+    return () => { active = false; };
+  }, [location]);
   useEffect(() => {
     const featureKey = serviceFeatureForPath(location);
     if (!featureKey || location.startsWith('/admin') || !useToken()) {
@@ -283,6 +299,7 @@ function Shell({ children }: { children: ReactNode }) {
     // Hard-navigate immediately so the authenticated shell and cached user state are gone without a manual refresh.
     window.location.replace('/');
   };
+  const allNav = sellerAccess ? [...nav, { href: "/seller", label: "Seller", icon: PackagePlus }] : nav;
   const linkList = (items: typeof nav) => items.map(({ href, label, icon: Icon }) => {
     const badge = href === '/chat' ? unreadChats : href === '/notifications' ? unreadNotifications : 0;
     return (
@@ -294,7 +311,7 @@ function Shell({ children }: { children: ReactNode }) {
   return <div className="app-shell">
     <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
       <div className="sidebar-top"><Logo compact /><button className="icon-btn mobile-close" onClick={() => setMobileOpen(false)} data-testid="button-close-menu" aria-label="Close navigation"><X size={19} /></button></div>
-      <div className="nav-group"><span className="nav-caption">ALL</span>{linkList(nav)}</div>
+      <div className="nav-group"><span className="nav-caption">ALL</span>{linkList(allNav)}</div>
       <div className="nav-group"><span className="nav-caption">Account</span>{linkList(utilityNav.filter((item) => item.href !== '/admin' || user?.isAdmin))}</div>
       <div className="sidebar-bottom">
         {user && <div className="user-menu-wrap">
@@ -1930,6 +1947,7 @@ function App() {
             <Route path="/temporary-email"><ProtectedArea><TemporaryEmail /></ProtectedArea></Route>
             <Route path="/social-boost"><ProtectedArea><SocialBoostPage /></ProtectedArea></Route>
             <Route path="/social-accounts"><ProtectedArea><SocialAccountsPage /></ProtectedArea></Route>
+            <Route path="/seller"><ProtectedArea><SellerPage /></ProtectedArea></Route>
             <Route path="/email-pro"><ProtectedArea><EmailProPage /></ProtectedArea></Route>
             <Route path="/crypto"><ProtectedArea><CryptoPage /></ProtectedArea></Route>
             <Route path="/transactions"><ProtectedArea><TransactionsPage /></ProtectedArea></Route>
