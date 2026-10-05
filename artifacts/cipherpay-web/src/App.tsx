@@ -63,7 +63,6 @@ const nav = [
   { href: '/fund', label: 'Fund wallet', icon: Plus },
   { href: '/send', label: 'Send money', icon: SendIcon },
   { href: '/crypto', label: 'Crypto', icon: Coins },
-  { href: '/chat', label: 'Find & chat', icon: MessageSquare },
   { href: '/data', label: 'Data bundles', icon: Wifi },
   { href: '/sms', label: 'SMS verification', icon: MessageSquare },
   { href: '/sms-extras', label: 'International eSIM', icon: Globe2 },
@@ -72,6 +71,7 @@ const nav = [
   { href: '/email-pro', label: 'Email Pro', icon: Mail },
   { href: '/social-boost', label: 'Social Boost', icon: Megaphone },
   { href: '/social-accounts', label: 'Social Accounts', icon: ShoppingBag },
+  { href: '/chat', label: 'Find & chat', icon: MessageSquare },
   { href: '/transactions', label: 'Transactions', icon: Activity },
   { href: '/referrals', label: 'Refer & earn', icon: Gift },
 ];
@@ -1998,95 +1998,3 @@ function Bills() {
     </section>
 
     <section className="bills-provider-panel">
-      <div className="bills-provider-head"><div><span className="section-kicker">02 / PROVIDER</span><h2>{selectedCategory?.name ?? 'Bill'} providers</h2><p>Select a provider to open its own payment workspace.</p></div><span className="bills-provider-count">{availableProviders.length} available</span></div>
-      {providers.isLoading ? <div className="bills-provider-loading"><RefreshCw size={17} className="spin" /> Loading live providers…</div> : providers.isError ? <div className="error-box" role="alert">Could not load providers for this category. Refresh and try again.</div> : <div className="bills-provider-grid">
-        {availableProviders.map((item: any, index: number) => {
-          const code = item.code || item.id;
-          return <button type="button" className="bills-provider-card" key={item.id} onClick={() => setLocation(`/bills/${category}/${encodeURIComponent(code)}`)} data-testid={`button-bill-provider-${item.id}`}>
-            <span className="bills-provider-index">{String(index + 1).padStart(2, '0')}</span><span className="bills-provider-logo"><ProviderLogo logo={item.logo} name={item.name} /></span><span className="bills-provider-info"><b>{item.name}</b><small>{item.description || 'Provider service'}</small></span><span className="bills-provider-open"><ArrowUpRight size={16} /></span>
-          </button>;
-        })}
-      </div>}
-    </section>
-
-    <section className="bills-flow-note"><span className="bills-flow-line" /><ShieldCheck size={17} /><span><b>Protected checkout.</b> We verify the customer before your wallet is charged.</span></section>
-  </>;
-}
-
-function BillProviderPage() {
-  const [, params] = useRoute<{ category: string; provider: string }>('/bills/:category/:provider');
-  const [, setLocation] = useLocation();
-  const category = params?.category || 'electricity';
-  const provider = params?.provider ? decodeURIComponent(params.provider) : '';
-  const cats = useListBillCategories();
-  const providers = useListBillProviders({ category }, { query: { queryKey: ['/api/bills/providers', category], staleTime: 60_000 } } as any);
-  const pay = usePayBill();
-  const validate = useValidateBill();
-  const [customerId, setCustomerId] = useState('');
-  const [amount, setAmount] = useState('');
-  const [phone, setPhone] = useState('');
-  const [meterType, setMeterType] = useState<'prepaid' | 'postpaid'>('prepaid');
-  const [validation, setValidation] = useState<any>(null);
-  const [done, setDone] = useState<any>(null);
-  const [error, setError] = useState('');
-  const categories: any[] = cats.data ?? [];
-  const availableProviders: any[] = providers.data ?? [];
-  const selectedProvider = availableProviders.find((item: any) => (item.code || item.id) === provider);
-  const selectedCategory = categories.find((item: any) => item.id === category);
-
-  useEffect(() => {
-    if (!providers.isLoading && availableProviders.length && !selectedProvider) setLocation('/bills');
-  }, [providers.isLoading, availableProviders.length, selectedProvider, setLocation]);
-
-  const verifyCustomer = () => {
-    setError('');
-    setValidation(null);
-    validate.mutate({ data: { provider, customerId, ...(category === 'electricity' ? { type: meterType } : {}) } as any }, {
-      onSuccess: (result: any) => setValidation(result),
-      onError: (reason: any) => setError(reason?.message ?? 'We could not verify those bill details.'),
-    });
-  };
-
-  const submit = (event: React.FormEvent) => {
-    event.preventDefault();
-    setError('');
-    setDone(null);
-    if (!validation) { setError('Verify the customer details before paying this bill.'); return; }
-    pay.mutate({ data: { provider, customerId, amount: parseGroupedDigits(amount), customerName: validation.name, phone: phone || customerId, meterType } as any }, {
-      onSuccess: (result: any) => setDone(result),
-      onError: (reason: any) => setError(reason?.message ?? 'Bill payment failed.'),
-    });
-  };
-
-  if (providers.isLoading || cats.isLoading || !selectedProvider) return <LoadingPage title="Opening provider" />;
-
-  return <>
-    <div className="bills-provider-back"><button type="button" onClick={() => setLocation('/bills')}><ArrowLeft size={16} /> All bill providers</button><span>PAYMENT DESK / {selectedCategory?.name || 'BILL'}</span></div>
-    <section className="bills-workspace-hero">
-      <div className="bills-workspace-brand"><span className="bills-workspace-logo"><ProviderLogo logo={selectedProvider.logo} name={selectedProvider.name} /></span><div><span className="section-kicker">LIVE PROVIDER</span><h1>{selectedProvider.name}</h1><p>{selectedProvider.description || selectedCategory?.description || 'Secure bill payment.'}</p></div></div>
-      <div className="bills-workspace-meta"><span><ShieldCheck size={14} /> Verified customer check</span><span><Check size={14} /> Wallet protected</span></div>
-    </section>
-
-    <div className="bills-workspace-grid">
-      <section className="panel bills-checkout-card">
-        <div className="bills-checkout-head"><div><span className="section-kicker">PAYMENT DETAILS</span><h2>Who are we paying?</h2><p>Enter the account details exactly as they appear on the bill.</p></div><span className="bills-secure-chip"><ShieldCheck size={14} /> Secure</span></div>
-        {category === 'electricity' && <div className="bills-meter-switch"><span className="form-label">Meter type</span><div>{(['prepaid', 'postpaid'] as const).map((type) => <button type="button" className={meterType === type ? 'active' : ''} onClick={() => { setMeterType(type); setValidation(null); setDone(null); }} key={type}>{type === 'prepaid' ? 'Prepaid' : 'Postpaid'}</button>)}</div></div>}
-        <div className="bills-input-grid">
-          <Field label={category === 'electricity' ? 'Meter number' : 'Customer / smartcard number'} placeholder={category === 'electricity' ? 'Enter meter number' : 'Enter customer number'} value={customerId} onChange={(event: any) => { setCustomerId(event.target.value); setValidation(null); setDone(null); }} required data-testid="input-customer-id" />
-          <Field label="Receipt phone (optional)" type="tel" placeholder="0803 123 4567" value={phone} onChange={(event: any) => setPhone(event.target.value)} data-testid="input-bill-phone" />
-        </div>
-        <div className="bills-verify-card"><div className={validation ? 'verified-copy' : ''}>{validation ? <><span className="bills-check-circle"><Check size={15} /></span><div><b>{validation.name}</b><small>{validation.address || 'Customer details verified by the provider.'}</small></div></> : <><span className="bills-verify-icon"><Fingerprint size={18} /></span><div><b>Verify before you pay</b><small>We’ll confirm the account directly with the provider.</small></div></>}</div><Button type="button" variant="secondary" onClick={verifyCustomer} disabled={validate.isPending || !customerId}>{validate.isPending ? <><RefreshCw size={15} className="spin" /> Checking…</> : validation ? 'Verify again' : 'Verify customer'}</Button></div>
-        <div className="bills-amount-section"><div className="bills-amount-head"><span className="form-label">Amount</span><span>{selectedProvider.minimumAmount ? `Min ${money.format(selectedProvider.minimumAmount)}` : 'Provider limit'}</span></div><div className="bills-amount-input"><span>₦</span><input type="text" inputMode="numeric" placeholder="0.00" value={amount} onChange={(event) => { setAmount(formatGroupedDigits(event.target.value)); setDone(null); }} required /></div><div className="bills-amount-limit">{selectedProvider.minimumAmount ? money.format(selectedProvider.minimumAmount) : '—'} <span>to</span> {selectedProvider.maximumAmount ? money.format(selectedProvider.maximumAmount) : 'No stated maximum'}</div></div>
-        {validation && <div className="bills-review"><div><span>Provider</span><b>{selectedProvider.name}</b></div><div><span>Customer</span><b>{validation.name}</b></div><div><span>Debit</span><b>{amount ? money.format(parseGroupedDigits(amount)) : '—'}</b></div></div>}
-        {error && <div className="error-box" role="alert">{error}</div>}
-        <Button type="submit" className="bills-pay-button full-btn" disabled={pay.isPending || !validation || !amount}>{pay.isPending ? 'Processing payment…' : `Pay ${selectedProvider.name}`} <ArrowRight size={17} /></Button>
-      </section>
-      <aside className="bills-workspace-side">
-        <section className="panel bills-summary-card"><span className="section-kicker">YOU’RE PAYING</span><div className="bills-summary-provider"><span className="bills-summary-logo"><ProviderLogo logo={selectedProvider.logo} name={selectedProvider.name} /></span><div><b>{selectedProvider.name}</b><small>{selectedCategory?.name || 'Bill payment'}</small></div></div><div className="bills-side-rule" /><div className="bills-side-step"><span>01</span><div><b>Enter details</b><small>Use the exact account or meter number.</small></div></div><div className="bills-side-step"><span>02</span><div><b>Verify</b><small>We confirm the customer with the live provider.</small></div></div><div className="bills-side-step"><span>03</span><div><b>Pay</b><small>Your wallet is charged after verification.</small></div></div></section>
-        <section className="bills-trust-panel"><ShieldCheck size={18} /><div><b>Nothing moves too early.</b><p>Customer verification happens before the payment request is submitted.</p></div></section>
-      </aside>
-    </div>
-    {done && <PurchaseSuccessPop kind="bill" onClose={() => setDone(null)} />}
-  </>;
-}
-
