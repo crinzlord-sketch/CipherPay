@@ -47,7 +47,6 @@ import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
 import './landing.css';
 import LandingExtras from './components/LandingExtras';
 import SellerPage from './pages/SellerPage';
-import GiftCardsPage from './pages/GiftCardsPage';
 
 const queryClient = new QueryClient();
 setBaseUrl((import.meta.env.VITE_API_URL ?? '').trim() || null);
@@ -65,7 +64,6 @@ const nav = [
   { href: '/fund', label: 'Fund wallet', icon: Plus },
   { href: '/send', label: 'Send money', icon: SendIcon },
   { href: '/crypto', label: 'Crypto', icon: Coins },
-  { href: '/gift-cards', label: 'Gift Cards', icon: Gift },
   { href: '/data', label: 'Data bundles', icon: Wifi },
   { href: '/sms', label: 'SMS verification', icon: MessageSquare },
   { href: '/sms-extras', label: 'International eSIM', icon: Globe2 },
@@ -1944,7 +1942,6 @@ function App() {
             <Route path="/seller"><ProtectedArea><SellerPage /></ProtectedArea></Route>
             <Route path="/email-pro"><ProtectedArea><EmailProPage /></ProtectedArea></Route>
             <Route path="/crypto"><ProtectedArea><CryptoPage /></ProtectedArea></Route>
-            <Route path="/gift-cards"><ProtectedArea><GiftCardsPage /></ProtectedArea></Route>
             <Route path="/transactions"><ProtectedArea><TransactionsPage /></ProtectedArea></Route>
           <Route path="/spending"><ProtectedArea><SpendingInsightsPage /></ProtectedArea></Route>
             <Route path="/chat/:id"><ProtectedArea><ChatPage /></ProtectedArea></Route>
