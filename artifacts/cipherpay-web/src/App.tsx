@@ -18,6 +18,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import AdminConsole from './pages/AdminConsole';
 import DataBundlesPage from './pages/DataBundlesPage';
 import SocialBoostPage from './pages/SocialBoostPage';
+import SocialAccountsPage from './pages/SocialAccountsPage';
 import EmailProPage from './pages/EmailProPage';
 import ChatPage from './pages/ChatPage';
 import CryptoPage from './pages/CryptoPage';
@@ -40,7 +41,7 @@ import {
   Bell, Bolt, Check, CircleHelp, Copy, CreditCard, FileText,
   Fingerprint, Globe2, Home, Landmark, LockKeyhole, LogOut, Menu, MessageSquare,
   MoreHorizontal, Coins, Network as NetworkIcon, Plus, Receipt, RefreshCw, Send as SendIcon, Megaphone,
-  Settings, ShieldCheck, Smartphone, Target, Tv, UserRound, WalletCards, Wifi, X, Eye, EyeOff, Gift, Mail,
+  Settings, ShieldCheck, Smartphone, Target, Tv, UserRound, WalletCards, Wifi, X, Eye, EyeOff, Gift, Mail, ShoppingBag,
 } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
 import './landing.css';
@@ -70,6 +71,7 @@ const nav = [
   { href: '/temporary-email', label: 'Temporary email', icon: Globe2 },
   { href: '/email-pro', label: 'Email Pro', icon: Mail },
   { href: '/social-boost', label: 'Social Boost', icon: Megaphone },
+  { href: '/social-accounts', label: 'Social Accounts', icon: ShoppingBag },
   { href: '/transactions', label: 'Transactions', icon: Activity },
   { href: '/referrals', label: 'Refer & earn', icon: Gift },
 ];
@@ -1924,6 +1926,7 @@ function App() {
             <Route path="/long-term-numbers"><ProtectedArea><LongTermNumbersPage /></ProtectedArea></Route>
             <Route path="/temporary-email"><ProtectedArea><TemporaryEmail /></ProtectedArea></Route>
             <Route path="/social-boost"><ProtectedArea><SocialBoostPage /></ProtectedArea></Route>
+            <Route path="/social-accounts"><ProtectedArea><SocialAccountsPage /></ProtectedArea></Route>
             <Route path="/email-pro"><ProtectedArea><EmailProPage /></ProtectedArea></Route>
             <Route path="/crypto"><ProtectedArea><CryptoPage /></ProtectedArea></Route>
             <Route path="/transactions"><ProtectedArea><TransactionsPage /></ProtectedArea></Route>
