@@ -4,10 +4,12 @@ import { sql } from "drizzle-orm";
 import { db, transactionsTable } from "@workspace/db";
 import { requireAdmin } from "../lib/admin-auth";
 import { generateReference } from "../lib/auth";
+import { isServiceFeatureEnabled } from "../lib/service-features";
 
 const router: IRouter = Router();
 const platforms = new Set(["instagram","tiktok","facebook","discord","twitter","youtube","telegram","snapchat","linkedin"]);
 const uid=(req:any)=>{const n=Number(req.headers["x-user-id"]);return Number.isInteger(n)&&n>0?n:null};
+const requireSocialAccountsService=async(res:any)=>{if(await isServiceFeatureEnabled("social_accounts")) return true;res.status(503).json({error:"Social Accounts is temporarily unavailable."});return false};
 const key=()=>createHash("sha256").update(process.env.SOCIAL_ACCOUNT_ENCRYPTION_KEY||process.env.SESSION_SECRET||"").digest();
 const enc=(v:string)=>{const iv=randomBytes(12),c=createCipheriv("aes-256-gcm",key(),iv);const d=Buffer.concat([c.update(v,"utf8"),c.final()]);return iv.toString("base64url")+"."+c.getAuthTag().toString("base64url")+"."+d.toString("base64url")};
 const dec=(v:string)=>{const [i,t,d]=v.split("."),c=createDecipheriv("aes-256-gcm",key(),Buffer.from(i,"base64url"));c.setAuthTag(Buffer.from(t,"base64url"));return Buffer.concat([c.update(Buffer.from(d,"base64url")),c.final()]).toString("utf8")};
@@ -26,6 +28,7 @@ async function tables(){
 void tables().catch(e=>console.error("Social account tables setup failed",e));
 
 router.get("/social-accounts/catalog",async(req,res)=>{
+ if(!await requireSocialAccountsService(res)) return;
  try{
   await tables();
   const r=await db.execute(sql`SELECT MIN(id) FILTER(WHERE status='available')::int AS "listingId",platform,country,title,MIN(price) AS price,COUNT(*) FILTER(WHERE status='available')::int AS stock FROM social_account_inventory GROUP BY platform,country,title ORDER BY platform,country,title`);
@@ -35,9 +38,10 @@ router.get("/social-accounts/catalog",async(req,res)=>{
   res.status(500).json({error:"Social accounts inventory could not be loaded."});
  }
 });
-router.get("/social-accounts/orders",async(req,res)=>{const userId=uid(req);if(!userId){res.status(401).json({error:"Unauthorized"});return}await tables();const r=await db.execute(sql`SELECT o.id,o.platform,o.country,o.title,o.amount,o.reference,o.status,o.created_at AS "createdAt",i.username FROM social_account_orders o JOIN social_account_inventory i ON i.id=o.inventory_id WHERE o.user_id=${userId} ORDER BY o.created_at DESC LIMIT 50`);res.json({data:r.rows})});
+router.get("/social-accounts/orders",async(req,res)=>{if(!await requireSocialAccountsService(res)) return;const userId=uid(req);if(!userId){res.status(401).json({error:"Unauthorized"});return}await tables();const r=await db.execute(sql`SELECT o.id,o.platform,o.country,o.title,o.amount,o.reference,o.status,o.created_at AS "createdAt",i.username FROM social_account_orders o JOIN social_account_inventory i ON i.id=o.inventory_id WHERE o.user_id=${userId} ORDER BY o.created_at DESC LIMIT 50`);res.json({data:r.rows})});
 
 router.post("/social-accounts/purchase/:listingId",async(req,res)=>{
+ if(!await requireSocialAccountsService(res)) return;
  const userId=uid(req);if(!userId){res.status(401).json({error:"Unauthorized"});return}const id=Number(req.params.listingId);if(!Number.isInteger(id)){res.status(400).json({error:"Invalid listing."});return}await tables();
  try{const out=await db.transaction(async(d)=>{
   const s=await d.execute(sql`SELECT id,platform,country,title,price,username FROM social_account_inventory WHERE id=${id} AND status='available' FOR UPDATE`);const item:any=s.rows[0];if(!item)throw new Error("This account is no longer in stock.");
@@ -50,9 +54,9 @@ router.post("/social-accounts/purchase/:listingId",async(req,res)=>{
  });res.json({success:true,...out,reviewRequired:true})}catch(e:any){res.status(400).json({error:e?.message||"Purchase failed."})}
 });
 
-router.post("/social-accounts/orders/:orderId/reveal",async(req,res)=>{const userId=uid(req);if(!userId){res.status(401).json({error:"Unauthorized"});return}await tables();const id=Number(req.params.orderId);const r=await db.execute(sql`SELECT o.id,i.encrypted_details,i.username,i.platform,i.country,i.title FROM social_account_orders o JOIN social_account_inventory i ON i.id=o.inventory_id WHERE o.id=${id} AND o.user_id=${userId}`);const row:any=r.rows[0];if(!row){res.status(404).json({error:"Order not found."});return}try{const details=JSON.parse(dec(row.encrypted_details));await db.execute(sql`UPDATE social_account_orders SET revealed_at=COALESCE(revealed_at,now()) WHERE id=${id}`);res.json({data:{id:row.id,platform:row.platform,country:row.country,title:row.title,username:row.username,details}})}catch{res.status(500).json({error:"Account details could not be unlocked."})}});
+router.post("/social-accounts/orders/:orderId/reveal",async(req,res)=>{if(!await requireSocialAccountsService(res)) return;const userId=uid(req);if(!userId){res.status(401).json({error:"Unauthorized"});return}await tables();const id=Number(req.params.orderId);const r=await db.execute(sql`SELECT o.id,i.encrypted_details,i.username,i.platform,i.country,i.title FROM social_account_orders o JOIN social_account_inventory i ON i.id=o.inventory_id WHERE o.id=${id} AND o.user_id=${userId}`);const row:any=r.rows[0];if(!row){res.status(404).json({error:"Order not found."});return}try{const details=JSON.parse(dec(row.encrypted_details));await db.execute(sql`UPDATE social_account_orders SET revealed_at=COALESCE(revealed_at,now()) WHERE id=${id}`);res.json({data:{id:row.id,platform:row.platform,country:row.country,title:row.title,username:row.username,details}})}catch{res.status(500).json({error:"Account details could not be unlocked."})}});
 
-router.post("/social-accounts/requests",async(req,res)=>{const userId=uid(req);if(!userId){res.status(401).json({error:"Unauthorized"});return}await tables();const p=String(req.body?.platform||"").trim(),c=String(req.body?.country||"").trim(),d=String(req.body?.description||"").trim(),b=req.body?.budget===""||req.body?.budget==null?null:Number(req.body.budget),m=String(req.body?.contactMethod||"support"),v=String(req.body?.contactValue||"").trim();if(!p||!d){res.status(400).json({error:"Platform and request details are required."});return}const r=await db.execute(sql`INSERT INTO social_account_requests(user_id,platform,country,description,budget,contact_method,contact_value) VALUES(${userId},${p},${c||null},${d.slice(0,3000)},${b},${m.slice(0,30)},${v.slice(0,200)}) RETURNING id,status,created_at AS "createdAt"`);res.status(201).json({request:r.rows[0]})});
+router.post("/social-accounts/requests",async(req,res)=>{if(!await requireSocialAccountsService(res)) return;const userId=uid(req);if(!userId){res.status(401).json({error:"Unauthorized"});return}await tables();const p=String(req.body?.platform||"").trim(),c=String(req.body?.country||"").trim(),d=String(req.body?.description||"").trim(),b=req.body?.budget===""||req.body?.budget==null?null:Number(req.body.budget),m=String(req.body?.contactMethod||"support"),v=String(req.body?.contactValue||"").trim();if(!p||!d){res.status(400).json({error:"Platform and request details are required."});return}const r=await db.execute(sql`INSERT INTO social_account_requests(user_id,platform,country,description,budget,contact_method,contact_value) VALUES(${userId},${p},${c||null},${d.slice(0,3000)},${b},${m.slice(0,30)},${v.slice(0,200)}) RETURNING id,status,created_at AS "createdAt"`);res.status(201).json({request:r.rows[0]})});
 
 router.get("/admin/social-accounts",requireAdmin,async(_req,res)=>{await tables();const r=await db.execute(sql`SELECT platform,country,title,COUNT(*)::int AS total,COUNT(*) FILTER(WHERE status='available')::int AS stock,MIN(price) AS price FROM social_account_inventory GROUP BY platform,country,title ORDER BY platform,country,title`);res.json({data:r.rows})});
 router.get("/admin/social-accounts/inventory",requireAdmin,async(_req,res)=>{await tables();const r=await db.execute(sql`SELECT id,platform,country,title,price,username,status,purchased_by,purchased_at,created_at AS "createdAt" FROM social_account_inventory ORDER BY created_at DESC LIMIT 300`);res.json({data:r.rows})});
