@@ -10,6 +10,7 @@ export const SERVICE_FEATURES = [
   { key: "sms_rentals", label: "Long-term numbers", description: "Manage SMSPool rental numbers, messages and extensions." },
   { key: "temporary_email", label: "Temporary email", description: "Create and use temporary inboxes." },
   { key: "social_boost", label: "Social Boost", description: "Browse and order supported Socially social-media services." },
+  { key: "social_accounts", label: "Social Accounts", description: "Buy available social media accounts by platform and country." },
   { key: "email_pro", label: "Email Pro", description: "Paid email sending and Email Pro access." },
   { key: "crypto", label: "Crypto", description: "Crypto wallet and supported crypto transactions." },
 ] as const;
