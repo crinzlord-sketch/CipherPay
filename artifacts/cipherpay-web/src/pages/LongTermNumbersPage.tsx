@@ -68,6 +68,7 @@ export default function LongTermNumbersPage() {
       setError(e?.message ?? "Could not load rental pricing.");
     } finally {
       setPricingLoading(false);
+      requestAnimationFrame(() => purchaseRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }));
     }
   };
 
