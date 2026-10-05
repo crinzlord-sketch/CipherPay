@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Clipboard, Copy, MessageCircle, Search, Send, ShoppingBag } from "lucide-react";
+import { Check, ChevronDown, Clipboard, Copy, MessageCircle, Search, Send, ShoppingBag, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { apiRequest } from "./page-api";
 import "./social-accounts.css";
