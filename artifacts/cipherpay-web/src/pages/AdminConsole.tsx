@@ -12,7 +12,7 @@ import UserDetailView from './UserDetailView';
 import { avatarDataUrl } from '../components/CipherAvatar';
 import AdminSocialAccounts from './AdminSocialAccounts';
 
-type Tab = 'overview' | 'users' | 'admins' | 'support' | 'money' | 'verification' | 'activity' | 'services' | 'social-accounts';
+type Tab = 'overview' | 'users' | 'admins' | 'support' | 'money' | 'verification' | 'activity' | 'services' | 'social-accounts' | 'sellers';
 type AdminOptions = { method?: string; body?: unknown; headers?: Record<string, string> };
 
 async function adminRequest<T>(path: string, token: string, options: AdminOptions = {}): Promise<T> {
@@ -94,7 +94,7 @@ export default function AdminConsole() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [adminAlertCounts, setAdminAlertCounts] = useState({ verification: 0, support: 0 });
+  const [adminAlertCounts, setAdminAlertCounts] = useState({ verification: 0, support: 0, sellers: 0 });
   const [serviceFeatures, setServiceFeatures] = useState<any[]>([]);
   const [serviceUpdating, setServiceUpdating] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
@@ -170,7 +170,7 @@ export default function AdminConsole() {
       setSmsActivations(smsResult.data ?? []);
       setSocialOrders(socialResult.data ?? []);
       setAdmins(adminsResult.data ?? []);
-      setAdminAlertCounts({ verification: Number(alertsResult.verification ?? 0), support: Number(alertsResult.support ?? 0) });
+      setAdminAlertCounts({ verification: Number(alertsResult.verification ?? 0), support: Number(alertsResult.support ?? 0), sellers: Number(alertsResult.sellers ?? 0) });
       setServiceFeatures(serviceFeaturesResult.data ?? []);
     } catch (caught) {
       if (caught instanceof Error && /token|admin|unauthorized|expired/i.test(caught.message)) {
@@ -188,8 +188,8 @@ export default function AdminConsole() {
   // Opening a queue tab marks its admin alerts as seen. New submissions that
   // arrive afterwards create a fresh unread badge.
   useEffect(() => {
-    if (!token || !['verification', 'support'].includes(tab)) return;
-    const type = tab === 'verification' ? 'admin_kyc' : 'admin_support';
+    if (!token || !['verification', 'support', 'sellers'].includes(tab)) return;
+    const type = tab === 'verification' ? 'admin_kyc' : tab === 'support' ? 'admin_support' : 'admin_seller';
     void adminRequest('/api/admin/alerts/read', token, { method: 'POST', body: { type } })
       .then(() => setAdminAlertCounts((current) => ({ ...current, [tab]: 0 })))
       .catch(() => {});
