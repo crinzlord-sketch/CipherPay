@@ -20,20 +20,7 @@ const start = async () => {
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS gender text`);
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS user_code text`);
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS chat_public_key text`);
-  await db.execute(sql\`ALTER TABLE gift_card_orders ADD COLUMN IF NOT EXISTS sogo_reference text\`);
-  await db.execute(sql\`ALTER TABLE gift_card_orders ADD COLUMN IF NOT EXISTS sogo_transaction_id text\`);
-  await db.execute(sql\`ALTER TABLE gift_card_orders ADD COLUMN IF NOT EXISTS payout_amount_ngn numeric(18,2)\`);
-  await db.execute(sql\`ALTER TABLE gift_card_orders ADD COLUMN IF NOT EXISTS fee_ngn numeric(18,2) DEFAULT 0\`);
-  await db.execute(sql\`ALTER TABLE gift_card_orders ADD COLUMN IF NOT EXISTS net_payout_ngn numeric(18,2)\`);
-  await db.execute(sql\`ALTER TABLE gift_card_orders ADD COLUMN IF NOT EXISTS payout_destination text NOT NULL DEFAULT 'wallet'\`);
-  await db.execute(sql\`ALTER TABLE gift_card_orders ADD COLUMN IF NOT EXISTS payout_account_id integer\`);
-  await db.execute(sql\`ALTER TABLE gift_card_orders ADD COLUMN IF NOT EXISTS payout_account_name text\`);
-  await db.execute(sql\`ALTER TABLE gift_card_orders ADD COLUMN IF NOT EXISTS payout_account_number text\`);
-  await db.execute(sql\`ALTER TABLE gift_card_orders ADD COLUMN IF NOT EXISTS payout_bank_name text\`);
-  await db.execute(sql\`ALTER TABLE gift_card_orders ADD COLUMN IF NOT EXISTS admin_id integer\`);
-  await db.execute(sql\`ALTER TABLE gift_card_orders ADD COLUMN IF NOT EXISTS processing_started_at timestamptz\`);
-  await db.execute(sql\`ALTER TABLE gift_card_orders ADD COLUMN IF NOT EXISTS completed_at timestamptz\`);
-  await db.execute(sql\`ALTER TABLE gift_card_orders ADD COLUMN IF NOT EXISTS failure_reason text\`);
+
   await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS users_user_code_unique ON users(user_code)`);
   await db.execute(sql`UPDATE users SET user_code = 'CP-' || upper(substr(md5(id::text), 1, 10)) WHERE user_code IS NULL`);
   await db.execute(sql`CREATE TABLE IF NOT EXISTS direct_chats (
