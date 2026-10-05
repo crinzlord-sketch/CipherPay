@@ -17,6 +17,7 @@ import referralsRouter from "./referrals";
 import cryptoRouter from "./crypto";
 import cryptoWalletRouter from "./crypto-wallet";
 import socialAccountsRouter from "./social-accounts";
+import sellersRouter from "./sellers";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use(referralsRouter);
 router.use(cryptoRouter);
 router.use(cryptoWalletRouter);
 router.use(socialAccountsRouter);
+router.use(sellersRouter);
 
 export default router;
