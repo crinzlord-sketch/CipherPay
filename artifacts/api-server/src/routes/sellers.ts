@@ -147,7 +147,7 @@ router.post("/sellers/apply", async (req, res): Promise<void> => {
   }).catch(() => {});
 
   try {
-    const admins = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.isAdmin, true));
+    const admins = await db.select({ id: usersTable.id, email: usersTable.email }).from(usersTable).where(eq(usersTable.isAdmin, true));
     if (admins.length) {
       await db.insert(notificationsTable).values(admins.map(admin => ({
         userId: admin.id,
@@ -157,10 +157,11 @@ router.post("/sellers/apply", async (req, res): Promise<void> => {
         link: "/admin?tab=sellers",
       })));
     }
-    await sendAdminAlertEmail(
+    await Promise.allSettled(admins.map((admin: any) => sendAdminAlertEmail(
       "New seller application",
       `A verified CipherPay customer has applied to become a seller.\n\nSeller: ${sellerName}\nEmail: ${user.email}\nUser ID: #${userId}\nCountry: ${country}\nKYC: verified (level ${kyc.level ?? 0})\nApplication IP: ${ip || "not available"}\n\nReview the application in Admin → Sellers.`,
-    );
+      String(admin.email ?? "").trim(),
+    )));
   } catch (e: any) {
     req.log?.warn?.({ err: e?.message }, "seller application admin alert failed");
   }
