@@ -368,15 +368,7 @@ function AuthLayout({ children, title, detail }: { children: ReactNode; title: s
       <div className="auth-sidekick-mockups" aria-hidden="true">
         <div className="auth-sidekick-device sidekick-one"><div className="auth-sidekick-screen"><b>Wallet</b><strong>₦24,680</strong><span>Available balance</span><i>Ready to move</i></div></div>
         <div className="auth-sidekick-device sidekick-two"><div className="auth-sidekick-screen"><b>Activity</b><strong>+₦20,000</strong><span>Wallet funded</span><i>Payment complete</i></div></div>
-        <div className="sidekick-orb"/><div className="sidekick-ring"/>
-        <div className="auth-sidekick-signal"><i/><i/><i/><span>LIVE / CIPHERPAY CORE</span></div>
-        <div className="auth-sidekick-float-label label-wallet"><b>01</b><span>Wallet ready</span><i>●</i></div>
-        <div className="auth-sidekick-float-label label-secure"><b>02</b><span>Protected</span><i>✓</i></div>
-        <div className="auth-sidekick-rail rail-one"/><div className="auth-sidekick-rail rail-two"/>
       </div>
-      <div className="auth-visual-ring auth-visual-ring-one" aria-hidden="true" />
-      <div className="auth-visual-ring auth-visual-ring-two" aria-hidden="true" /><div className="auth-3d-shard auth-3d-shard-one" aria-hidden="true"><span>CP</span></div><div className="auth-3d-shard auth-3d-shard-two" aria-hidden="true"><span>01</span></div><div className="auth-3d-orb" aria-hidden="true"><span>PAY</span></div>
-      <div className="orb orb-one" /><div className="orb orb-two" />
       <div className="auth-quote"><span className="auth-overline">CIPHERPAY</span><span className="quote-mark">“</span><div className="auth-quote-line"><span/><span/><span/></div><h2>Your digital<br /><em>sidekick.</em></h2><p>One calm place to fund, spend, send, and stay in control.</p><div className="auth-benefits"><span><b>01</b> Move with clarity</span><span><b>02</b> Stay protected</span><span><b>03</b> Keep momentum</span></div></div><div className="auth-footer"><span>Built for the way life moves.</span><span>© 2025 CipherPay</span></div>
     </div>
     <div className="auth-form-wrap"><div className="auth-form-inner"><div className="mobile-auth-brand"><Logo /></div><div className="eyebrow">CIPHERPAY / PERSONAL</div><h1>{title}</h1><p className="auth-detail">{detail}</p>{children}<p className="auth-legal">By continuing, you agree to our Terms and Privacy Policy.</p></div></div>
