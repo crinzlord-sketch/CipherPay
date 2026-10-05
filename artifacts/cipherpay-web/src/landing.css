@@ -2846,3 +2846,32 @@ html.dark .cp-support-close{
 .cp-footer-premium{width:100vw;max-width:none!important;margin-left:calc(50% - 50vw)!important;margin-right:calc(50% - 50vw)!important;padding-left:max(28px,calc((100vw - 1184px)/2))!important;padding-right:max(28px,calc((100vw - 1184px)/2))!important;}
 .cp-footer-premium .cp-footer-top,.cp-footer-premium .cp-footer-bottom{width:100%;}
 @media(max-width:600px){.cp-footer-premium{padding-left:17px!important;padding-right:17px!important;}}
+
+
+/* Performance: keep the rich landing visuals, but avoid spending paint/layout work on
+   sections that are far outside the viewport. */
+.cp-landing .cp-section,
+.cp-landing .cp-footer {
+  content-visibility: auto;
+  contain-intrinsic-size: 900px;
+}
+
+.cp-landing .cp-section {
+  contain: layout style;
+}
+
+@media (max-width: 900px) {
+  .cp-landing .cp-section {
+    contain: layout style paint;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-landing *,
+  .cp-landing *::before,
+  .cp-landing *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
