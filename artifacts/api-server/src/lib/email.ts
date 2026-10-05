@@ -246,6 +246,7 @@ export async function sendMail(to: string, subject: string, html: string, text?:
   }
 
 
+}
 export async function sendOtpEmail(to: string, code: string, purpose: "verification" | "withdraw" | "password_reset" | "login"): Promise<void> {
   const map = {
     verification: { title: "Verify your email", subject: "Verify your CipherPay email", preview: "Your CipherPay verification code is ready.", intro: "Use the code below to verify the email address on your CipherPay account." },
