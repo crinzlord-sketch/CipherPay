@@ -7,7 +7,7 @@ export interface NotifyArgs {
   userId: number;
   title: string;
   body: string;
-  type?: "info" | "success" | "warning" | "error" | "admin" | "transaction" | "admin_kyc" | "admin_support" | "admin_seller" | "admin_gift_card";
+  type?: "info" | "success" | "warning" | "error" | "admin" | "transaction" | "admin_kyc" | "admin_support" | "admin_seller";
   link?: string | null;
   email?: boolean;
 }
