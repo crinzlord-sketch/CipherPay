@@ -466,7 +466,7 @@ function LandingPage() {
         <div className="cp-hero-depth-orbs" aria-hidden="true">
           <span className="cp-depth-orb orb-a">₦</span>
           <span className="cp-depth-orb orb-b">↗</span>
-          <span className="cp-depth-orb orb-c">✦</span>
+          
           <span className="cp-depth-orb orb-d">CP</span>
         </div>
         <div className="cp-hero-data-ring" aria-hidden="true">
