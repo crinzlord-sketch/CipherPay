@@ -19,6 +19,7 @@ function verifyHash(header: string | undefined): boolean {
 interface FlwEvent {
   event?: string;
   "event.type"?: string;
+  type?: string;
   data?: {
     id?: number;
     status?: string;
@@ -56,7 +57,7 @@ export async function flutterwaveWebhookHandler(req: Request, res: Response): Pr
 }
 
 export async function handleEvent(req: Request, evt: FlwEvent, psaAccountReference?: string): Promise<void> {
-  const eventName = evt.event ?? evt["event.type"] ?? "";
+  const eventName = evt.event ?? evt["event.type"] ?? evt.type ?? "";
   const data = evt.data ?? {};
 
   // Flutterwave bill-payment completion webhook. Airtime/data are asynchronous:
@@ -269,9 +270,9 @@ export async function handleEvent(req: Request, evt: FlwEvent, psaAccountReferen
   }
 
   if (eventName === "charge.completed") {
-    const ref = data.tx_ref;
+    const ref = data.tx_ref ?? data.reference;
     if (!ref) { req.log?.warn?.("flw webhook: charge.completed without tx_ref"); return; }
-    if (String(data.status).toLowerCase() !== "successful") {
+    if (!["successful", "success", "completed", "succeeded"].includes(String(data.status).toLowerCase())) {
       req.log?.info?.({ ref, status: data.status }, "flw webhook: charge not successful, ignored");
       return;
     }
