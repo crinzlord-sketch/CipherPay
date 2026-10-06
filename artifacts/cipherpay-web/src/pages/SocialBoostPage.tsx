@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Check, Clock3, ExternalLink, Megaphone, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Clock3, ExternalLink, Megaphone, RefreshCw, X, Copy } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { apiRequest } from './page-api';
@@ -83,6 +83,7 @@ export default function SocialBoostPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState<SocialOrder | null>(null);
 
   const refreshLiveStatuses = useCallback(async (items: SocialOrder[]) => {
     const active = items.filter((order) => !terminalStatuses.has(order.status));
@@ -178,6 +179,8 @@ export default function SocialBoostPage() {
     return () => window.clearInterval(interval);
   }, [orders.length]);
 
+  const copyOrderId = async (id: number) => { try { await navigator.clipboard?.writeText(String(id)); } catch { /* unavailable */ } };
+
   return <>
     <PageHeading
       eyebrow="SOCIAL BOOST / LIVE PROVIDER CATALOGUE"
@@ -201,6 +204,29 @@ export default function SocialBoostPage() {
       </section>
       <aside className="panel social-boost-side"><h3>Simple, visible, trackable.</h3><p>Your wallet is debited only when the delivery partner accepts the order. We refresh progress here, and any order still incomplete after 24 hours is automatically refunded.</p><div className="side-rule" /><span className="mono">BOOST / LIVE TRACKING</span></aside>
     </div>
-    <section className="panel social-orders-panel"><div className="section-head"><div><h2>Recent boost orders</h2><span>Track your latest social fulfilment requests.</span></div><button type="button" className="btn btn-secondary" onClick={() => void refreshOrders()} disabled={refreshing}><RefreshCw size={15} className={refreshing ? 'admin-spin' : ''} /> Refresh</button></div>{orders.length ? <div className="social-orders-list">{orders.map((order) => { const delivered = Math.max(0, order.quantity - (order.remainsCount ?? order.quantity)); return <div className="social-order-row" key={order.id}><span className="social-order-icon"><Megaphone size={15} /></span><span className="social-order-copy"><b>{order.serviceName}</b><small>{platformLabels[order.platform] ?? order.platform} · {delivered.toLocaleString()} / {order.quantity.toLocaleString()} delivered · {new Date(order.createdAt).toLocaleDateString('en-NG')}</small></span><span className={`status-pill status-${order.status}`} >{order.status === 'cancelled' ? 'Refunded' : prettyStatus(order.status)}</span><a href={order.link} target="_blank" rel="noreferrer" aria-label={`Open link for ${order.serviceName}`}><ExternalLink size={15} /></a></div>; })}</div> : <div className="empty-state"><Megaphone size={22} /><b>No boost orders yet</b><span>Your recent orders will appear here.</span></div>}</section>
+    <section className="panel social-orders-panel"><div className="section-head"><div><h2>Recent boost orders</h2><span>Track your latest social fulfilment requests.</span></div><button type="button" className="btn btn-secondary" onClick={() => void refreshOrders()} disabled={refreshing}><RefreshCw size={15} className={refreshing ? 'admin-spin' : ''} /> Refresh</button></div>{orders.length ? <div className="social-orders-list">{orders.map((order) => { const delivered = Math.max(0, order.quantity - (order.remainsCount ?? order.quantity)); return <div className="social-order-row" key={order.id}><span className="social-order-icon"><Megaphone size={15} /></span><span className="social-order-copy"><b>{order.serviceName}</b><small>{platformLabels[order.platform] ?? order.platform} · {delivered.toLocaleString()} / {order.quantity.toLocaleString()} delivered · {new Date(order.createdAt).toLocaleDateString('en-NG')}</small></span><span className={`status-pill status-${order.status}`} >{order.status === 'cancelled' ? 'Refunded' : prettyStatus(order.status)}</span><button type="button" className="social-order-open" onClick={() => setSelectedOrder(order)}>Open <ArrowRight size={14} /></button></div>; })}</div> : <div className="empty-state"><Megaphone size={22} /><b>No boost orders yet</b><span>Your recent orders will appear here.</span></div>}</section>
+    {selectedOrder && (() => {
+      const delivered = Math.max(0, selectedOrder.quantity - (selectedOrder.remainsCount ?? selectedOrder.quantity));
+      const remaining = Math.max(0, selectedOrder.remainsCount ?? 0);
+      const progress = selectedOrder.quantity ? Math.min(100, (delivered / selectedOrder.quantity) * 100) : 0;
+      return <div className="social-order-overlay" role="dialog" aria-modal="true" aria-labelledby="social-order-detail-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedOrder(null); }}>
+        <div className="social-order-modal">
+          <button type="button" className="social-order-close" onClick={() => setSelectedOrder(null)} aria-label="Close order details"><X size={18} /></button>
+          <div className="social-order-modal-head"><span className="social-boost-mark"><Megaphone size={19} /></span><div><span className="mono">BOOST ORDER</span><h2 id="social-order-detail-title">{selectedOrder.serviceName}</h2><p>{platformLabels[selectedOrder.platform] ?? selectedOrder.platform}</p></div></div>
+          <div className="social-order-status-card"><span>Status</span><strong className={`status-text status-${selectedOrder.status}`}>{selectedOrder.status === 'cancelled' ? 'Refunded' : prettyStatus(selectedOrder.status)}</strong></div>
+          <div className="social-order-detail-grid">
+            <div><span>Price paid</span><strong>{naira(selectedOrder.amount)}</strong></div>
+            <div><span>Quantity</span><strong>{selectedOrder.quantity.toLocaleString()}</strong></div>
+            <div><span>Delivered</span><strong>{delivered.toLocaleString()}</strong></div>
+            <div><span>Remaining</span><strong>{remaining.toLocaleString()}</strong></div>
+            <div><span>Order ID</span><strong className="social-order-id">{selectedOrder.id} <button type="button" onClick={() => void copyOrderId(selectedOrder.id)} aria-label="Copy order ID"><Copy size={13} /></button></strong></div>
+            <div><span>Placed</span><strong>{new Date(selectedOrder.createdAt).toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' })}</strong></div>
+          </div>
+          <div className="social-order-target"><span>Target link</span><a href={selectedOrder.link} target="_blank" rel="noreferrer">{selectedOrder.link}<ExternalLink size={14} /></a></div>
+          <div className="social-order-progress"><div><span>Delivery progress</span><b>{Math.round(progress)}%</b></div><div className="social-order-progress-track"><i style={{ width: `${progress}%` }} /></div></div>
+          <button type="button" className="btn btn-primary full-btn" onClick={() => window.open(selectedOrder.link, '_blank', 'noopener,noreferrer')}>Open target <ExternalLink size={16} /></button>
+        </div>
+      </div>;
+    })()}
   </>;
 }
