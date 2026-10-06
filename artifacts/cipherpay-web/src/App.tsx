@@ -1292,11 +1292,23 @@ function Fund() {
   const [error,setError]=useState('');
   const routes=[{value:'bank_transfer',icon:Landmark,label:'Bank transfer',note:'One-time transfer account'},{value:'card',icon:CreditCard,label:'Debit card',note:'Secure Flutterwave checkout'}];
 
-  useEffect(()=>{const params=new URLSearchParams(window.location.search);const reference=params.get('tx_ref');const redirectStatus=(params.get('status')||'').toLowerCase();if(!reference)return;let active=true;
-    const poll=async()=>{try{const token=useToken();const r=await fetch(apiUrl('/api/wallet/fund/verify'),{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},credentials:'include',body:JSON.stringify({reference,status:redirectStatus})});const p=await r.json().catch(()=>null);if(!active)return;if(p?.status==='success'){setPaymentStatus('success');void queryClient.invalidateQueries({queryKey:['/api/wallet']});window.history.replaceState({},'','/fund');return;}if(p?.status==='failed'||redirectStatus==='cancelled'||redirectStatus==='canceled'){setPaymentStatus('failed');window.history.replaceState({},'','/fund');return;}}catch{}if(active)window.setTimeout(poll,3000)};void poll();return()=>{active=false}},[]);
+  useEffect(()=>{const params=new URLSearchParams(window.location.search);const reference=params.get('tx_ref');const redirectStatus=(params.get('status')||'').toLowerCase();if(!reference)return;let active=true;let started=Date.now();let fallbackUsed=false;let timer:number|undefined;
+    const poll=async()=>{try{const token=useToken();const r=await fetch(apiUrl('/api/wallet/fund/status?reference='+encodeURIComponent(reference)),{headers:{...(token?{Authorization:'Bearer '+token}:{})},credentials:'include',cache:'no-store'});const p=await r.json().catch(()=>null);if(!active)return;if(p?.status==='success'){setPaymentStatus('success');void queryClient.invalidateQueries({queryKey:['/api/wallet']});void queryClient.invalidateQueries({queryKey:['/api/dashboard']});void queryClient.invalidateQueries({queryKey:['/api/wallet/stats']});window.history.replaceState({},'','/fund');return;}if(p?.status==='failed'||redirectStatus==='cancelled'||redirectStatus==='canceled'){setPaymentStatus('failed');window.history.replaceState({},'','/fund');return;
+      }
+      // If the webhook has not arrived after 5s, perform one server-side provider
+      // verification. Normal success detection stays DB-only so we don't hammer Flutterwave.
+      if(!fallbackUsed && Date.now()-started>=5000){fallbackUsed=true;await fetch(apiUrl('/api/wallet/fund/verify'),{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},credentials:'include',body:JSON.stringify({reference,status:redirectStatus})}).catch(()=>{});}
+    }catch{}
+    if(active)timer=window.setTimeout(poll,800);
+    };void poll();return()=>{active=false;if(timer)clearTimeout(timer);};},[]);
 
-  useEffect(()=>{if(!result?.reference)return;let active=true,timer:number|undefined;
-    const poll=async()=>{try{const token=useToken();const r=await fetch(apiUrl('/api/wallet/fund/verify'),{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},credentials:'include',body:JSON.stringify({reference:result.reference})});const p=await r.json().catch(()=>null);if(!active)return;if(p?.status==='success'){setPaymentStatus('success');void queryClient.invalidateQueries({queryKey:['/api/wallet']});return;}if(p?.status==='failed'){setPaymentStatus('failed');return;}}catch{}timer=window.setTimeout(poll,1500)};void poll();return()=>{active=false;if(timer)clearTimeout(timer);};},[result?.reference]);
+  useEffect(()=>{if(!result?.reference)return;let active=true;let timer:number|undefined;let started=Date.now();let fallbackUsed=false;
+    const poll=async()=>{try{const token=useToken();const r=await fetch(apiUrl('/api/wallet/fund/status?reference='+encodeURIComponent(result.reference)),{headers:{...(token?{Authorization:'Bearer '+token}:{})},credentials:'include',cache:'no-store'});const p=await r.json().catch(()=>null);if(!active)return;if(p?.status==='success'){setPaymentStatus('success');void queryClient.invalidateQueries({queryKey:['/api/wallet']});void queryClient.invalidateQueries({queryKey:['/api/dashboard']});void queryClient.invalidateQueries({queryKey:['/api/wallet/stats']});return;}if(p?.status==='failed'){setPaymentStatus('failed');return;
+      }
+      if(!fallbackUsed && Date.now()-started>=5000){fallbackUsed=true;await fetch(apiUrl('/api/wallet/fund/verify'),{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},credentials:'include',body:JSON.stringify({reference:result.reference})}).catch(()=>{});}
+    }catch{}
+    timer=window.setTimeout(poll,800);
+    };void poll();return()=>{active=false;if(timer)clearTimeout(timer);};},[result?.reference]);
 
   const submit=(e:React.FormEvent)=>{e.preventDefault();setError('');setResult(null);setPaymentStatus('waiting');setTransferOpen(false);const requestedAmount=parseGroupedDigits(amount);if(!requestedAmount||requestedAmount<100){setError('Minimum funding amount is ₦100.');return;}
     mutation.mutate({data:{amount:requestedAmount,channel}},{onSuccess:(value:any)=>{setResult(value);if(value.checkoutUrl)window.location.assign(value.checkoutUrl);else if(value.account)setTransferOpen(true)},onError:(reason:any)=>setError(reason?.message??'Could not prepare wallet funding.')});
