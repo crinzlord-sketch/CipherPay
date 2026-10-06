@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowRight, Check, Clock3, ExternalLink, Megaphone, RefreshCw, X, Copy } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
+import { createPortal } from 'react-dom';
 import { apiRequest } from './page-api';
 import { PageHeading } from './PagePieces';
 
@@ -209,7 +210,7 @@ export default function SocialBoostPage() {
       const delivered = Math.max(0, selectedOrder.quantity - (selectedOrder.remainsCount ?? selectedOrder.quantity));
       const remaining = Math.max(0, selectedOrder.remainsCount ?? 0);
       const progress = selectedOrder.quantity ? Math.min(100, (delivered / selectedOrder.quantity) * 100) : 0;
-      return <div className="social-order-overlay" role="dialog" aria-modal="true" aria-labelledby="social-order-detail-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedOrder(null); }}>
+      return createPortal(<div className="social-order-overlay" role="dialog" aria-modal="true" aria-labelledby="social-order-detail-title" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedOrder(null); }}>
         <div className="social-order-modal">
           <button type="button" className="social-order-close" onClick={() => setSelectedOrder(null)} aria-label="Close order details"><X size={18} /></button>
           <div className="social-order-modal-head"><span className="social-boost-mark"><Megaphone size={19} /></span><div><span className="mono">BOOST ORDER</span><h2 id="social-order-detail-title">{selectedOrder.serviceName}</h2><p>{platformLabels[selectedOrder.platform] ?? selectedOrder.platform}</p></div></div>
@@ -226,7 +227,7 @@ export default function SocialBoostPage() {
           <div className="social-order-progress"><div><span>Delivery progress</span><b>{Math.round(progress)}%</b></div><div className="social-order-progress-track"><i style={{ width: `${progress}%` }} /></div></div>
           <button type="button" className="btn btn-primary full-btn" onClick={() => window.open(selectedOrder.link, '_blank', 'noopener,noreferrer')}>Open target <ExternalLink size={16} /></button>
         </div>
-      </div>;
+      </div>, document.body);
     })()}
   </>;
 }
