@@ -318,6 +318,8 @@ export async function createBankTransferCharge(params: { amount: number; email: 
     email: params.email,
     fullname: params.name ?? "",
     phone_number: params.phone ?? "",
+    // Flutterwave uses narration as the name shown when the generated account is resolved.
+    narration: params.name ? `CipherPay Funding - ${params.name}` : "CipherPay Funding",
     is_bank_transfer: true,
   });
   if (status < 200 || status >= 300 || body?.status === "error") throw new Error(body?.message || `Flutterwave bank-transfer initialization failed (HTTP ${status})`);
