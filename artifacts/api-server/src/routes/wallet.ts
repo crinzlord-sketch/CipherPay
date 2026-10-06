@@ -90,7 +90,10 @@ router.post("/wallet/fund", async (req, res): Promise<void> => {
   try {
     if (channel === "bank_transfer") {
       const transfer = await createBankTransferCharge({ reference, amount, email:payerEmail, name:user ? user.firstName+" "+user.lastName : undefined, phone:user?.phone ?? undefined });
-      res.json({ reference, account:{ accountNumber:transfer.accountNumber, bankName:transfer.bankName, accountName:"CipherPay Wallet Funding", beneficiaryName:"CipherPay Wallet Funding", permanent:false, currency:"NGN", expiresAt:transfer.expiresAt, amount:transfer.amount } });
+      const fundingName = user?.firstName || user?.lastName
+        ? `CipherPay Funding - ${[user?.firstName, user?.lastName].filter(Boolean).join(" ")}`
+        : "CipherPay Funding";
+      res.json({ reference, account:{ accountNumber:transfer.accountNumber, bankName:transfer.bankName, accountName:fundingName, beneficiaryName:fundingName, permanent:false, currency:"NGN", expiresAt:transfer.expiresAt, amount:transfer.amount } });
       return;
     }
     const webBase = (process.env.PUBLIC_WEB_URL || "https://cipherpay-web.onrender.com").replace(/\/+$/,"");
