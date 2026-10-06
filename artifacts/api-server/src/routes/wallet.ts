@@ -127,7 +127,7 @@ router.post("/wallet/fund/verify", async (req,res):Promise<void> => {
   try {
     const provider = await verifyByReference(reference);
     const state = String(provider.status).toLowerCase();
-    if (["successful","success","completed"].includes(state)) {
+    if (["successful","success","completed","succeeded"].includes(state)) {
       await creditFlutterwaveFunding(reference,{amount:provider.amount,currency:provider.currency});
       await respond("success"); return;
     }
