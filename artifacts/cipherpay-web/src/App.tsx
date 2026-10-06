@@ -47,6 +47,7 @@ import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
 import './landing.css';
 import LandingExtras from './components/LandingExtras';
 import SellerPage from './pages/SellerPage';
+import AboutPage from './pages/AboutPage';
 
 const queryClient = new QueryClient();
 setBaseUrl((import.meta.env.VITE_API_URL ?? '').trim() || null);
@@ -443,10 +444,10 @@ function LandingPage() {
       <nav className="cp-landing-nav" aria-label="Landing navigation">
         <div className="cp-landing-nav-inner">
           <Logo onHomeClick={() => { setMobileNavOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
-          <div className="cp-landing-links"><button type="button" onClick={() => scrollToSection('experience')}>Experience</button><button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('crypto')}>Crypto</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={openSupport}>Support</button></div>
+          <div className="cp-landing-links"><button type="button" onClick={() => setLocation('/about')}>About</button><button type="button" onClick={() => scrollToSection('experience')}>Experience</button><button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('crypto')}>Crypto</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={openSupport}>Support</button></div>
           <div className="cp-landing-nav-actions"><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={15}/></button><button type="button" className={`cp-mobile-menu-toggle ${mobileNavOpen ? "is-open" : ""}`} aria-label={mobileNavOpen ? "Close landing menu" : "Open landing menu"} aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen(v => !v)}><span className="cp-menu-icon"><Menu size={19}/><X size={19}/></span></button></div>
           <div className={`cp-mobile-menu ${mobileNavOpen ? "open" : ""}`} aria-hidden={!mobileNavOpen}>
-            <button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('experience')}>Experience</button><button type="button" onClick={() => scrollToSection('crypto')}>Crypto</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={openSupport}>Support</button><button type="button" onClick={() => { setMobileNavOpen(false); goToAuth('login'); }}>Log in</button><button type="button" onClick={() => { setMobileNavOpen(false); goToAuth('register'); }}>Get started</button>
+            <button type="button" onClick={() => { setMobileNavOpen(false); setLocation('/about'); }}>About</button><button type="button" onClick={() => scrollToSection('features')}>Features</button><button type="button" onClick={() => scrollToSection('experience')}>Experience</button><button type="button" onClick={() => scrollToSection('crypto')}>Crypto</button><button type="button" onClick={() => scrollToSection('security')}>Security</button><button type="button" onClick={openSupport}>Support</button><button type="button" onClick={() => { setMobileNavOpen(false); goToAuth('login'); }}>Log in</button><button type="button" onClick={() => { setMobileNavOpen(false); goToAuth('register'); }}>Get started</button>
           </div>
         </div>
       </nav>,
@@ -1944,6 +1945,7 @@ function App() {
             <Route path="/reset-password"><ResetPassword /></Route>
             <Route path="/dashboard"><ProtectedArea><Dashboard /></ProtectedArea></Route>
             <Route path="/"><HomeRoute /></Route>
+            <Route path="/about"><AboutPage /></Route>
             <Route path="/fund"><ProtectedArea><Fund /></ProtectedArea></Route>
             <Route path="/send"><ProtectedArea><Send /></ProtectedArea></Route>
             <Route path="/bills/:category/:provider"><ProtectedArea><BillsPage /></ProtectedArea></Route>
