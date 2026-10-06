@@ -1,7 +1,7 @@
 import { type Request, type Response } from "express";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { db, transactionsTable, walletsTable, notificationsTable, usersTable } from "@workspace/db";
-import { creditWallet, getOrCreateWallet, creditFlutterwaveFunding } from "../lib/wallet";
+import { creditWallet, getOrCreateWallet } from "../lib/wallet";
 import { ensureUserPayoutWallet } from "../lib/payout-wallet";
 import { moveMerchantToPayoutWallet } from "../lib/flutterwave";
 import { notifyUser } from "../lib/notifications";
