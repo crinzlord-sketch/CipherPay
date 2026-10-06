@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Banknote, Bitcoin, Check, Globe2, LockKeyhole, MessageSquare, Send, ShieldCheck, Smartphone, ShoppingBag, WalletCards, Wifi, Mail, UsersRound, Megaphone, Zap, CircleDollarSign, Boxes } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, Banknote, Bitcoin, Check, Globe2, LockKeyhole, MessageSquare, Send, ShieldCheck, Smartphone, ShoppingBag, WalletCards, Wifi, Mail, UsersRound, Megaphone, Zap, CircleDollarSign, Boxes } from 'lucide-react';
 import { Link } from 'wouter';
 import './about.css';
 
