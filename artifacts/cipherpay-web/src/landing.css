@@ -2875,3 +2875,12 @@ html.dark .cp-support-close{
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Animated service marquee before the landing footer — shared visual language with About. */
+.cp-service-marquee{position:relative;z-index:2;overflow:hidden;border-top:1px solid rgba(20,20,30,.07);border-bottom:1px solid rgba(20,20,30,.07);background:rgba(255,255,255,.42);transform:rotate(-1.2deg) scale(1.03);margin:35px -10px 0;}
+.cp-service-marquee>div{display:flex;width:max-content;animation:cpServiceMarquee 28s linear infinite}
+.cp-service-marquee span{display:flex;align-items:center;gap:28px;padding:16px 28px;font-size:10px;font-weight:900;letter-spacing:.16em;color:#777784}
+.cp-service-marquee b{font-size:7px;color:#8c76f2}
+@keyframes cpServiceMarquee{to{transform:translateX(-50%)}}
+@media(max-width:600px){.cp-service-marquee span{padding:14px 22px;gap:22px;font-size:9px}}
+@media(prefers-reduced-motion:reduce){.cp-service-marquee>div{animation:none}}
