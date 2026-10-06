@@ -5,6 +5,7 @@ import router from "./routes";
 import { flutterwaveWebhookHandler } from "./routes/webhooks";
 import { verifyCallbackSignature } from "./lib/opay";
 import { creditOpayFunding } from "./routes/wallet";
+import { reconcilePendingFlutterwaveFundings } from "./lib/wallet";
 import { logger } from "./lib/logger";
 import { verifyToken } from "./lib/auth";
 import { verifyAdminToken } from "./lib/admin-auth";
@@ -97,6 +98,26 @@ function createCipherPayPreviewPng(): Buffer {
 }
 
 const app: Express = express();
+
+// Flutterwave webhooks are the primary settlement signal. This background
+// reconciler is the safety net: if a webhook is delayed, unavailable, or missed,
+// the API re-checks pending fundings directly with Flutterwave and credits them
+// idempotently. The DB transition is CAS-guarded, so webhook + reconciler races
+// cannot double-credit a customer.
+const runFundingReconciliation = async () => {
+  try {
+    const result = await reconcilePendingFlutterwaveFundings(50);
+    if (result.checked || result.credited) {
+      logger.info(result, "Flutterwave funding reconciliation completed");
+    }
+  } catch (error: any) {
+    logger.warn({ err: error?.message }, "Flutterwave funding reconciliation failed");
+  }
+};
+void runFundingReconciliation();
+const fundingReconcileTimer = setInterval(runFundingReconciliation, 60_000);
+fundingReconcileTimer.unref?.();
+
 
 app.use(
   pinoHttp({
