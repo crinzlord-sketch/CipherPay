@@ -1,7 +1,7 @@
 import { type Request, type Response } from "express";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { db, transactionsTable, walletsTable, notificationsTable, usersTable } from "@workspace/db";
-import { creditWallet, getOrCreateWallet } from "../lib/wallet";
+import { creditWallet, getOrCreateWallet, creditFlutterwaveFunding } from "../lib/wallet";
 import { ensureUserPayoutWallet } from "../lib/payout-wallet";
 import { moveMerchantToPayoutWallet } from "../lib/flutterwave";
 import { notifyUser } from "../lib/notifications";
@@ -282,12 +282,23 @@ export async function handleEvent(req: Request, evt: FlwEvent, psaAccountReferen
     if (!tx) { req.log?.warn?.({ ref }, "flw webhook: no matching fund tx"); return; }
     if (tx.status === "success") { return; }
 
+    // Never credit from webhook data alone. Re-query Flutterwave so the
+    // reference, status, amount and currency are independently verified.
+    const verified = await import("../lib/flutterwave").then(({ verifyByReference }) => verifyByReference(String(ref)));
     const expected = parseFloat(tx.amount);
-    if (Number(data.amount ?? 0) + 0.001 < expected) {
-      req.log?.warn?.({ ref, expected, got: data.amount }, "flw webhook: charge amount mismatch");
+    if (String(verified.tx_ref ?? ref) !== String(ref)) {
+      req.log?.warn?.({ ref, verifiedRef: verified.tx_ref }, "flw webhook: verified reference mismatch");
       return;
     }
-    if ((data.currency ?? "NGN").toUpperCase() !== "NGN") { return; }
+    if (String(verified.status).toLowerCase() !== "successful") {
+      req.log?.info?.({ ref, status: verified.status }, "flw webhook: verified charge not successful");
+      return;
+    }
+    if (Number(verified.amount) + 0.001 < expected) {
+      req.log?.warn?.({ ref, expected, got: verified.amount }, "flw webhook: verified amount mismatch");
+      return;
+    }
+    if (String(verified.currency ?? "NGN").toUpperCase() !== "NGN") { return; }
 
     await getOrCreateWallet(tx.userId);
 
