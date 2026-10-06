@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Check, Clock3, ExternalLink, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Clock3, ExternalLink, Megaphone, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { apiRequest } from './page-api';
