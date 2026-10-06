@@ -336,6 +336,21 @@ export async function createBankTransferCharge(params: { amount: number; email: 
 }
 
 export interface FlwVerifiedCharge { status: string; amount: number; currency: string; tx_ref: string; }
+export async function verifyById(transactionId: number): Promise<FlwVerifiedCharge> {
+  if (!Number.isInteger(transactionId) || transactionId <= 0) throw new Error("Invalid Flutterwave transaction id");
+  const { status, body } = await flwGet<any>(`/transactions/${transactionId}/verify`);
+  if (status < 200 || status >= 300 || body?.status === "error") {
+    throw new Error(body?.message || `Flutterwave verification failed (HTTP ${status})`);
+  }
+  const data = body?.data ?? {};
+  return {
+    status: data?.status ?? "unknown",
+    amount: Number(data?.amount ?? 0),
+    currency: (data?.currency ?? "NGN").toUpperCase(),
+    tx_ref: data?.tx_ref ?? "",
+  };
+}
+
 export async function verifyByReference(reference: string): Promise<FlwVerifiedCharge> {
   const { status, body } = await flwGet<any>(`/transactions/verify_by_reference?tx_ref=${encodeURIComponent(reference)}`);
   if (status < 200 || status >= 300 || body?.status === "error") throw new Error(body?.message || `Flutterwave verification failed (HTTP ${status})`);
