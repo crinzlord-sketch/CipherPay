@@ -311,6 +311,10 @@ export async function createHostedPayment(params: { amount: number; email: strin
 }
 
 export async function createBankTransferCharge(params: { amount: number; email: string; reference: string; name?: string; phone?: string; }): Promise<{ accountNumber: string; bankName: string; amount: number; expiresAt?: string }> {
+  const requestedAccountName = params.name
+    ? `CipherPay Funding - ${params.name}`.slice(0, 35)
+    : "CipherPay Funding";
+
   const { status, body } = await flwPost<any>("/charges?type=bank_transfer", {
     tx_ref: params.reference,
     amount: params.amount,
@@ -318,8 +322,8 @@ export async function createBankTransferCharge(params: { amount: number; email: 
     email: params.email,
     fullname: params.name ?? "",
     phone_number: params.phone ?? "",
-    // Flutterwave uses narration as the name shown when the generated account is resolved.
-    narration: params.name ? `CipherPay Funding - ${params.name}` : "CipherPay Funding",
+    // Flutterwave uses this field to set the name returned when the generated account is resolved.
+    narration: requestedAccountName,
     is_bank_transfer: true,
   });
   if (status < 200 || status >= 300 || body?.status === "error") throw new Error(body?.message || `Flutterwave bank-transfer initialization failed (HTTP ${status})`);
