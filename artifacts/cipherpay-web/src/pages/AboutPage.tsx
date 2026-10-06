@@ -51,7 +51,7 @@ export default function AboutPage() {
         <p>CipherPay brings money, digital services, communication and commerce into one account — designed to feel simple even when the work behind it is not.</p>
         <div className="about-hero-actions">
           <Link href="/register" className="about-hero-button">Start using CipherPay <ArrowRight size={16} /></Link>
-          <span className="about-live"><i /> Built to keep moving</span>
+
         </div>
       </div>
 
