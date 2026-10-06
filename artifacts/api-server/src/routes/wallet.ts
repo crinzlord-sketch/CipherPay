@@ -105,6 +105,32 @@ router.post("/wallet/fund", async (req, res): Promise<void> => {
   }
 });
 
+router.get("/wallet/fund/status", async (req, res): Promise<void> => {
+  const userId = getUserId(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const reference = String(req.query.reference ?? "").trim();
+  if (!reference) { res.status(400).json({ error: "Reference is required" }); return; }
+
+  const [tx] = await db.select().from(transactionsTable)
+    .where(and(
+      eq(transactionsTable.reference, reference),
+      eq(transactionsTable.type, "fund"),
+      eq(transactionsTable.userId, userId),
+    ))
+    .limit(1);
+
+  if (!tx) { res.status(404).json({ error: "Transaction not found" }); return; }
+
+  const wallet = await getOrCreateWallet(userId);
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    status: tx.status === "success" ? "success" : tx.status === "failed" ? "failed" : "pending",
+    reference,
+    transaction: formatTransaction(tx),
+    wallet: formatWallet(wallet),
+  });
+});
+
 router.post("/wallet/fund/verify", async (req,res):Promise<void> => {
   const parsed = VerifyFundingBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error:"Invalid reference" }); return; }
