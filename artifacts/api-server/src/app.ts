@@ -115,7 +115,7 @@ const runFundingReconciliation = async () => {
   }
 };
 void runFundingReconciliation();
-const fundingReconcileTimer = setInterval(runFundingReconciliation, 60_000);
+const fundingReconcileTimer = setInterval(runFundingReconciliation, 10_000);
 fundingReconcileTimer.unref?.();
 
 
