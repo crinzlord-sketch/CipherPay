@@ -284,13 +284,18 @@ export async function handleEvent(req: Request, evt: FlwEvent, psaAccountReferen
 
     // Never credit from webhook data alone. Re-query Flutterwave so the
     // reference, status, amount and currency are independently verified.
-    const verified = await import("../lib/flutterwave").then(({ verifyByReference }) => verifyByReference(String(ref)));
+    const verified = await import("../lib/flutterwave").then(({ verifyById, verifyByReference }) => {
+      const providerId = Number(data.id ?? 0);
+      return Number.isInteger(providerId) && providerId > 0
+        ? verifyById(providerId)
+        : verifyByReference(String(ref));
+    });
     const expected = parseFloat(tx.amount);
     if (String(verified.tx_ref ?? ref) !== String(ref)) {
       req.log?.warn?.({ ref, verifiedRef: verified.tx_ref }, "flw webhook: verified reference mismatch");
       return;
     }
-    if (String(verified.status).toLowerCase() !== "successful") {
+    if (!["successful", "success", "completed", "succeeded"].includes(String(verified.status).toLowerCase())) {
       req.log?.info?.({ ref, status: verified.status }, "flw webhook: verified charge not successful");
       return;
     }
