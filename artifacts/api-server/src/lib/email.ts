@@ -121,6 +121,29 @@ function brandWrap(title: string, contentHtml: string, previewText: string): str
 </html>`;
 }
 
+export async function sendWelcomeEmail(to: string, firstName?: string): Promise<void> {
+  const name = (firstName || "there").trim();
+  const content = `
+    <p style="margin:0 0 18px;color:#4b5870;font-size:16px;line-height:26px;">Hi <strong style="color:#17213b;">${escapeHtml(name)}</strong>,</p>
+    <p style="margin:0 0 18px;color:#4b5870;font-size:16px;line-height:26px;">Welcome to CipherPay. Your account is now verified and ready to use.</p>
+    <p style="margin:0 0 24px;color:#4b5870;font-size:16px;line-height:26px;">You can fund your wallet, send money, manage digital services, explore social features, and more — all from one place.</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
+      <tr>
+        <td style="border-radius:10px;background:#f4733a;">
+          <a href="https://cipherpay.it.com/" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;">Open CipherPay</a>
+        </td>
+      </tr>
+    </table>
+    <p style="margin:0;color:#738099;font-size:13px;line-height:21px;">Keep this email for your records. If you ever need help, our support team is available at support@cipherpay.it.com.</p>
+  `;
+  await sendMail(
+    to,
+    "Welcome to CipherPay 🎉",
+    brandWrap("Welcome to CipherPay", content, "Your CipherPay account is verified and ready to use."),
+    `Hi ${name}, welcome to CipherPay. Your account is now verified and ready to use. Open CipherPay: https://cipherpay.it.com/`,
+  );
+}
+
 export async function sendMail(to: string, subject: string, html: string, text?: string): Promise<void> {
   html = canonicalizeSiteLinks(html);
   text = text ? canonicalizeSiteLinks(text) : text;
