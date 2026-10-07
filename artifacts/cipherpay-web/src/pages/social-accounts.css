@@ -102,3 +102,40 @@ html.dark .social-modal-close{background:#2a2530;color:#fff}
 .social-orb-grid .social-orb-icon b{display:none;position:absolute;font-size:10px;font-weight:900;color:#6251a8}
 .social-orb-grid .social-orb-icon.logo-fallback img{display:none!important}
 .social-orb-grid .social-orb-icon.logo-fallback b{display:block}
+
+
+/* Account purchase details: rich centered dialog, portaled to body so it cannot jump to page top. */
+.social-account-buy-portal{z-index:6000!important}
+.social-buy-modal{max-width:560px;padding:28px;overflow-y:auto}
+.social-buy-hero{display:flex;align-items:center;gap:15px;padding-right:42px}
+.social-buy-brand{width:58px;height:58px;border-radius:18px;background:linear-gradient(145deg,#f3ecff,#fff);display:grid;place-items:center;position:relative;overflow:hidden;flex:0 0 58px}
+.social-buy-brand img{width:34px;height:34px;object-fit:contain}
+.social-buy-brand span{display:none;font-weight:900;color:#7052d9}
+.social-buy-hero h2{font-size:27px;line-height:1.1;margin:4px 0 4px;letter-spacing:-.025em}
+.social-buy-hero p{margin:0!important}
+.social-buy-price{margin:22px 0 14px;padding:18px 18px;border-radius:18px;background:linear-gradient(135deg,#f7f3ff,#faf9fb);display:flex;align-items:center;justify-content:space-between;gap:15px}
+.social-buy-price small{display:block;font-size:10px;letter-spacing:.14em;font-weight:900;color:#8b8295;margin-bottom:4px}
+.social-buy-price strong{font-size:30px;letter-spacing:-.04em}
+.social-buy-specs{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0 16px}
+.social-buy-specs div{padding:13px 14px;border:1px solid rgba(0,0,0,.07);border-radius:14px;background:#faf9fb}
+.social-buy-specs span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#8a8291;font-weight:800;margin-bottom:5px}
+.social-buy-specs b{font-size:13px}
+.social-buy-includes{display:grid;gap:8px;padding:16px;border-radius:17px;background:#f5fbf7;border:1px solid rgba(24,129,74,.12)}
+.social-buy-includes>b{font-size:13px;margin-bottom:2px}
+.social-buy-includes span{font-size:12px;color:#53645a}
+.social-buy-note{margin-top:12px;padding:12px 14px;border-radius:13px;background:#f6f3f8;color:#746c7b;font-size:11px;line-height:1.5}
+.social-buy-modal .social-modal-actions{margin-top:18px}
+html.dark .social-buy-brand{background:#292230}
+html.dark .social-buy-price{background:linear-gradient(135deg,#25202e,#211d27)}
+html.dark .social-buy-specs div{background:#211d27;border-color:rgba(255,255,255,.08)}
+html.dark .social-buy-includes{background:#17251d;border-color:rgba(91,190,128,.15)}
+html.dark .social-buy-includes span{color:#a9b9ae}
+html.dark .social-buy-note{background:#25212b;color:#aaa3b2}
+@media(max-width:600px){
+ .social-buy-modal{width:min(100%,470px);padding:20px 18px 17px}
+ .social-buy-hero h2{font-size:23px}
+ .social-buy-price strong{font-size:26px}
+ .social-buy-specs{gap:8px}
+ .social-buy-specs div{padding:11px 12px}
+ .social-buy-includes{padding:14px}
+}
