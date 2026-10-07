@@ -526,7 +526,11 @@ function LandingPage() {
         <div className="cp-footer-brand"><Logo /><p>One secure place for your wallet, CipherPay transfers, communication and connected digital services.</p></div>
         <div className="cp-footer-col"><span>PRODUCT</span><a href="#experience">Everything</a><a href="#crypto">Crypto</a><a href="#features">Services</a><a href="#security">Security</a></div>
         <div className="cp-footer-col"><span>COMPANY</span><a href="#home">Home</a><a href="/login">Sign in</a><a href="/register">Create account</a><button type="button" onClick={() => setSupportOpen(true)}>Support</button></div>
-        
+        <div className="cp-footer-social"><span>FOLLOW CIPHERPAY</span><div className="cp-footer-socials">
+          <a className="cp-social-3d cp-social-ig" href="https://www.instagram.com/cipherpay.app" target="_blank" rel="noreferrer" aria-label="CipherPay on Instagram"><Instagram size={23}/></a>
+          <a className="cp-social-3d cp-social-tiktok" href="#" aria-label="CipherPay on TikTok"><Music2 size={23}/></a>
+          <a className="cp-social-3d cp-social-x" href="#" aria-label="CipherPay on X"><span className="cp-social-xmark">𝕏</span></a>
+        </div></div>
       </div>
       <div className="cp-footer-orbit"><span /><span /><span /><b>CP</b></div>
       <div className="cp-footer-bottom"><span>© 2026 CipherPay. All rights reserved.</span><span>Secure payments · Digital services · Communication</span><span>Privacy · Terms</span></div>
