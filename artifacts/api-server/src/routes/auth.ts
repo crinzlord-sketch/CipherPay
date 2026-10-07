@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { sendWelcomeEmail } from "../lib/email";
 import bcrypt from "bcryptjs";
 import { eq, and, desc } from "drizzle-orm";
 import { db, usersTable, otpTable, transactionsTable } from "@workspace/db";
@@ -601,6 +602,7 @@ router.post("/auth/verify-otp", async (req, res): Promise<void> => {
   if (otp.purpose === "verification") {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.email, target));
     if (user) {
+      const wasAlreadyVerified = !!user.isVerified;
       const [verifiedUser] = await db.update(usersTable)
         .set({ isVerified: true })
         .where(eq(usersTable.id, user.id))
@@ -646,6 +648,13 @@ router.post("/auth/verify-otp", async (req, res): Promise<void> => {
       }
 
       const wallet = await getOrCreateWallet(user.id);
+
+      if (!wasAlreadyVerified) {
+        void sendWelcomeEmail(user.email, user.firstName).catch((error: any) => {
+          req.log?.warn?.({ err: error?.message, userId: user.id }, "welcome email failed");
+        });
+      }
+
       const dev = deviceInfo(req);
       const sid = await createSession(user.id, dev.name, dev.platform, dev.ip);
       const token = signToken(user.id, sid);
