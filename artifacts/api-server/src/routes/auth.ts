@@ -645,6 +645,7 @@ router.post("/auth/verify-otp", async (req, res): Promise<void> => {
         }
       }
 
+      const wallet = await getOrCreateWallet(user.id);
       const dev = deviceInfo(req);
       const sid = await createSession(user.id, dev.name, dev.platform, dev.ip);
       const token = signToken(user.id, sid);
