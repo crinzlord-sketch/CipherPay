@@ -3401,6 +3401,40 @@ a {
   animation: auth-orb-breathe 7s ease-in-out infinite;
 }
 
+.otp-help{
+  display:flex;
+  align-items:flex-start;
+  gap:11px;
+  padding:12px 13px;
+  margin-top:2px;
+  border:1px solid rgba(115,92,255,.18);
+  border-radius:12px;
+  background:rgba(115,92,255,.055);
+  color:hsl(var(--foreground));
+  font-size:.78rem;
+  line-height:1.5;
+}
+.otp-help>svg{
+  flex:0 0 auto;
+  margin-top:1px;
+  color:#735cff;
+}
+.otp-help>div{
+  display:grid;
+  gap:3px;
+}
+.otp-help strong{
+  font-size:.79rem;
+  font-weight:750;
+}
+.otp-help span{
+  color:hsl(var(--muted-foreground));
+}
+.otp-help b{
+  color:hsl(var(--foreground));
+  font-weight:700;
+}
+
 .otp-notice {
   padding: 11px 13px;
   border: 1px solid hsl(var(--primary) / 0.2);
