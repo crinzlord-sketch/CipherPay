@@ -139,3 +139,22 @@ html.dark .social-buy-note{background:#25212b;color:#aaa3b2}
  .social-buy-specs div{padding:11px 12px}
  .social-buy-includes{padding:14px}
 }
+
+
+/* Clear centered purchase failure dialog, especially for insufficient balance. */
+.social-purchase-error-portal{z-index:6100!important}
+.social-purchase-error-modal{max-width:460px;text-align:center}
+.social-purchase-error-modal .social-modal-close{top:16px;right:16px}
+.social-purchase-error-icon{width:58px;height:58px;margin:0 auto 15px;border-radius:18px;display:grid;place-items:center;background:#fff0ef;color:#d34b43;font-size:25px;font-weight:900;border:1px solid rgba(211,75,67,.12)}
+.social-purchase-error-modal h2{font-size:28px;letter-spacing:-.03em}
+.social-purchase-error-modal p{margin:7px auto;max-width:360px}
+.social-purchase-error-card{margin:20px 0 10px;padding:16px;border-radius:16px;background:#f8f6f9;display:flex;justify-content:space-between;align-items:center;text-align:left}
+.social-purchase-error-card span{font-size:11px;color:#8a8290;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+.social-purchase-error-card strong{font-size:20px}
+.social-purchase-error-detail{padding:12px 14px;border-radius:13px;background:#fff7ed;color:#765524;font-size:12px;line-height:1.5;text-align:left}
+.social-purchase-error-modal .social-modal-actions{justify-content:stretch}
+.social-purchase-error-modal .social-modal-actions button{flex:1;justify-content:center}
+html.dark .social-purchase-error-icon{background:#301f20;color:#ff8b83;border-color:rgba(255,139,131,.15)}
+html.dark .social-purchase-error-card{background:#25212b}
+html.dark .social-purchase-error-detail{background:#2b2418;color:#e7c37b}
+@media(max-width:600px){.social-purchase-error-modal{padding:24px 18px 18px}.social-purchase-error-modal h2{font-size:25px}}
