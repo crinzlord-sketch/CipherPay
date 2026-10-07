@@ -2884,3 +2884,44 @@ html.dark .cp-support-close{
 @keyframes cpServiceMarquee{to{transform:translateX(-50%)}}
 @media(max-width:600px){.cp-service-marquee span{padding:14px 22px;gap:22px;font-size:9px}}
 @media(prefers-reduced-motion:reduce){.cp-service-marquee>div{animation:none}}
+
+
+/* User account menu readability fix: keep the glass look, but use an opaque surface and explicit contrast. */
+.user-menu{
+  background:rgba(255,255,255,.97)!important;
+  border:1px solid rgba(55,42,70,.14)!important;
+  box-shadow:0 22px 55px rgba(31,22,42,.16)!important;
+  backdrop-filter:blur(18px) saturate(120%)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(120%)!important;
+}
+.user-menu-item,
+.user-menu-item span{
+  color:#282238!important;
+}
+.user-menu-item svg{
+  color:#8b5cf6!important;
+  opacity:1!important;
+}
+.user-menu-item:hover,
+.user-menu-item:focus-visible{
+  background:rgba(115,92,255,.09)!important;
+}
+.user-menu-logout,
+.user-menu-logout span{
+  color:#c94f43!important;
+}
+.user-menu-logout svg{
+  color:#e36a5c!important;
+}
+html.dark .user-menu{
+  background:rgba(31,27,39,.98)!important;
+  border-color:rgba(255,255,255,.10)!important;
+}
+html.dark .user-menu-item,
+html.dark .user-menu-item span{
+  color:#f4f0f8!important;
+}
+html.dark .user-menu-item:hover,
+html.dark .user-menu-item:focus-visible{
+  background:rgba(255,255,255,.07)!important;
+}
