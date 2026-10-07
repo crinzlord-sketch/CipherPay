@@ -6276,11 +6276,6 @@ html.dark .more-menu a{color:#f7f3fb!important}
 html.dark .more-menu a:hover,
 html.dark .more-menu a:focus-visible{background:rgba(255,255,255,.07)!important}
 html.dark .scrim{background:rgba(0,0,0,.55)!important}
-html.dark .auth-page{background:#17131d!important}
-html.dark .auth-form-wrap{background:rgba(23,19,29,.86)!important}
-html.dark .auth-form-inner input{background:rgba(35,28,47,.82)!important;border-color:rgba(255,255,255,.12)!important;color:#f7f3fb!important}
-html.dark .auth-form-inner .auth-detail,
-html.dark .auth-form-inner .auth-legal{color:rgba(247,243,251,.58)!important}
 html.dark .temp-privacy-panel,
 html.dark .social-boost-side,
 html.dark .temp-message-detail{
@@ -6367,8 +6362,7 @@ html.dark .spending-breakdown-card,
 html.dark .spending-summary-card,
 html.dark .temp-privacy-panel,
 html.dark .social-boost-side,
-html.dark .temp-message-detail,
-html.dark .auth-form-inner{
+html.dark .temp-message-detail{
   background:linear-gradient(145deg,rgba(34,27,47,.96),rgba(23,18,31,.94))!important;
   border-color:rgba(255,255,255,.10)!important;
   color:#f6f2fb!important;
