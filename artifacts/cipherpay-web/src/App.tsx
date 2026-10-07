@@ -1926,17 +1926,29 @@ function KycDetailRoute() {
   return <ProtectedArea><KycPage /></ProtectedArea>;
 }
 
+function ThemeBoundary() {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    const publicLightRoutes = ['/','/login','/register','/forgot-password','/verify-email','/reset-password'];
+    const forceLight = publicLightRoutes.includes(location.split('?')[0]);
+    const storedTheme = window.localStorage.getItem('cipherpay_theme');
+    document.documentElement.classList.toggle('dark', !forceLight && storedTheme === 'dark');
+  }, [location]);
+
+  return null;
+}
+
 function App() {
   useEffect(() => {
     setAuthTokenGetter(() => window.localStorage.getItem('cipherpay_token'));
-    const storedTheme = window.localStorage.getItem('cipherpay_theme');
-    document.documentElement.classList.toggle('dark', storedTheme === 'dark');
     return () => setAuthTokenGetter(null);
   }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AnimatedDialogProvider>
+          <ThemeBoundary />
           <Toaster />
           <Switch>
             <Route path="/login"><Login /></Route>
