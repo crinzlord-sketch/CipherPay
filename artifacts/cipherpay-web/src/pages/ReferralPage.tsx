@@ -51,7 +51,7 @@ export default function ReferralPage() {
     const text = `Join me on CipherPay. Use my code ${data.referralCode} and get ${money.format(data.friendReward)} when you verify your account.`;
     try {
       if (navigator.share) {
-        await navigator.share({ title: "Join me on CipherPay", text, url: data.referralLink });
+        await navigator.share({ title: "Join me on CipherPay", text, url: "https://cipherpay.it.com/register?ref=" + data.referralCode });
       } else {
         await navigator.clipboard.writeText(`${text} ${data.referralLink}`);
       }
@@ -99,8 +99,8 @@ export default function ReferralPage() {
         <p>Give them this code at signup, or send the invite link and we’ll fill it in for them.</p>
         <div className="referral-link-row">
           <Link2 size={16} />
-          <span>{data.referralLink}</span>
-          <button type="button" onClick={() => void copy(data.referralLink, "link")} aria-label="Copy referral link">
+          <span>{"https://cipherpay.it.com/register?ref=" + data.referralCode}</span>
+          <button type="button" onClick={() => void copy("https://cipherpay.it.com/register?ref=" + data.referralCode, "link")} aria-label="Copy referral link">
             {copied === "link" ? <Check size={17} /> : <Copy size={17} />}
           </button>
         </div>
