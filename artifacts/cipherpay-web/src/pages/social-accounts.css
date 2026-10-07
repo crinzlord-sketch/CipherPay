@@ -162,3 +162,10 @@ html.dark .social-purchase-error-detail{background:#2b2418;color:#e7c37b}
 .social-account-message{display:flex;align-items:center;justify-content:space-between;gap:14px}
 .social-account-message button{border:0;border-radius:10px;padding:9px 14px;background:#201b29;color:#fff;font:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
 html.dark .social-account-message button{background:#fff;color:#201b29}
+
+/* Purchase success and credential delivery dialogs are portaled to body so they stay centered on the viewport. */
+.social-purchase-complete-portal,
+.social-account-details-portal{position:fixed!important;inset:0!important;z-index:6200!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:20px!important;box-sizing:border-box}
+.social-purchase-complete-modal,
+.social-account-details-modal{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;transform:none!important;margin:0!important;width:min(100%,520px)!important;max-height:calc(100dvh - 40px);overflow-y:auto}
+.social-account-details-modal{width:min(100%,620px)}
