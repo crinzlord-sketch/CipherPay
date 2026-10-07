@@ -768,6 +768,13 @@ function Login() {
          <AuthBuddy key={`login-buddy-${faceReaction}`} field="idle" hasText gaze={{ x: 0, y: 0 }} mood={faceMood} buddyRef={buddyRef} />
         <div className="otp-notice" role="status">{otpNotice}</div>
         <Field label="Six-digit code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} placeholder="000000" value={code} onChange={(event: any) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} required data-testid="input-login-otp" />
+        <div className="otp-help" role="note">
+          <Mail size={17} />
+          <div>
+            <strong>Can’t find your code?</strong>
+            <span>Check your Spam or Junk folder. If you find the CipherPay email there, open it and tap <b>Report as not spam</b> (or <b>Not spam</b>) so future emails can reach your inbox.</span>
+          </div>
+        </div>
         {error && <div className="error-box" role="alert">{error}</div>}
         <Button type="submit" className="full-btn" disabled={otpPending || code.length !== 6} data-testid="button-verify-login-otp">{otpPending ? 'Verifying…' : 'Verify and sign in'} <ArrowRight size={17} /></Button>
         <button type="button" className="text-link back-to-login" onClick={() => void resendLogin()} disabled={otpResendPending || otpResendCooldown > 0}>{otpResendPending ? 'Sending…' : otpResendCooldown > 0 ? `Resend code in ${otpResendCooldown}s` : 'Resend code'}</button>
@@ -875,7 +882,14 @@ function VerifyEmail() {
 
   return <AuthLayout title="Check your email." detail={email ? `We sent a verification code to ${email}.` : 'Enter the code from your verification email.'}>
     <form className="auth-form" onSubmit={submit}>
-      <Field label="Six-digit verification code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={4} placeholder="000000" value={code} onChange={(event: any) => setCode(event.target.value.replace(/\D/g, '').slice(0, 4))} required data-testid="input-email-otp" />
+      <Field label="Six-digit verification code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} placeholder="000000" value={code} onChange={(event: any) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} required data-testid="input-email-otp" />
+      <div className="otp-help" role="note">
+        <Mail size={17} />
+        <div>
+          <strong>Can’t find your code?</strong>
+          <span>Check your Spam or Junk folder. If you find the CipherPay email there, open it and tap <b>Report as not spam</b> (or <b>Not spam</b>) so future emails can reach your inbox.</span>
+        </div>
+      </div>
       {error && <div className="error-box" role="alert">{error}</div>}
       {notice && <div className="success-box" role="status">{notice}</div>}
       <Button type="submit" className="full-btn" disabled={verify.isPending || code.length !== 6 || !email} data-testid="button-verify-email">{verify.isPending ? 'Verifying…' : 'Verify email'} <ArrowRight size={17} /></Button>
