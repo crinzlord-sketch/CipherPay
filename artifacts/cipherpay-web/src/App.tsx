@@ -41,7 +41,7 @@ import {
   Bell, Bolt, Check, CircleHelp, Copy, CreditCard, FileText,
   Fingerprint, Globe2, Home, Landmark, LockKeyhole, LogOut, Menu, MessageSquare,
   MoreHorizontal, Coins, Network as NetworkIcon, Plus, Receipt, RefreshCw, Send as SendIcon, Megaphone,
-  Settings, ShieldCheck, Smartphone, Target, Tv, UserRound, WalletCards, Wifi, X, Eye, EyeOff, Gift, Mail, ShoppingBag, PackagePlus, Instagram, Music2,
+  Settings, ShieldCheck, Smartphone, Target, Tv, UserRound, WalletCards, Wifi, X, Eye, EyeOff, Gift, Mail, ShoppingBag, PackagePlus, Instagram,
 } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
 import './landing.css';
@@ -113,6 +113,12 @@ function ServiceMaintenance({ serviceLabel, comingSoon = false }: { serviceLabel
 
 function useToken() {
   return typeof window !== 'undefined' ? window.localStorage.getItem('cipherpay_token') : null;
+}
+
+function TikTokLogo({ size = 23 }: { size?: number }) {
+  return <svg width={size} height={size} viewBox="0 0 448 512" aria-hidden="true" focusable="false" fill="currentColor">
+    <path d="M448,209.91a210.06,210.06,0,0,1-122.8-39.7V349.4A162.55,162.55,0,1,1,185,188.31V278.2a74.62,74.62,0,1,0,52.24,71.2V0h88.24a121.18,121.18,0,0,0,1.86,22.17A122.18,122.18,0,0,0,381,95.86a121.43,121.43,0,0,0,67,20.14Z"/>
+  </svg>;
 }
 
 function Logo({ compact = false, onHomeClick }: { compact?: boolean; onHomeClick?: () => void }) {
@@ -528,7 +534,7 @@ function LandingPage() {
         <div className="cp-footer-col"><span>COMPANY</span><a href="#home">Home</a><a href="/login">Sign in</a><a href="/register">Create account</a><button type="button" onClick={() => setSupportOpen(true)}>Support</button></div>
         <div className="cp-footer-social"><span>FOLLOW CIPHERPAY</span><div className="cp-footer-socials">
           <a className="cp-social-3d cp-social-ig" href="https://www.instagram.com/cipherpay.app" target="_blank" rel="noreferrer" aria-label="CipherPay on Instagram"><Instagram size={23}/></a>
-          <a className="cp-social-3d cp-social-tiktok" href="#" aria-label="CipherPay on TikTok"><Music2 size={23}/></a>
+          <a className="cp-social-3d cp-social-tiktok" href="#" aria-label="CipherPay on TikTok"><TikTokLogo size={23}/></a>
           <a className="cp-social-3d cp-social-x" href="#" aria-label="CipherPay on X"><span className="cp-social-xmark">𝕏</span></a>
         </div></div>
       </div>
