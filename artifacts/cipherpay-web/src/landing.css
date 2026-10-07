@@ -2925,3 +2925,33 @@ html.dark .user-menu-item:hover,
 html.dark .user-menu-item:focus-visible{
   background:rgba(255,255,255,.07)!important;
 }
+
+
+/* Premium 3D social icons — footer */
+.cp-footer-social{display:flex;flex-direction:column;gap:13px;min-width:180px}
+.cp-footer-social>span{font-size:10px;font-weight:900;letter-spacing:.16em;color:#777784}
+.cp-footer-socials{display:flex;align-items:center;gap:12px}
+.cp-social-3d{
+  position:relative;display:grid;place-items:center;width:52px;height:52px;border-radius:16px;
+  color:#fff;text-decoration:none;
+  background:linear-gradient(145deg,rgba(255,255,255,.92),rgba(235,232,244,.72));
+  border:1px solid rgba(255,255,255,.82);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.95),inset 0 -8px 16px rgba(31,22,42,.09),0 12px 24px rgba(31,22,42,.16),0 3px 0 rgba(31,22,42,.14);
+  transform:translateY(0) rotateX(0deg);
+  transition:transform .22s ease,box-shadow .22s ease;
+  overflow:hidden;
+}
+.cp-social-3d::before{content:"";position:absolute;inset:2px;border-radius:14px;background:linear-gradient(135deg,rgba(255,255,255,.42),transparent 42%);pointer-events:none}
+.cp-social-3d:hover{transform:translateY(-6px) rotateX(10deg) rotateZ(-2deg);box-shadow:inset 0 1px 1px rgba(255,255,255,.95),inset 0 -8px 16px rgba(31,22,42,.12),0 20px 34px rgba(31,22,42,.2),0 5px 0 rgba(31,22,42,.16)}
+.cp-social-ig{background:linear-gradient(145deg,#ff9a5c 0%,#ee4c74 48%,#7c4df4 100%);box-shadow:inset 0 1px 2px rgba(255,255,255,.65),inset 0 -10px 18px rgba(56,15,105,.22),0 13px 25px rgba(127,66,197,.27),0 4px 0 #9d4169}
+.cp-social-tiktok{background:linear-gradient(145deg,#15151b,#38333f);box-shadow:inset 0 1px 2px rgba(255,255,255,.55),inset 0 -10px 18px rgba(0,0,0,.42),0 13px 25px rgba(22,18,28,.25),0 4px 0 #17131d}
+.cp-social-x{background:linear-gradient(145deg,#33333a,#0d0d10);box-shadow:inset 0 1px 2px rgba(255,255,255,.45),inset 0 -10px 18px rgba(0,0,0,.5),0 13px 25px rgba(22,18,28,.25),0 4px 0 #09090b}
+.cp-social-xmark{font-size:24px;font-weight:900;line-height:1}
+.cp-footer-social .cp-social-3d:active{transform:translateY(2px);box-shadow:inset 0 1px 2px rgba(255,255,255,.6),0 4px 10px rgba(31,22,42,.16),0 1px 0 rgba(31,22,42,.15)}
+@media(max-width:800px){
+  .cp-footer-social{grid-column:1/-1}
+}
+@media(max-width:600px){
+  .cp-footer-social{min-width:0}
+  .cp-social-3d{width:48px;height:48px;border-radius:14px}
+}
