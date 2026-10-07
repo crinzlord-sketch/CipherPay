@@ -535,7 +535,6 @@ function LandingPage() {
         <div className="cp-footer-social"><span>FOLLOW CIPHERPAY</span><div className="cp-footer-socials">
           <a className="cp-social-3d cp-social-ig" href="https://www.instagram.com/cipherpay.app" target="_blank" rel="noreferrer" aria-label="CipherPay on Instagram"><Instagram size={23}/></a>
           <a className="cp-social-3d cp-social-tiktok" href="https://www.tiktok.com/@cipherpay?_r=1&_t=ZS-9AMUCSmVN4s" target="_blank" rel="noreferrer" aria-label="CipherPay on TikTok"><TikTokLogo size={23}/></a>
-          <a className="cp-social-3d cp-social-x" href="#" aria-label="CipherPay on X"><span className="cp-social-xmark">𝕏</span></a>
         </div></div>
       </div>
       <div className="cp-footer-orbit"><span /><span /><span /><b>CP</b></div>
