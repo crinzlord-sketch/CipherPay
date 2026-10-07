@@ -63,9 +63,6 @@ const parseGroupedDigits = (value: string) => Number(value.replace(/,/g, '')) ||
 const nav = [
   { href: '/', label: 'Overview', icon: Home },
   { href: '/fund', label: 'Fund wallet', icon: Plus },
-  { href: '/send', label: 'Send money', icon: SendIcon },
-  { href: '/crypto', label: 'Crypto', icon: Coins },
-  { href: '/data', label: 'Data bundles', icon: Wifi },
   { href: '/sms', label: 'SMS verification', icon: MessageSquare },
   { href: '/sms-extras', label: 'International eSIM', icon: Globe2 },
   { href: '/long-term-numbers', label: 'Long-term numbers', icon: Smartphone },
@@ -73,9 +70,12 @@ const nav = [
   { href: '/email-pro', label: 'Email Pro', icon: Mail },
   { href: '/social-boost', label: 'Social Boost', icon: Megaphone },
   { href: '/social-accounts', label: 'Social Accounts', icon: ShoppingBag },
+  { href: '/crypto', label: 'Crypto', icon: Coins },
+  { href: '/data', label: 'Data bundles', icon: Wifi },
   { href: '/chat', label: 'Find & chat', icon: MessageSquare },
   { href: '/transactions', label: 'Transactions', icon: Activity },
   { href: '/referrals', label: 'Refer & earn', icon: Gift },
+  { href: '/send', label: 'Send money', icon: SendIcon },
 ];
 const utilityNav = [
   { href: '/notifications', label: 'Notifications', icon: Bell },
@@ -1052,8 +1052,8 @@ function Dashboard() {
          <div className="balance-card"><div className="balance-top"><span>Available balance</span><button type="button" className="balance-visibility" onClick={() => setBalanceVisible((visible) => !visible)} aria-label={balanceVisible ? 'Hide balance' : 'Show balance'} aria-pressed={!balanceVisible} title={balanceVisible ? 'Hide balance' : 'Show balance'} data-testid="button-toggle-balance">{balanceVisible ? <Eye size={16} /> : <EyeOff size={16} />}</button></div><div className="balance-value" data-testid="text-wallet-balance">{displayBalance(w?.balance)}</div><div className="balance-bottom"><span>Ledger balance <b>{displayBalance(w?.ledgerBalance)}</b></span><span className="mono">{w?.currency ?? 'NGN'}</span></div><div className="balance-shine" /></div>
         <div className="quick-actions"><div className="section-head"><h2>Explore services</h2><span className="quick-actions-label">Quick actions</span><button type="button" className="quick-actions-view-all" onClick={() => window.dispatchEvent(new Event('cipherpay:open-all-menu'))} aria-label="View all services" data-testid="button-quick-actions-view-all">View All <ArrowRight size={15} /></button></div>
           <div className="action-row">
-            <Link href="/crypto" className="action-tile" data-testid="link-quick-crypto">
-              <span className="action-icon purple"><Coins size={19} /></span><b>Crypto</b><small>Manage your crypto</small>
+            <Link href="/social-accounts" className="action-tile" data-testid="link-quick-social-accounts">
+              <span className="action-icon purple"><ShoppingBag size={19} /></span><b>Social Accounts</b><small>Buy social accounts</small>
             </Link>
             <Link href="/social-boost" className="action-tile" data-testid="link-quick-social-boost"><span className="action-icon orange"><Target size={19} /></span><b>Social Boost</b><small>Grow your social presence</small></Link>
             <Link href="/sms" className="action-tile" data-testid="link-quick-sms"><span className="action-icon green"><MessageSquare size={19} /></span><b>SMS verification</b><small>Get a verification number</small></Link>
