@@ -109,7 +109,7 @@ router.get("/sellers/status", async (req, res): Promise<void> => {
   // hide an older verified record (and DESC puts NULL verifiedAt values first).
   const [kyc] = await db.select({ status: kycTable.status, level: kycTable.level })
     .from(kycTable)
-    .where(sql`user_id = \${userId} AND status = 'verified'`)
+    .where(sql`user_id = ${userId} AND status = 'verified'`)
     .orderBy(desc(kycTable.level), desc(kycTable.verifiedAt), desc(kycTable.createdAt))
     .limit(1);
   const r = await db.execute(sql`SELECT id,legal_name AS "legalName",seller_name AS "sellerName",phone,address,country,account_source AS "accountSource",experience,status,admin_note AS "adminNote",created_at AS "createdAt",reviewed_at AS "reviewedAt" FROM seller_applications WHERE user_id=${userId} ORDER BY id DESC LIMIT 1`);
@@ -135,7 +135,7 @@ router.post("/sellers/apply", async (req, res): Promise<void> => {
   const [kyc] = await db.select({
     status: kycTable.status, level: kycTable.level, fullName: kycTable.fullName, address: kycTable.address,
   }).from(kycTable)
-    .where(sql`user_id = \${userId} AND status = 'verified'`)
+    .where(sql`user_id = ${userId} AND status = 'verified'`)
     .orderBy(desc(kycTable.level), desc(kycTable.verifiedAt), desc(kycTable.createdAt)).limit(1);
 
   if (!user) { res.status(404).json({ error: "User account not found." }); return; }
