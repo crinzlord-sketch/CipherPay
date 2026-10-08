@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db, kycTable, usersTable, notificationsTable } from "@workspace/db";
 import { notifyUser } from "../lib/notifications";
 import { sendAdminAlertEmail } from "../lib/email";
@@ -55,7 +55,13 @@ router.get("/kyc/status", async (req, res): Promise<void> => {
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
-  const [kyc] = await db.select().from(kycTable).where(eq(kycTable.userId, userId));
+  // A user can have more than one KYC row from older attempts. Prefer an
+  // approved record first so a newer pending/rejected attempt cannot hide a
+  // KYC that an administrator has already verified.
+  const [kyc] = await db.select().from(kycTable)
+    .where(eq(kycTable.userId, userId))
+    .orderBy(desc(kycTable.status), desc(kycTable.verifiedAt), desc(kycTable.createdAt))
+    .limit(1);
   res.json(formatKyc(kyc, user?.kycLevel ?? 0));
 });
 
@@ -78,9 +84,13 @@ router.post("/kyc/submit", async (req, res): Promise<void> => {
   if (!dateOfBirth) { res.status(400).json({ error: "Date of birth is required." }); return; }
   if (address.length < 8) { res.status(400).json({ error: "Please enter your residential address." }); return; }
 
-  const [existing] = await db.select().from(kycTable).where(eq(kycTable.userId, userId));
-  if (existing?.status === "verified") { res.status(400).json({ error: "Your KYC is already verified." }); return; }
-  if (existing?.status === "submitted") { res.status(400).json({ error: "Your previous submission is still under review." }); return; }
+  const [verifiedKyc] = await db.select().from(kycTable)
+    .where(eq(kycTable.userId, userId))
+    .orderBy(desc(kycTable.status), desc(kycTable.verifiedAt), desc(kycTable.createdAt))
+    .limit(1);
+  if (verifiedKyc?.status === "verified") { res.status(400).json({ error: "Your KYC is already verified." }); return; }
+  if (verifiedKyc?.status === "submitted") { res.status(400).json({ error: "Your previous submission is still under review." }); return; }
+  const existing = verifiedKyc;
 
   const frontUrl: string | null = null;
   const backUrl: string | null = null;
