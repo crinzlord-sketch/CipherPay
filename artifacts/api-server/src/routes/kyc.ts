@@ -60,7 +60,7 @@ router.get("/kyc/status", async (req, res): Promise<void> => {
   // KYC that an administrator has already verified.
   const [kyc] = await db.select().from(kycTable)
     .where(eq(kycTable.userId, userId))
-    .orderBy(desc(kycTable.status), desc(kycTable.verifiedAt), desc(kycTable.createdAt))
+    .orderBy(desc(kycTable.verifiedAt), desc(kycTable.createdAt))
     .limit(1);
   res.json(formatKyc(kyc, user?.kycLevel ?? 0));
 });
