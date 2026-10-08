@@ -169,3 +169,8 @@ html.dark .social-account-message button{background:#fff;color:#201b29}
 .social-purchase-complete-modal,
 .social-account-details-modal{position:relative!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;transform:none!important;margin:0!important;width:min(100%,520px)!important;max-height:calc(100dvh - 40px);overflow-y:auto}
 .social-account-details-modal{width:min(100%,620px)}
+
+/* Bundled React brand icons are SVGs, not images. Keep them visible on white icon tiles. */
+.social-orb-grid .social-orb-icon svg{width:24px;height:24px;color:#18151d;display:block}
+.social-platform-icon svg{width:18px;height:18px;display:block;color:currentColor}
+.social-brand-mark svg{width:24px;height:24px;display:block;color:#18151d}
