@@ -1457,6 +1457,18 @@ router.delete("/admin/withdrawals", requireAdmin, async (_req, res): Promise<voi
   res.json({ success: true, deleted: deleted.length });
 });
 
+// ── TRANSACTION HISTORY CLEAR ────────────────────────────────────────────────
+router.delete("/admin/transactions", requireAdmin, async (req: AdminRequest, res): Promise<void> => {
+  const confirm = req.headers["x-transactions-clear-confirm"];
+  if (confirm !== "CLEAR_CIPHERPAY_TRANSACTIONS") {
+    res.status(400).json({ error: "Missing or incorrect confirmation." });
+    return;
+  }
+  const deleted = await db.delete(transactionsTable).returning({ id: transactionsTable.id });
+  req.log?.warn?.({ adminId: req.admin!.id, deleted: deleted.length }, "ALL TRANSACTION HISTORY CLEARED");
+  res.json({ success: true, deleted: deleted.length, message: "All transaction history cleared. Wallet balances were preserved." });
+});
+
 // ── SYSTEM RESET ─────────────────────────────────────────────────────────────
 // NUCLEAR: truncates all user data. Requires a confirmation header.
 router.post("/admin/system/reset", requireAdmin, async (req: AdminRequest, res): Promise<void> => {
