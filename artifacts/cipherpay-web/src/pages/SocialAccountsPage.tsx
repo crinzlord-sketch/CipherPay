@@ -1,5 +1,6 @@
 import { Check, ChevronDown, Clipboard, Copy, MessageCircle, Search, Send, ShoppingBag, ShieldCheck } from "lucide-react";
 import { FaDiscord, FaFacebook, FaInstagram, FaLinkedinIn, FaSnapchatGhost, FaTelegram, FaTiktok, FaYoutube } from "react-icons/fa";
+// Platform icons are bundled locally so they render immediately without CDN requests.
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { apiRequest } from "./page-api";
