@@ -104,8 +104,14 @@ router.get("/sellers/status", async (req, res): Promise<void> => {
   const userId = uid(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   await tables();
+  // Seller eligibility is based on whether the user has ANY approved KYC record.
+  // Do not select the latest row: a newer submitted/rejected attempt can otherwise
+  // hide an older verified record (and DESC puts NULL verifiedAt values first).
   const [kyc] = await db.select({ status: kycTable.status, level: kycTable.level })
-    .from(kycTable).where(eq(kycTable.userId, userId)).orderBy(desc(kycTable.verifiedAt), desc(kycTable.createdAt)).limit(1);
+    .from(kycTable)
+    .where(sql`user_id = \${userId} AND status = 'verified'`)
+    .orderBy(desc(kycTable.level), desc(kycTable.verifiedAt), desc(kycTable.createdAt))
+    .limit(1);
   const r = await db.execute(sql`SELECT id,legal_name AS "legalName",seller_name AS "sellerName",phone,address,country,account_source AS "accountSource",experience,status,admin_note AS "adminNote",created_at AS "createdAt",reviewed_at AS "reviewedAt" FROM seller_applications WHERE user_id=${userId} ORDER BY id DESC LIMIT 1`);
   const application: any = r.rows[0] ?? null;
   res.json({
@@ -125,9 +131,12 @@ router.post("/sellers/apply", async (req, res): Promise<void> => {
   const [user] = await db.select({
     id: usersTable.id, email: usersTable.email, firstName: usersTable.firstName, lastName: usersTable.lastName, phone: usersTable.phone,
   }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  // Use an approved KYC record if one exists, even when a newer attempt is pending/rejected.
   const [kyc] = await db.select({
     status: kycTable.status, level: kycTable.level, fullName: kycTable.fullName, address: kycTable.address,
-  }).from(kycTable).where(eq(kycTable.userId, userId)).orderBy(desc(kycTable.verifiedAt), desc(kycTable.createdAt)).limit(1);
+  }).from(kycTable)
+    .where(sql`user_id = \${userId} AND status = 'verified'`)
+    .orderBy(desc(kycTable.level), desc(kycTable.verifiedAt), desc(kycTable.createdAt)).limit(1);
 
   if (!user) { res.status(404).json({ error: "User account not found." }); return; }
   if (kyc?.status !== "verified") {
