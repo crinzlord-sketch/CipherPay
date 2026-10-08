@@ -105,7 +105,7 @@ router.get("/sellers/status", async (req, res): Promise<void> => {
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   await tables();
   const [kyc] = await db.select({ status: kycTable.status, level: kycTable.level })
-    .from(kycTable).where(eq(kycTable.userId, userId)).limit(1);
+    .from(kycTable).where(eq(kycTable.userId, userId)).orderBy(desc(kycTable.verifiedAt), desc(kycTable.createdAt)).limit(1);
   const r = await db.execute(sql`SELECT id,legal_name AS "legalName",seller_name AS "sellerName",phone,address,country,account_source AS "accountSource",experience,status,admin_note AS "adminNote",created_at AS "createdAt",reviewed_at AS "reviewedAt" FROM seller_applications WHERE user_id=${userId} ORDER BY id DESC LIMIT 1`);
   const application: any = r.rows[0] ?? null;
   res.json({
@@ -127,7 +127,7 @@ router.post("/sellers/apply", async (req, res): Promise<void> => {
   }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   const [kyc] = await db.select({
     status: kycTable.status, level: kycTable.level, fullName: kycTable.fullName, address: kycTable.address,
-  }).from(kycTable).where(eq(kycTable.userId, userId)).limit(1);
+  }).from(kycTable).where(eq(kycTable.userId, userId)).orderBy(desc(kycTable.verifiedAt), desc(kycTable.createdAt)).limit(1);
 
   if (!user) { res.status(404).json({ error: "User account not found." }); return; }
   if (kyc?.status !== "verified") {
