@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { sendWelcomeEmail } from "../lib/email";
 import bcrypt from "bcryptjs";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { db, usersTable, otpTable, transactionsTable } from "@workspace/db";
 import { RegisterBody, LoginBody, SendOtpBody, VerifyOtpBody, UpdateProfileBody, ChangePasswordBody } from "@workspace/api-zod";
 import { signToken, generateOtp, generateReferralCode } from "../lib/auth";
@@ -16,6 +16,20 @@ import path from "path";
 import fs from "fs/promises";
 import crypto from "crypto";
 
+// One-time security reset: require every account to enroll a fresh 4-digit transfer PIN.
+let transferPinResetPromise: Promise<void> | null = null;
+async function ensureTransferPinReset(): Promise<void> {
+  if (!transferPinResetPromise) {
+    transferPinResetPromise = (async () => {
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS app_security_migrations (migration_key text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())`);
+      const result = await db.execute(sql`INSERT INTO app_security_migrations(migration_key) VALUES ('reset_transfer_pins_2026_10') ON CONFLICT DO NOTHING RETURNING migration_key`);
+      if (result.rows.length) {
+        await db.update(usersTable).set({ pinHash: null, pinUpdatedAt: null });
+      }
+    })();
+  }
+  return transferPinResetPromise;
+}
 const AVATAR_DIR = path.resolve(process.cwd(), "uploads", "avatar");
 const AVATAR_PUBLIC_BASE = "/api/uploads/avatar";
 // Profile pics are intentionally publicly readable (we only persist the URL on the
@@ -832,6 +846,7 @@ function pinIssue(v: any): string | null {
 }
 
 router.get("/auth/pin/status", async (req, res): Promise<void> => {
+  await ensureTransferPinReset();
   const rawId = req.headers["x-user-id"];
   const userId = parseInt(Array.isArray(rawId) ? rawId[0] : (rawId ?? ""), 10);
   if (isNaN(userId)) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -841,6 +856,7 @@ router.get("/auth/pin/status", async (req, res): Promise<void> => {
 });
 
 router.post("/auth/pin/set", async (req, res): Promise<void> => {
+  await ensureTransferPinReset();
   const rawId = req.headers["x-user-id"];
   const userId = parseInt(Array.isArray(rawId) ? rawId[0] : (rawId ?? ""), 10);
   if (isNaN(userId)) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -888,6 +904,7 @@ const PIN_LOCKOUT_MS = 15 * 60 * 1000;
 const pinAttempts = new Map<number, { count: number; lockedUntil: number }>();
 
 router.post("/auth/pin/verify", async (req, res): Promise<void> => {
+  await ensureTransferPinReset();
   const rawId = req.headers["x-user-id"];
   const userId = parseInt(Array.isArray(rawId) ? rawId[0] : (rawId ?? ""), 10);
   if (isNaN(userId)) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -933,6 +950,7 @@ router.post("/auth/pin/verify", async (req, res): Promise<void> => {
 });
 
 router.post("/auth/pin/remove", async (req, res): Promise<void> => {
+  await ensureTransferPinReset();
   const rawId = req.headers["x-user-id"];
   const userId = parseInt(Array.isArray(rawId) ? rawId[0] : (rawId ?? ""), 10);
   if (isNaN(userId)) { res.status(401).json({ error: "Unauthorized" }); return; }
