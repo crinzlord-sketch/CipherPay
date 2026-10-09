@@ -90,6 +90,7 @@ async function tables() {
     )`);
     await db.execute(sql`ALTER TABLE seller_withdrawal_requests ADD COLUMN IF NOT EXISTS payout_method text NOT NULL DEFAULT 'bank'`);
     await db.execute(sql`ALTER TABLE seller_withdrawal_requests ALTER COLUMN bank_name DROP NOT NULL`);
+    await db.execute(sql`ALTER TABLE seller_withdrawal_requests ALTER COLUMN bank_name DROP NOT NULL`);
     await db.execute(sql`ALTER TABLE seller_withdrawal_requests ALTER COLUMN account_number DROP NOT NULL`);
     await db.execute(sql`ALTER TABLE seller_withdrawal_requests ALTER COLUMN account_name DROP NOT NULL`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS seller_withdrawal_requests_user_idx ON seller_withdrawal_requests(user_id,created_at DESC)`);
