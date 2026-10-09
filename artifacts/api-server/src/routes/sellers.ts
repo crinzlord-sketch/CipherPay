@@ -219,9 +219,13 @@ router.get("/seller/dashboard", async (req, res): Promise<void> => {
   const available = await db.execute(sql`SELECT COUNT(*)::int AS count FROM social_account_inventory WHERE seller_user_id=${userId} AND status='available'`);
   const sold = await db.execute(sql`SELECT COUNT(*)::int AS count FROM social_account_inventory WHERE seller_user_id=${userId} AND status='sold'`);
   const wallet = await db.execute(sql`SELECT balance FROM wallets WHERE user_id=${userId} LIMIT 1`);
+  const earned = await db.execute(sql`SELECT COALESCE(SUM(ROUND(o.amount*(1-i.seller_fee_rate/100),2)),0) AS total FROM social_account_orders o JOIN social_account_inventory i ON i.id=o.inventory_id WHERE i.seller_user_id=${userId}`);
   const withdrawals = await db.execute(sql`SELECT id,amount,bank_name AS "bankName",bank_code AS "bankCode",account_number AS "accountNumber",account_name AS "accountName",narration,status,admin_note AS "adminNote",created_at AS "createdAt",reviewed_at AS "reviewedAt",paid_at AS "paidAt" FROM seller_withdrawal_requests WHERE user_id=${userId} ORDER BY created_at DESC LIMIT 50`);
   const pendingHeld = await db.execute(sql`SELECT COALESCE(SUM(amount),0) AS total FROM seller_withdrawal_requests WHERE user_id=${userId} AND status IN ('pending','approved')`);
-  res.json({ seller, feeRate: SELLER_FEE_RATE, walletBalance: Number((wallet.rows[0] as any)?.balance ?? 0), pendingWithdrawal: Number((pendingHeld.rows[0] as any)?.total ?? 0), listings: listings.rows, sales: sales.rows, withdrawals: withdrawals.rows, stats: { available: Number((available.rows[0] as any)?.count ?? 0), sold: Number((sold.rows[0] as any)?.count ?? 0) } });
+  const alreadyWithdrawn = await db.execute(sql`SELECT COALESCE(SUM(amount),0) AS total FROM seller_withdrawal_requests WHERE user_id=${userId} AND status IN ('pending','approved','paid','completed')`);
+  const sellerEarned = Number((earned.rows[0] as any)?.total ?? 0);
+  const sellerReserved = Number((alreadyWithdrawn.rows[0] as any)?.total ?? 0);
+  res.json({ seller, feeRate: SELLER_FEE_RATE, walletBalance: Number((wallet.rows[0] as any)?.balance ?? 0), sellerAvailableBalance: Math.max(0, Number((sellerEarned-sellerReserved).toFixed(2))), pendingWithdrawal: Number((pendingHeld.rows[0] as any)?.total ?? 0), listings: listings.rows, sales: sales.rows, withdrawals: withdrawals.rows, stats: { available: Number((available.rows[0] as any)?.count ?? 0), sold: Number((sold.rows[0] as any)?.count ?? 0) } });
 });
 
 router.post("/seller/listings", async (req, res): Promise<void> => {
