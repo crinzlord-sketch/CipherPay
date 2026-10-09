@@ -301,7 +301,7 @@ router.post("/seller/withdrawals", async (req, res): Promise<void> => {
   const amount = Number(req.body?.amount);
   const payoutMethod = String(req.body?.payoutMethod ?? "bank");
   const narration = String(req.body?.narration ?? "").trim().slice(0, 200) || null;
-  if (!Number.isFinite(amount) || amount < SELLER_WITHDRAWAL_MIN) { res.status(400).json({ error: \`Minimum seller withdrawal is ₦\${SELLER_WITHDRAWAL_MIN.toLocaleString()}.\` }); return; }
+  if (!Number.isFinite(amount) || amount < SELLER_WITHDRAWAL_MIN) { res.status(400).json({ error: `Minimum seller withdrawal is ₦${SELLER_WITHDRAWAL_MIN.toLocaleString()}.` }); return; }
   if (!["bank", "wallet"].includes(payoutMethod)) { res.status(400).json({ error: "Choose bank payout or CipherPay wallet." }); return; }
   let bankName = "", bankCode = "", accountNumber = "", accountName = "";
   if (payoutMethod === "bank") {
