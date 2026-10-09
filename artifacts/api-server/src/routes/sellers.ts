@@ -323,31 +323,31 @@ router.post("/seller/withdrawals", async (req, res): Promise<void> => {
   await tables();
   try {
     const out = await db.transaction(async (d) => {
-      const open = await d.execute(sql\`SELECT id FROM seller_withdrawal_requests WHERE user_id=\${userId} AND status IN ('pending','approved') LIMIT 1\`);
+      const open = await d.execute(sql`SELECT id FROM seller_withdrawal_requests WHERE user_id=\${userId} AND status IN ('pending','approved') LIMIT 1`);
       if (open.rows.length) throw new Error("You already have a withdrawal request being processed.");
-      const earned = await d.execute(sql\`SELECT COALESCE(SUM(ROUND(o.amount*(1-i.seller_fee_rate/100),2)),0) AS total FROM social_account_orders o JOIN social_account_inventory i ON i.id=o.inventory_id WHERE i.seller_user_id=\${userId}\`);
-      const reserved = await d.execute(sql\`SELECT COALESCE(SUM(amount),0) AS total FROM seller_withdrawal_requests WHERE user_id=\${userId} AND status IN ('pending','approved','paid','completed')\`);
+      const earned = await d.execute(sql`SELECT COALESCE(SUM(ROUND(o.amount*(1-i.seller_fee_rate/100),2)),0) AS total FROM social_account_orders o JOIN social_account_inventory i ON i.id=o.inventory_id WHERE i.seller_user_id=\${userId}`);
+      const reserved = await d.execute(sql`SELECT COALESCE(SUM(amount),0) AS total FROM seller_withdrawal_requests WHERE user_id=\${userId} AND status IN ('pending','approved','paid','completed')`);
       const available = Math.max(0, Number((earned.rows[0] as any)?.total ?? 0) - Number((reserved.rows[0] as any)?.total ?? 0));
       if (available < amount) throw new Error("Your available seller earnings are not enough for this withdrawal.");
       if (payoutMethod === "wallet") {
-        const wallet = await d.execute(sql\`SELECT balance FROM wallets WHERE user_id=\${userId} FOR UPDATE\`);
+        const wallet = await d.execute(sql`SELECT balance FROM wallets WHERE user_id=\${userId} FOR UPDATE`);
         if (!wallet.rows.length) throw new Error("Your CipherPay wallet is not ready. Please contact support.");
         const before = Number((wallet.rows[0] as any).balance ?? 0);
-        const updated = await d.execute(sql\`UPDATE wallets SET balance=balance+\${amount.toFixed(2)},ledger_balance=ledger_balance+\${amount.toFixed(2)},updated_at=now() WHERE user_id=\${userId} RETURNING balance\`);
+        const updated = await d.execute(sql`UPDATE wallets SET balance=balance+\${amount.toFixed(2)},ledger_balance=ledger_balance+\${amount.toFixed(2)},updated_at=now() WHERE user_id=\${userId} RETURNING balance`);
         const tx = await d.insert(transactionsTable).values({ userId, type: "seller_earnings_transfer", amount: amount.toFixed(2), status: "completed", reference: generateReference("SEW"), description: "Seller earnings transferred to CipherPay wallet", metadata: JSON.stringify({ payoutMethod: "wallet", narration }), balanceBefore: before.toFixed(2), balanceAfter: Number(updated.rows[0].balance).toFixed(2) }).returning({ id: transactionsTable.id });
-        const request = await d.execute(sql\`INSERT INTO seller_withdrawal_requests(user_id,amount,payout_method,narration,transaction_id,status,paid_at,reviewed_at) VALUES(\${userId},\${amount.toFixed(2)},'wallet',\${narration},\${tx[0]?.id ?? null},'completed',now(),now()) RETURNING id,amount,payout_method AS "payoutMethod",status,created_at AS "createdAt"\`);
+        const request = await d.execute(sql`INSERT INTO seller_withdrawal_requests(user_id,amount,payout_method,narration,transaction_id,status,paid_at,reviewed_at) VALUES(\${userId},\${amount.toFixed(2)},'wallet',\${narration},\${tx[0]?.id ?? null},'completed',now(),now()) RETURNING id,amount,payout_method AS "payoutMethod",status,created_at AS "createdAt"`);
         return { request: request.rows[0], sellerAvailableBalance: Number((available - amount).toFixed(2)) };
       }
-      const tx = await d.insert(transactionsTable).values({ userId, type: "seller_withdrawal", amount: amount.toFixed(2), status: "pending", reference: generateReference("SWD"), description: \`Seller withdrawal to \${accountName} (\${accountNumber})\`, metadata: JSON.stringify({ payoutMethod: "bank", bankName, bankCode, accountNumber, accountName, narration, requestStatus: "pending" }), balanceBefore: null, balanceAfter: null }).returning({ id: transactionsTable.id });
-      const request = await d.execute(sql\`INSERT INTO seller_withdrawal_requests(user_id,amount,payout_method,bank_name,bank_code,account_number,account_name,narration,transaction_id,status) VALUES(\${userId},\${amount.toFixed(2)},'bank',\${bankName},\${bankCode},\${accountNumber},\${accountName},\${narration},\${tx[0]?.id ?? null},'pending') RETURNING id,amount,payout_method AS "payoutMethod",bank_name AS "bankName",account_number AS "accountNumber",account_name AS "accountName",status,created_at AS "createdAt"\`);
+      const tx = await d.insert(transactionsTable).values({ userId, type: "seller_withdrawal", amount: amount.toFixed(2), status: "pending", reference: generateReference("SWD"), description: `Seller withdrawal to \${accountName} (\${accountNumber})`, metadata: JSON.stringify({ payoutMethod: "bank", bankName, bankCode, accountNumber, accountName, narration, requestStatus: "pending" }), balanceBefore: null, balanceAfter: null }).returning({ id: transactionsTable.id });
+      const request = await d.execute(sql`INSERT INTO seller_withdrawal_requests(user_id,amount,payout_method,bank_name,bank_code,account_number,account_name,narration,transaction_id,status) VALUES(\${userId},\${amount.toFixed(2)},'bank',\${bankName},\${bankCode},\${accountNumber},\${accountName},\${narration},\${tx[0]?.id ?? null},'pending') RETURNING id,amount,payout_method AS "payoutMethod",bank_name AS "bankName",account_number AS "accountNumber",account_name AS "accountName",status,created_at AS "createdAt"`);
       return { request: request.rows[0], sellerAvailableBalance: Number((available - amount).toFixed(2)) };
     });
-    await notifyUser({ userId, type: "transaction", title: payoutMethod === "wallet" ? "Seller earnings transferred" : "Withdrawal request submitted", body: payoutMethod === "wallet" ? \`₦\${amount.toLocaleString()} seller earnings have been transferred to your CipherPay wallet.\` : \`Your seller withdrawal request for ₦\${amount.toLocaleString()} is now being reviewed.\`, link: "/seller" }).catch(() => {});
+    await notifyUser({ userId, type: "transaction", title: payoutMethod === "wallet" ? "Seller earnings transferred" : "Withdrawal request submitted", body: payoutMethod === "wallet" ? `₦\${amount.toLocaleString()} seller earnings have been transferred to your CipherPay wallet.` : `Your seller withdrawal request for ₦\${amount.toLocaleString()} is now being reviewed.`, link: "/seller" }).catch(() => {});
     if (payoutMethod === "bank") try {
       const admins = await db.select({ id: usersTable.id, email: usersTable.email }).from(usersTable).where(eq(usersTable.isAdmin, true));
       if (admins.length) {
-        await db.insert(notificationsTable).values(admins.map(admin => ({ userId: admin.id, type: "admin_seller", title: "Seller withdrawal request", body: \`Seller #\${userId} requested a ₦\${amount.toLocaleString()} bank withdrawal.\`, link: "/admin?tab=sellers" })));
-        await Promise.allSettled(admins.map((admin: any) => sendAdminAlertEmail("Seller withdrawal request", \`Seller: \${seller.sellerName}\\nUser ID: #\${userId}\\nAmount: ₦\${amount.toLocaleString()}\\nBank: \${bankName}\\nAccount: \${accountName} (\${accountNumber})\`, String(admin.email ?? "").trim())));
+        await db.insert(notificationsTable).values(admins.map(admin => ({ userId: admin.id, type: "admin_seller", title: "Seller withdrawal request", body: `Seller #\${userId} requested a ₦\${amount.toLocaleString()} bank withdrawal.`, link: "/admin?tab=sellers" })));
+        await Promise.allSettled(admins.map((admin: any) => sendAdminAlertEmail("Seller withdrawal request", `Seller: \${seller.sellerName}\\nUser ID: #\${userId}\\nAmount: ₦\${amount.toLocaleString()}\\nBank: \${bankName}\\nAccount: \${accountName} (\${accountNumber})`, String(admin.email ?? "").trim())));
       }
     } catch (e: any) { req.log?.warn?.({ err: e?.message }, "seller withdrawal admin alert failed"); }
     res.status(201).json({ success: true, ...out });
