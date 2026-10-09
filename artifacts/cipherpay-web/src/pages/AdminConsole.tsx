@@ -11,6 +11,7 @@ import './admin.css';
 import UserDetailView from './UserDetailView';
 import { avatarDataUrl } from '../components/CipherAvatar';
 import AdminSocialAccounts from './AdminSocialAccounts';
+import AdminSellerManagement from './AdminSellers';
 
 type Tab = 'overview' | 'users' | 'admins' | 'support' | 'money' | 'verification' | 'activity' | 'services' | 'social-accounts' | 'sellers';
 type AdminOptions = { method?: string; body?: unknown; headers?: Record<string, string> };
