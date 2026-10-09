@@ -8,7 +8,7 @@ import { sendAdminAlertEmail, sendUserNotificationEmail } from "../lib/email";
 import { generateReference } from "../lib/auth";
 
 const router: IRouter = Router();
-const platforms = new Set(["instagram","tiktok","facebook","discord","twitter","youtube","telegram","snapchat","linkedin"]);
+const platforms = new Set(["instagram","tiktok","facebook","discord","twitter","youtube","telegram","snapchat","linkedin","email"]);
 const SELLER_FEE_RATE = 5;
 const SELLER_WITHDRAWAL_MIN = 1000;
 const flutterwaveSecret=()=>process.env.FLW_SECRET_KEY||process.env.FLUTTERWAVE_SECRET_KEY||"";
