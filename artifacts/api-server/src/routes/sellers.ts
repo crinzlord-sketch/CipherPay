@@ -395,6 +395,16 @@ router.patch("/admin/seller-applications/:id", requireAdmin, async (req, res): P
   res.json({ success: true, status, userEmail: application.email });
 });
 
+router.patch("/admin/sellers/:userId/dismiss", requireAdmin, async (req, res): Promise<void> => {
+  const targetUserId = Number(req.params.userId);
+  if (!Number.isSafeInteger(targetUserId) || targetUserId <= 0) { res.status(400).json({ error: "Invalid seller user ID." }); return; }
+  const note = String(req.body?.adminNote ?? "").trim().slice(0, 1000) || null;
+  const rows = await db.execute(sql`UPDATE seller_applications SET status='dismissed',admin_note=${note},reviewed_by=${req.admin!.id},reviewed_at=now(),updated_at=now() WHERE user_id=${targetUserId} AND status='approved' RETURNING seller_name AS "sellerName"`);
+  if (!rows.rows.length) { res.status(404).json({ error: "No currently approved seller was found for that user." }); return; }
+  await notifyUser({ userId: targetUserId, type: "warning", title: "Seller access removed", body: note ? `Your seller access has been removed by an administrator. Note: ${note}` : "Your seller access has been removed by an administrator. Contact support if you believe this was a mistake.", link: "/social-accounts", email: true }).catch(() => {});
+  res.json({ success: true, status: "dismissed", sellerName: (rows.rows[0] as any).sellerName });
+});
+
 router.get("/admin/seller-withdrawals", requireAdmin, async (_req, res): Promise<void> => {
   await tables();
   const r = await db.execute(sql`SELECT w.id,w.user_id AS "userId",w.amount,w.bank_name AS "bankName",w.bank_code AS "bankCode",w.account_number AS "accountNumber",w.account_name AS "accountName",w.narration,w.status,w.admin_note AS "adminNote",w.created_at AS "createdAt",w.reviewed_at AS "reviewedAt",w.paid_at AS "paidAt",w.transaction_id AS "transactionId",u.email,u.first_name AS "firstName",u.last_name AS "lastName",a.seller_name AS "sellerName" FROM seller_withdrawal_requests w JOIN users u ON u.id=w.user_id LEFT JOIN seller_applications a ON a.user_id=w.user_id AND a.status='approved' ORDER BY CASE WHEN w.status='pending' THEN 0 WHEN w.status='approved' THEN 1 ELSE 2 END,w.created_at DESC LIMIT 300`);
