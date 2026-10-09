@@ -75,8 +75,9 @@ async function tables() {
       amount numeric(18,2) NOT NULL,
       bank_name text NOT NULL,
       bank_code text,
-      account_number text NOT NULL,
-      account_name text NOT NULL,
+      account_number text,
+      account_name text,
+      payout_method text NOT NULL DEFAULT 'bank',
       narration text,
       transaction_id integer,
       status text NOT NULL DEFAULT 'pending',
@@ -87,6 +88,10 @@ async function tables() {
       created_at timestamptz NOT NULL DEFAULT now(),
       updated_at timestamptz NOT NULL DEFAULT now()
     )`);
+    await db.execute(sql`ALTER TABLE seller_withdrawal_requests ADD COLUMN IF NOT EXISTS payout_method text NOT NULL DEFAULT 'bank'`);
+    await db.execute(sql`ALTER TABLE seller_withdrawal_requests ALTER COLUMN bank_name DROP NOT NULL`);
+    await db.execute(sql`ALTER TABLE seller_withdrawal_requests ALTER COLUMN account_number DROP NOT NULL`);
+    await db.execute(sql`ALTER TABLE seller_withdrawal_requests ALTER COLUMN account_name DROP NOT NULL`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS seller_withdrawal_requests_user_idx ON seller_withdrawal_requests(user_id,created_at DESC)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS seller_withdrawal_requests_status_idx ON seller_withdrawal_requests(status,created_at)`);
   })().catch(error => { tablesPromise = null; throw error; });
@@ -292,84 +297,61 @@ router.post("/seller/withdrawals", async (req, res): Promise<void> => {
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   const seller = await approvedSeller(userId);
   if (!seller) { res.status(403).json({ error: "Seller access has not been approved." }); return; }
-
   const amount = Number(req.body?.amount);
-  const bankName = String(req.body?.bankName ?? "").trim().slice(0, 120);
-  const bankCode = String(req.body?.bankCode ?? "").trim().slice(0, 30) || null;
-  const accountNumber = String(req.body?.accountNumber ?? "").replace(/\D/g, "").slice(0, 20);
-  const accountName = String(req.body?.accountName ?? "").trim().slice(0, 160);
-  const verifiedAccountName = String(req.body?.verifiedAccountName ?? "").trim().slice(0, 160);
+  const payoutMethod = String(req.body?.payoutMethod ?? "bank");
   const narration = String(req.body?.narration ?? "").trim().slice(0, 200) || null;
-
-  if (!Number.isFinite(amount) || amount < SELLER_WITHDRAWAL_MIN) {
-    res.status(400).json({ error: `Minimum seller withdrawal is ₦${SELLER_WITHDRAWAL_MIN.toLocaleString()}.` }); return;
+  if (!Number.isFinite(amount) || amount < SELLER_WITHDRAWAL_MIN) { res.status(400).json({ error: \`Minimum seller withdrawal is ₦\${SELLER_WITHDRAWAL_MIN.toLocaleString()}.\` }); return; }
+  if (!["bank", "wallet"].includes(payoutMethod)) { res.status(400).json({ error: "Choose bank payout or CipherPay wallet." }); return; }
+  let bankName = "", bankCode = "", accountNumber = "", accountName = "";
+  if (payoutMethod === "bank") {
+    bankName = String(req.body?.bankName ?? "").trim().slice(0, 120);
+    bankCode = String(req.body?.bankCode ?? "").trim().slice(0, 30);
+    accountNumber = String(req.body?.accountNumber ?? "").replace(/\D/g, "").slice(0, 20);
+    accountName = String(req.body?.accountName ?? "").trim().slice(0, 160);
+    const verifiedAccountName = String(req.body?.verifiedAccountName ?? "").trim().slice(0, 160);
+    if (!bankName || !/^\d{10}$/.test(accountNumber) || !accountName || !verifiedAccountName || !bankCode) { res.status(400).json({ error: "Enter and verify the bank name, 10-digit account number and account name." }); return; }
+    try {
+      const check = await flutterwave("/accounts/resolve", { method: "POST", body: JSON.stringify({ account_number: accountNumber, account_bank: bankCode }) });
+      const resolved = String(check?.data?.account_name ?? "").trim();
+      if (!resolved || resolved.toLowerCase() !== verifiedAccountName.toLowerCase() || resolved.toLowerCase() !== accountName.toLowerCase()) { res.status(422).json({ error: "Bank account details do not match the verified account. Please verify again." }); return; }
+    } catch (e: any) { res.status(422).json({ error: e?.message || "Bank account verification failed." }); return; }
   }
-  if (!bankName || !/^\d{10}$/.test(accountNumber) || !accountName || !verifiedAccountName || !bankCode) {
-    res.status(400).json({ error: "Enter the bank name, 10-digit account number and account name." }); return;
-  }
-
-  try {
-    const check=await flutterwave("/accounts/resolve",{method:"POST",body:JSON.stringify({account_number:accountNumber,account_bank:bankCode})});
-    const resolved=String(check?.data?.account_name??"").trim();
-    if(!resolved || resolved.toLowerCase()!==verifiedAccountName.toLowerCase() || resolved.toLowerCase()!==accountName.toLowerCase()){
-      res.status(422).json({error:"The bank account details changed or no longer match the verified account name. Please verify again."}); return;
-    }
-  } catch(e:any) {
-    res.status(422).json({error:e?.message||"Bank account verification failed. Please verify again."}); return;
-  }
-
   const bcrypt = await import("bcryptjs");
-  const [user] = await db.select({ id: usersTable.id, email: usersTable.email, pinHash: usersTable.pinHash })
-    .from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  if (!user?.pinHash || !(await bcrypt.default.compare(String(req.body?.pin ?? ""), user.pinHash))) {
-    res.status(401).json({ error: user?.pinHash ? "Incorrect transfer PIN." : "Create your 4-digit transfer PIN before requesting a withdrawal.", code: "TRANSFER_PIN_REQUIRED" }); return;
-  }
-
+  const [user] = await db.select({ id: usersTable.id, email: usersTable.email, pinHash: usersTable.pinHash }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user?.pinHash || !(await bcrypt.default.compare(String(req.body?.pin ?? ""), user.pinHash))) { res.status(401).json({ error: user?.pinHash ? "Incorrect transfer PIN." : "Create your 4-digit transfer PIN before requesting a withdrawal.", code: "TRANSFER_PIN_REQUIRED" }); return; }
   await tables();
   try {
     const out = await db.transaction(async (d) => {
-      const open = await d.execute(sql`SELECT id FROM seller_withdrawal_requests WHERE user_id=${userId} AND status IN ('pending','approved') LIMIT 1`);
+      const open = await d.execute(sql\`SELECT id FROM seller_withdrawal_requests WHERE user_id=\${userId} AND status IN ('pending','approved') LIMIT 1\`);
       if (open.rows.length) throw new Error("You already have a withdrawal request being processed.");
-
-      const wallet = await d.execute(sql`SELECT balance FROM wallets WHERE user_id=${userId} FOR UPDATE`);
-      const balance = Number((wallet.rows[0] as any)?.balance ?? 0);
-      if (balance < amount) throw new Error("Your available balance is not enough for this withdrawal.");
-
-      const updated = await d.execute(sql`UPDATE wallets SET balance=balance-${amount.toFixed(2)},ledger_balance=ledger_balance-${amount.toFixed(2)},updated_at=now() WHERE user_id=${userId} AND balance>=${amount.toFixed(2)} RETURNING balance`);
-      if (!updated.rows.length) throw new Error("Your available balance is not enough for this withdrawal.");
-
-      const tx = await d.insert(transactionsTable).values({
-        userId, type:"seller_withdrawal", amount:amount.toFixed(2), status:"pending",
-        reference:generateReference("SWD"), description:`Seller withdrawal to ${accountName} (${accountNumber})`,
-        metadata:JSON.stringify({bankName,bankCode,accountNumber,accountName,narration,requestStatus:"pending"}),
-        balanceBefore:balance.toFixed(2), balanceAfter:Number(updated.rows[0].balance).toFixed(2),
-      }).returning({id:transactionsTable.id});
-
-      const request = await d.execute(sql`INSERT INTO seller_withdrawal_requests(user_id,amount,bank_name,bank_code,account_number,account_name,narration,transaction_id)
-        VALUES(${userId},${amount.toFixed(2)},${bankName},${bankCode},${accountNumber},${accountName},${narration},${tx[0]?.id ?? null})
-        RETURNING id,amount,bank_name AS "bankName",account_number AS "accountNumber",account_name AS "accountName",status,created_at AS "createdAt"`);
-      return {request:request.rows[0], balance:Number(updated.rows[0].balance)};
-    });
-
-    await notifyUser({userId,type:"transaction",title:"Withdrawal request submitted",body:`Your seller withdrawal request for ₦${amount.toLocaleString()} is now being reviewed.`,link:"/seller"}).catch(()=>{});
-    try {
-      const admins = await db.select({id:usersTable.id,email:usersTable.email}).from(usersTable).where(eq(usersTable.isAdmin,true));
-      if (admins.length) {
-        await db.insert(notificationsTable).values(admins.map(admin=>({userId:admin.id,type:"admin_seller",title:"Seller withdrawal request",body:`Seller #${userId} requested a ₦${amount.toLocaleString()} withdrawal.`,link:"/admin?tab=sellers"})));
-        await Promise.allSettled(admins.map((admin:any)=>sendAdminAlertEmail(
-          "Seller withdrawal request",
-          `Seller withdrawal request received.\n\nSeller: ${seller.sellerName}\nUser ID: #${userId}\nAmount: ₦${amount.toLocaleString()}\nBank: ${bankName}\nAccount: ${accountName} (${accountNumber})\n\nReview it in Admin → Sellers.`,
-          String(admin.email??"").trim(),
-        )));
+      const earned = await d.execute(sql\`SELECT COALESCE(SUM(ROUND(o.amount*(1-i.seller_fee_rate/100),2)),0) AS total FROM social_account_orders o JOIN social_account_inventory i ON i.id=o.inventory_id WHERE i.seller_user_id=\${userId}\`);
+      const reserved = await d.execute(sql\`SELECT COALESCE(SUM(amount),0) AS total FROM seller_withdrawal_requests WHERE user_id=\${userId} AND status IN ('pending','approved','paid','completed')\`);
+      const available = Math.max(0, Number((earned.rows[0] as any)?.total ?? 0) - Number((reserved.rows[0] as any)?.total ?? 0));
+      if (available < amount) throw new Error("Your available seller earnings are not enough for this withdrawal.");
+      if (payoutMethod === "wallet") {
+        const wallet = await d.execute(sql\`SELECT balance FROM wallets WHERE user_id=\${userId} FOR UPDATE\`);
+        if (!wallet.rows.length) throw new Error("Your CipherPay wallet is not ready. Please contact support.");
+        const before = Number((wallet.rows[0] as any).balance ?? 0);
+        const updated = await d.execute(sql\`UPDATE wallets SET balance=balance+\${amount.toFixed(2)},ledger_balance=ledger_balance+\${amount.toFixed(2)},updated_at=now() WHERE user_id=\${userId} RETURNING balance\`);
+        const tx = await d.insert(transactionsTable).values({ userId, type: "seller_earnings_transfer", amount: amount.toFixed(2), status: "completed", reference: generateReference("SEW"), description: "Seller earnings transferred to CipherPay wallet", metadata: JSON.stringify({ payoutMethod: "wallet", narration }), balanceBefore: before.toFixed(2), balanceAfter: Number(updated.rows[0].balance).toFixed(2) }).returning({ id: transactionsTable.id });
+        const request = await d.execute(sql\`INSERT INTO seller_withdrawal_requests(user_id,amount,payout_method,narration,transaction_id,status,paid_at,reviewed_at) VALUES(\${userId},\${amount.toFixed(2)},'wallet',\${narration},\${tx[0]?.id ?? null},'completed',now(),now()) RETURNING id,amount,payout_method AS "payoutMethod",status,created_at AS "createdAt"\`);
+        return { request: request.rows[0], sellerAvailableBalance: Number((available - amount).toFixed(2)) };
       }
-    } catch (e:any) { req.log?.warn?.({err:e?.message},"seller withdrawal admin alert failed"); }
-
-    res.status(201).json({success:true,...out});
-  } catch (e:any) {
-    res.status(400).json({error:e?.message||"Withdrawal request failed."});
-  }
+      const tx = await d.insert(transactionsTable).values({ userId, type: "seller_withdrawal", amount: amount.toFixed(2), status: "pending", reference: generateReference("SWD"), description: \`Seller withdrawal to \${accountName} (\${accountNumber})\`, metadata: JSON.stringify({ payoutMethod: "bank", bankName, bankCode, accountNumber, accountName, narration, requestStatus: "pending" }), balanceBefore: null, balanceAfter: null }).returning({ id: transactionsTable.id });
+      const request = await d.execute(sql\`INSERT INTO seller_withdrawal_requests(user_id,amount,payout_method,bank_name,bank_code,account_number,account_name,narration,transaction_id,status) VALUES(\${userId},\${amount.toFixed(2)},'bank',\${bankName},\${bankCode},\${accountNumber},\${accountName},\${narration},\${tx[0]?.id ?? null},'pending') RETURNING id,amount,payout_method AS "payoutMethod",bank_name AS "bankName",account_number AS "accountNumber",account_name AS "accountName",status,created_at AS "createdAt"\`);
+      return { request: request.rows[0], sellerAvailableBalance: Number((available - amount).toFixed(2)) };
+    });
+    await notifyUser({ userId, type: "transaction", title: payoutMethod === "wallet" ? "Seller earnings transferred" : "Withdrawal request submitted", body: payoutMethod === "wallet" ? \`₦\${amount.toLocaleString()} seller earnings have been transferred to your CipherPay wallet.\` : \`Your seller withdrawal request for ₦\${amount.toLocaleString()} is now being reviewed.\`, link: "/seller" }).catch(() => {});
+    if (payoutMethod === "bank") try {
+      const admins = await db.select({ id: usersTable.id, email: usersTable.email }).from(usersTable).where(eq(usersTable.isAdmin, true));
+      if (admins.length) {
+        await db.insert(notificationsTable).values(admins.map(admin => ({ userId: admin.id, type: "admin_seller", title: "Seller withdrawal request", body: \`Seller #\${userId} requested a ₦\${amount.toLocaleString()} bank withdrawal.\`, link: "/admin?tab=sellers" })));
+        await Promise.allSettled(admins.map((admin: any) => sendAdminAlertEmail("Seller withdrawal request", \`Seller: \${seller.sellerName}\\nUser ID: #\${userId}\\nAmount: ₦\${amount.toLocaleString()}\\nBank: \${bankName}\\nAccount: \${accountName} (\${accountNumber})\`, String(admin.email ?? "").trim())));
+      }
+    } catch (e: any) { req.log?.warn?.({ err: e?.message }, "seller withdrawal admin alert failed"); }
+    res.status(201).json({ success: true, ...out });
+  } catch (e: any) { res.status(400).json({ error: e?.message || "Withdrawal request failed." }); }
 });
-
 router.get("/seller/withdrawals", async (req, res): Promise<void> => {
   const userId = uid(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
