@@ -272,10 +272,12 @@ router.post("/auth/register", async (req, res): Promise<void> => {
       markOtpIssued(user.email, "verification");
       await db.insert(otpTable).values({ target: user.email, code, purpose: "verification", expiresAt });
       otpDelivery = "email";
-      // Registration must wait until the verification code has actually been
-      // handed to the mail provider. The client must receive this response before
-      // it can continue to the OTP screen.
-      await sendOtpEmail(user.email, code, "verification");
+      // Persist the OTP first, then dispatch email delivery without holding the
+      // signup request open on SMTP/provider latency. The client can open the OTP
+      // screen immediately; delivery failures are logged and users can retry.
+      void sendOtpEmail(user.email, code, "verification").catch((e: any) => {
+        req.log?.error?.({ err: e?.message, userId: user.id }, "signup OTP delivery failed in background");
+      });
     } catch (e: any) {
       req.log.error({ err: e?.message, userId: user.id }, "signup OTP setup failed");
       res.status(502).json({ error: "Account was created, but we could not send your verification code. Please try signing in again." });
@@ -331,7 +333,10 @@ router.post("/auth/login", async (req, res): Promise<void> => {
       if (isEmailConfigured()) {
         otpDelivery = "email";
         // Do not mint a session until the user proves control of the inbox.
-        await sendOtpEmail(user.email, code, "verification");
+        // Don't make login wait for the mail provider's network round trip.
+        void sendOtpEmail(user.email, code, "verification").catch((e: any) => {
+          req.log?.error?.({ err: e?.message, userId: user.id }, "login verification OTP delivery failed in background");
+        });
       } else {
         req.log.info({ target: user.email, code }, "login verification OTP generated (email not configured)");
       }
@@ -373,10 +378,11 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     await db.insert(otpTable).values({ target: user.email, code, purpose: "login", expiresAt });
     if (isEmailConfigured()) {
       otpDelivery = "email";
-      // Login is not complete until the OTP has been delivered. Keep the request
-      // pending while the provider accepts the message so the client only shows
-      // the OTP screen once the code has actually been sent.
-      await sendOtpEmail(user.email, code, "login");
+      // The OTP is stored before dispatch. Return the OTP challenge promptly
+      // instead of keeping the user on "Sending OTP" while SMTP/provider calls wait.
+      void sendOtpEmail(user.email, code, "login").catch((e: any) => {
+        req.log?.error?.({ err: e?.message, userId: user.id }, "login OTP delivery failed in background");
+      });
     } else req.log.info({ target: user.email, code }, "login OTP generated (email not configured)");
   } catch (e: any) {
     req.log.error({ err: e?.message, userId: user.id }, "login OTP email failed");
