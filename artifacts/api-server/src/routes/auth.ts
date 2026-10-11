@@ -47,7 +47,8 @@ const router: IRouter = Router();
 const OTP_RESEND_COOLDOWN_MS = 30 * 1000;
 // Login OTP is controlled by the runtime flag so the second factor can be
 // enabled without changing the auth contract or client bundle.
-const LOGIN_OTP_ENABLED = true;
+// Temporary outage mode: login and signup do not require email OTP until delivery is restored.
+const LOGIN_OTP_ENABLED = false;
 const otpCooldowns = new Map<string, number>();
 
 function otpCooldownKey(target: string, purpose: string): string {
@@ -238,7 +239,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     referralCode: myReferralCode,
     userCode: myUserCode,
     referredBy: normalizedReferralCode ?? null,
-    isVerified: false,
+    isVerified: true,
     kycLevel: 0,
   }).returning();
 
@@ -260,47 +261,18 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     req.log?.warn?.({ userId: user.id, err: e?.message }, "initial Flutterwave payout wallet provisioning failed");
   });
 
-  // Auto-send an email OTP so the user can verify their inbox before they finish
-  // the signup flow. We still issue the JWT (the mobile app needs it to call
-  // /auth/verify-otp from the verify screen), but the client treats `isVerified=false`
-  // as a hard gate and routes to the verify-email screen.
-  let otpDelivery: "email" | "logged" | "skipped" = "skipped";
-  if (isEmailConfigured()) {
-    try {
-      const code = generateOtp();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-      markOtpIssued(user.email, "verification");
-      await db.insert(otpTable).values({ target: user.email, code, purpose: "verification", expiresAt });
-      otpDelivery = "email";
-      // Persist the OTP first, then dispatch email delivery without holding the
-      // signup request open on SMTP/provider latency. The client can open the OTP
-      // screen immediately; delivery failures are logged and users can retry.
-      void sendOtpEmail(user.email, code, "verification").catch((e: any) => {
-        req.log?.error?.({ err: e?.message, userId: user.id }, "signup OTP delivery failed in background");
-      });
-    } catch (e: any) {
-      req.log.error({ err: e?.message, userId: user.id }, "signup OTP setup failed");
-      res.status(502).json({ error: "Account was created, but we could not send your verification code. Please try signing in again." });
-      return;
-    }
-  } else {
-    const code = generateOtp();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    markOtpIssued(user.email, "verification");
-    await db.insert(otpTable).values({ target: user.email, code, purpose: "verification", expiresAt });
-    req.log.info({ target: user.email, code }, "signup OTP generated (email not configured)");
-    otpDelivery = "logged";
-  }
-
-  // No authenticated session is created until the verification OTP is accepted.
-  void sendWelcomeEmail(user.email, user.firstName).catch((e: any) => {
-    req.log?.warn?.({ userId: user.id, err: e?.message }, "welcome email failed");
-  });
+  // Temporary email-outage mode: create an authenticated session directly.
+  // Email verification is paused until provider credentials are repaired.
+  const wallet = await getOrCreateWallet(user.id);
+  const dev = deviceInfo(req);
+  const sid = await createSession(user.id, dev.name, dev.platform, dev.ip);
+  const token = signToken(user.id, sid);
 
   res.status(201).json({
-    user: formatUser(user, 0),
-    requiresEmailVerification: true,
-    otpDelivery,
+    user: formatUser(user, parseFloat(wallet.balance)),
+    token,
+    requiresEmailVerification: false,
+    ...(user.isAdmin ? { adminToken: signAdminToken(user.id) } : {}),
   });
 });
 
@@ -319,38 +291,11 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
-  // Email-verification gate: if a user signed up but never confirmed their inbox,
-  // do not promote them to a full session. Re-issue an OTP and tell the client to
-  // route through the verify-email screen. We still hand back the JWT because the
-  // verify screen needs it to call /auth/verify-otp from a logged-out state.
+  // Temporary email-outage mode: allow existing accounts awaiting verification
+  // to sign in with their correct password without sending an OTP.
   if (!user.isVerified) {
-    let otpDelivery: "email" | "logged" = "logged";
-    try {
-      const code = generateOtp();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-      markOtpIssued(user.email, "verification");
-      await db.insert(otpTable).values({ target: user.email, code, purpose: "verification", expiresAt });
-      if (isEmailConfigured()) {
-        otpDelivery = "email";
-        // Do not mint a session until the user proves control of the inbox.
-        // Don't make login wait for the mail provider's network round trip.
-        void sendOtpEmail(user.email, code, "verification").catch((e: any) => {
-          req.log?.error?.({ err: e?.message, userId: user.id }, "login verification OTP delivery failed in background");
-        });
-      } else {
-        req.log.info({ target: user.email, code }, "login verification OTP generated (email not configured)");
-      }
-    } catch (e: any) {
-      req.log.error({ err: e?.message, userId: user.id }, "login verification OTP email failed");
-      res.status(502).json({ error: "We could not send your verification code. Please try again." });
-      return;
-    }
-    res.status(200).json({
-      email: user.email,
-      requiresEmailVerification: true,
-      otpDelivery,
-    });
-    return;
+    await db.update(usersTable).set({ isVerified: true }).where(eq(usersTable.id, user.id));
+    user.isVerified = true;
   }
 
   if (!LOGIN_OTP_ENABLED) {
