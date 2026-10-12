@@ -305,7 +305,6 @@ export async function sendWelcomeEmail(to: string, firstName: string): Promise<v
   `, "Welcome to CipherPay — your account is verified and ready.");
   await sendMail(to, "Welcome to CipherPay 🎉", html, `Hey ${firstName.trim() || "there"}, welcome to CipherPay. Your account is verified and ready to use.
 
-Open CipherPay: https://cipherpay.it.com/
 
 — CipherPay`);
 }
