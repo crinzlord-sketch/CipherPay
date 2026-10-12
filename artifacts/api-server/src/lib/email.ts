@@ -110,7 +110,7 @@ function brandWrap(title: string, contentHtml: string, previewText: string): str
             <tr>
               <td style="padding:24px 8px 0;color:#738099;font-size:12px;line-height:19px;">
                 <p style="margin:0 0 8px;">This is an automated message from CipherPay.</p>
-                <p style="margin:0;">Need help? Contact <a href="mailto:support@cipherpay.it.com" style="color:#5b3aa4;text-decoration:underline;">support@cipherpay.it.com</a><br>CipherPay, Nigeria</p>
+                <p style="margin:0;">Need help? Contact support@cipherpay.it.com<br>CipherPay, Nigeria</p>
               </td>
             </tr>
           </table>
@@ -287,7 +287,6 @@ export async function sendPasswordResetEmail(to: string, link: string, firstName
     <p style="margin:0 0 26px;text-align:center;">
       <a href="${safeLink}" style="display:inline-block;padding:13px 22px;border-radius:9px;background:#f4733a;color:#ffffff;font-size:14px;line-height:20px;font-weight:700;text-decoration:none;">Reset password</a>
     </p>
-    <p style="margin:0;color:#738099;font-size:12px;line-height:19px;word-break:break-word;">If the button does not work, copy this link into your browser:<br><a href="${safeLink}" style="color:#5b3aa4;text-decoration:underline;">${safeLink}</a></p>
     <p style="margin:22px 0 0;color:#738099;font-size:13px;line-height:21px;">If you did not request this, you can ignore this message. Your password will not change.</p>
   `, "Use the secure link to reset your CipherPay password.");
   await sendMail(to, "Reset your CipherPay password", html, `Hi ${firstName.trim() || "there"},\n\nWe received a request to reset your CipherPay password.\n\nReset your password: ${link}\n\nThis link is valid for 30 minutes. If you did not request this, you can ignore this message.`);
@@ -302,14 +301,7 @@ export async function sendWelcomeEmail(to: string, firstName: string): Promise<v
       <p style="margin:0 0 10px;color:#17213b;font-size:14px;font-weight:700;">A good place to start</p>
       <p style="margin:0;color:#4e5c74;font-size:14px;line-height:23px;">Fund your wallet when you’re ready, explore the services available to you, and keep your account protected. Never share your verification codes or password.</p>
     </div>
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
-      <tr>
-        <td style="border-radius:10px;background:#f4733a;">
-          <a href="https://cipherpay.it.com/" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;">Open CipherPay</a>
-        </td>
-      </tr>
-    </table>
-    <p style="margin:0;color:#738099;font-size:13px;line-height:21px;">We’ll occasionally send useful tips and updates — no noise, just things worth knowing.</p>
+    <p style="margin:0;color:#738099;font-size:13px;line-height:21px;">This is a service message confirming your account is ready. We will only send relevant account-related emails.</p>
   `, "Welcome to CipherPay — your account is verified and ready.");
   await sendMail(to, "Welcome to CipherPay 🎉", html, `Hey ${firstName.trim() || "there"}, welcome to CipherPay. Your account is verified and ready to use.
 
