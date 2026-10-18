@@ -673,6 +673,29 @@
   box-shadow: 0 14px 28px rgba(58, 35, 88, 0.13);
 }
 
+/* Keep a visible position/scroll track on the SMS service dropdown. */
+.sms-picker-menu {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 0.75) hsl(var(--muted));
+}
+.sms-picker-menu::-webkit-scrollbar {
+  width: 7px;
+}
+.sms-picker-menu::-webkit-scrollbar-track {
+  margin: 7px 2px;
+  border-radius: 999px;
+  background: hsl(var(--muted));
+}
+.sms-picker-menu::-webkit-scrollbar-thumb {
+  min-height: 28px;
+  border-radius: 999px;
+  background: hsl(var(--primary) / 0.75);
+  border: 1px solid hsl(var(--card));
+}
+.sms-picker-menu::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
+
 .sms-picker-option {
   display: flex;
   width: 100%;
