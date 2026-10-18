@@ -126,7 +126,7 @@ export default function SocialBoostPage() {
     [platform, services],
   );
   const selectedService = services.find((service) => service.id === serviceId) ?? platformServices[0];
-  const total = selectedService ? selectedService.pricePerUnit * parseGroupedDigits(quantity) + (selectedService.platformFee ?? 200) : 0;
+  const total = selectedService && quantity.trim() ? selectedService.pricePerUnit * parseGroupedDigits(quantity) + (selectedService.platformFee ?? 200) : 0;
 
   useEffect(() => {
     if (!platformServices.some((service) => service.id === serviceId)) {
