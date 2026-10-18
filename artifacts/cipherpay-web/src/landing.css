@@ -1079,7 +1079,7 @@ input:not(:disabled):hover,textarea:not(:disabled):hover,select:not(:disabled):h
 }
 
 /* Cards/rows across functional pages */
-.sms-number-row,.sms-code-card,.sms-picker-input,.sms-picker-menu,
+.sms-number-row,.sms-code-card,.sms-picker-input,
 .sms-history-row,.vas-side-card,.vas-trust-card,
 .bills-picker,.bills-provider-panel,.bills-workspace-hero,
 .bills-checkout-card,.bills-summary-card,.bills-trust-panel,
