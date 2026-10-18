@@ -455,7 +455,7 @@ router.get("/social/services", async (req, res): Promise<void> => {
         return {
           ...(({ keywords: _k, ...rest }) => rest)(service),
           // Customer price includes CipherPay's 20% markup; never add a large flat fee per order.
-          pricePerUnit: Math.round((provider.rate / 1000) * 1.2 * 100) / 100,
+          pricePerUnit: (provider.rate / 1000) * 1.2,
           providerRate: provider.rate,
           platformFee: 0,
           minQuantity: Math.max(service.minQuantity, provider.min),
