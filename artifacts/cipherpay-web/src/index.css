@@ -565,6 +565,8 @@
 .sms-order-panel {
   display: grid;
   gap: 17px;
+  /* Let the service dropdown extend beyond the rounded order card on mobile. */
+  overflow: visible !important;
 }
 
 .sms-search-input {
