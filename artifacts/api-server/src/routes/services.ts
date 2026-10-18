@@ -454,9 +454,10 @@ router.get("/social/services", async (req, res): Promise<void> => {
         ].filter(Boolean);
         return {
           ...(({ keywords: _k, ...rest }) => rest)(service),
-          pricePerUnit: provider.rate / 1000,
+          // Customer price includes CipherPay's 20% markup; never add a large flat fee per order.
+          pricePerUnit: Math.round((provider.rate / 1000) * 1.2 * 100) / 100,
           providerRate: provider.rate,
-          platformFee: 200,
+          platformFee: 0,
           minQuantity: Math.max(service.minQuantity, provider.min),
           maxQuantity: Math.min(service.maxQuantity, provider.max),
           refill: Boolean(provider.refill),
@@ -493,11 +494,16 @@ router.post("/social/order", async (req, res): Promise<void> => {
   const sociallyService = await smmFindService(service.keywords, quantity);
   if (!sociallyService) { res.status(502).json({ error: "No live provider service is available for this order right now." }); return; }
   const providerAmount = (sociallyService.rate * quantity) / 1000;
-  const amount = Math.ceil((providerAmount + 200) / 10) * 10;
+  // Apply a 20% margin on provider cost, with no flat platform fee or artificial ₦10 rounding.
+  const amount = Math.round(providerAmount * 1.2 * 100) / 100;
+  if (amount <= 0) {
+    res.status(400).json({ error: "This service price is temporarily unavailable." });
+    return;
+  }
 
   let tx: any;
   try {
-    ({ tx } = await debitWallet(userId, amount, `${service.name} x${quantity} - ${link}`, "social", { serviceId, link, quantity, providerAmount, cipherPayProfit: 200 }));
+    ({ tx } = await debitWallet(userId, amount, `${service.name} x${quantity} - ${link}`, "social", { serviceId, link, quantity, providerAmount, cipherPayProfit: Math.round((amount - providerAmount) * 100) / 100 }));
   } catch (e: any) {
     res.status(400).json({ error: e.message }); return;
   }
