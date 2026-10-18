@@ -126,17 +126,13 @@ export default function SocialBoostPage() {
     [platform, services],
   );
   const selectedService = services.find((service) => service.id === serviceId) ?? platformServices[0];
-  const total = selectedService ? selectedService.pricePerUnit * parseGroupedDigits(quantity || String(selectedService.minQuantity)) + (selectedService.platformFee ?? 200) : 0;
+  const total = selectedService ? selectedService.pricePerUnit * parseGroupedDigits(quantity) + (selectedService.platformFee ?? 200) : 0;
 
   useEffect(() => {
     if (!platformServices.some((service) => service.id === serviceId)) {
       setServiceId(platformServices[0]?.id ?? '');
     }
   }, [platformServices, serviceId]);
-
-  useEffect(() => {
-    if (selectedService && !quantity) setQuantity(formatGroupedDigits(selectedService.minQuantity));
-  }, [selectedService, quantity]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
