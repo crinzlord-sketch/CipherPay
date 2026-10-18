@@ -106,8 +106,8 @@ export async function smmFindService(keywords: string[], quantity: number): Prom
     })
     .filter(Boolean) as { s: SmmService; score: number; inRange: boolean; rate: number }[];
 
-  const inRange = scored.filter((x) => x.inRange);
-  const pool = inRange.length > 0 ? inRange : scored;
+  // Never submit a quantity outside the provider's actual limits.
+  const pool = scored.filter((x) => x.inRange);
   if (pool.length === 0) return null;
 
   pool.sort((a, b) => (b.score !== a.score ? b.score - a.score : a.rate - b.rate));
