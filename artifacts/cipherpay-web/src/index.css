@@ -654,12 +654,15 @@
   top: calc(100% + 7px);
   right: 0;
   left: 0;
-  max-height: 255px;
+  max-height: min(255px, 38vh);
   overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow-y: scroll;
+  overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
+  /* Keep the open list independently scrollable while mobile keyboards are visible. */
+  transform: translateZ(0);
+  contain: layout paint;
   scrollbar-gutter: stable;
   padding: 5px;
   border: 1px solid hsl(var(--border));
