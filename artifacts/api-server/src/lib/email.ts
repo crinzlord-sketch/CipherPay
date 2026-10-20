@@ -122,6 +122,8 @@ function brandWrap(title: string, contentHtml: string, previewText: string): str
 }
 
 export async function sendMail(to: string, subject: string, html: string, text?: string): Promise<void> {
+  logger.info({ to, subject }, "Email sending temporarily disabled by operator");
+  return;
   html = canonicalizeSiteLinks(html);
   text = text ? canonicalizeSiteLinks(text) : text;
   if (!isEmailConfigured()) {
