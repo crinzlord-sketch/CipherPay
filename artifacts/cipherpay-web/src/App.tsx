@@ -1851,7 +1851,7 @@ function Airtime() {
     </section>
     <div className="vas-layout">
       <section className="panel service-panel vas-main-card">
-        <div className="service-card-heading"><div><span className="section-kicker">01 / CHOOSE A SERVICE</span><h2>What do you need?</h2><p>Prices and bundles are loaded from the live provider catalog.</p></div><span className="service-live-badge"><span /> Live</span></div>
+        <div className="service-card-heading"><div><span className="section-kicker">CHOOSE A SERVICE</span><h2>What do you need?</h2><p>Prices and bundles are loaded from the live provider catalog.</p></div><span className="service-live-badge"><span /> Live</span></div>
         <div className="tabs vas-tabs" role="tablist" aria-label="Connectivity service">
           <button className={tab === 'airtime' ? 'tab active' : 'tab'} type="button" role="tab" aria-selected={tab === 'airtime'} onClick={() => { setTab('airtime'); setDone(false); setError(''); }} data-testid="tab-airtime"><Banknote size={15} /> Airtime</button>
           <button className={tab === 'data' ? 'tab active' : 'tab'} type="button" role="tab" aria-selected={tab === 'data'} onClick={() => { setTab('data'); setDone(false); setError(''); }} data-testid="tab-data"><Layers3 size={15} /> Data bundles</button>
@@ -2052,12 +2052,12 @@ function Bills() {
       <div className="bills-command-glow bills-command-glow-one" />
       <div className="bills-command-glow bills-command-glow-two" />
       <div className="bills-command-hero-top"><span className="bills-command-icon"><Receipt size={22} /></span><span className="service-live-badge"><span /> Live provider catalogue</span></div>
-      <div className="bills-command-copy"><span className="section-kicker">PAYMENT DESK / 01</span><h2>Choose the bill.<br /><em>We’ll handle the rest.</em></h2><p>Live provider logos, instant customer verification, and a clean checkout flow — no giant form to fight through.</p></div>
+      <div className="bills-command-copy"><span className="section-kicker">PAYMENT DESK</span><h2>Choose the bill.<br /><em>We’ll handle the rest.</em></h2><p>Live provider logos, instant customer verification, and a clean checkout flow — no giant form to fight through.</p></div>
       <div className="bills-command-stats"><span><b>{categories.length || '—'}</b><small>bill categories</small></span><span><b>{availableProviders.length || '—'}</b><small>providers available</small></span><span><b>LIVE</b><small>provider connection</small></span></div>
     </section>
 
     <section className="bills-picker">
-      <div className="bills-picker-head"><div><span className="section-kicker">01 / SERVICE</span><h2>What are you paying for?</h2><p>Choose a category first. You’ll get a dedicated provider screen next.</p></div><span className="bills-step-pill">Choose a category</span></div>
+      <div className="bills-picker-head"><div><span className="section-kicker">SERVICE</span><h2>What are you paying for?</h2><p>Choose a category first. You’ll get a dedicated provider screen next.</p></div><span className="bills-step-pill">Choose a category</span></div>
       <div className="bills-category-grid">
         {categories.map((item: any, index: number) => <button type="button" key={item.id} className={`bills-category-card ${category === item.id ? 'active' : ''}`} onClick={() => setCategory(item.id)}>
           <span className="bills-category-number">{String(index + 1).padStart(2, '0')}</span><span className="bills-category-symbol">{billCategoryIcon(item.id)}</span><span className="bills-category-text"><b>{item.name}</b><small>{item.description || 'Pay this bill from your wallet.'}</small></span><ArrowRight size={17} />
@@ -2066,7 +2066,7 @@ function Bills() {
     </section>
 
     <section className="bills-provider-panel">
-      <div className="bills-provider-head"><div><span className="section-kicker">02 / PROVIDER</span><h2>{selectedCategory?.name ?? 'Bill'} providers</h2><p>Select a provider to open its own payment workspace.</p></div><span className="bills-provider-count">{availableProviders.length} available</span></div>
+      <div className="bills-provider-head"><div><span className="section-kicker">PROVIDER</span><h2>{selectedCategory?.name ?? 'Bill'} providers</h2><p>Select a provider to open its own payment workspace.</p></div><span className="bills-provider-count">{availableProviders.length} available</span></div>
       {providers.isLoading ? <div className="bills-provider-loading"><RefreshCw size={17} className="spin" /> Loading live providers…</div> : providers.isError ? <div className="error-box" role="alert">Could not load providers for this category. Refresh and try again.</div> : <div className="bills-provider-grid">
         {availableProviders.map((item: any, index: number) => {
           const code = item.code || item.id;
