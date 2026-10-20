@@ -116,12 +116,17 @@ export default function AboutPage() {
     </section>
 
     <section className="about-founder about-width">
-      <div className="about-founder-mark"><span>PU</span><i /></div>
+      <div className="about-founder-visual">
+        <img src="https://images.unsplash.com/photo-1510511459019-5dda7724fd87?auto=format&fit=crop&w=1000&q=85" alt="Technology workspace glowing with code and computer screens" loading="lazy" />
+        <div className="about-founder-glass"><span>CP / FOUNDER</span><strong>BUILD<br />THE FUTURE</strong><small>TECH · SYSTEMS · VISION</small></div>
+        <i className="about-founder-orbit orbit-one" /><i className="about-founder-orbit orbit-two" />
+      </div>
       <div className="about-founder-copy">
         <span className="about-section-label">THE FOUNDER / 04</span>
-        <h2>Patrick Udo</h2>
-        <p className="about-founder-role">Founder, CipherPay</p>
-        <p>CipherPay is founded by Patrick Udo, with a focus on building a practical digital platform that brings everyday financial and digital services together in one place.</p>
+        <h2>Patrick Udo <em>(Crinz)</em></h2>
+        <p className="about-founder-role">Founder of CipherPay · Founder of Cipher Technologies</p>
+        <p>Patrick Udo, known as Crinz, founded CipherPay and Cipher Technologies with a vision to build practical digital products that bring financial tools, online services and modern technology closer together.</p>
+        <div className="about-founder-tags"><span>FOUNDER</span><span>PRODUCT BUILDER</span><span>TECHNOLOGY</span></div>
       </div>
     </section>
 
