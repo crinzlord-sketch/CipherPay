@@ -87,6 +87,7 @@ export default function SmsVerification() {
   const countries = (countriesQuery.data ?? []) as Country[];
   const services = (servicesQuery.data ?? []) as Service[];
   const history = (historyQuery.data ?? []) as Activation[];
+  const newestFirstHistory = [...history].sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
   const [service, setService] = useState('');
   const [serviceSearch, setServiceSearch] = useState('');
   const [serviceOpen, setServiceOpen] = useState(false);
@@ -123,11 +124,11 @@ export default function SmsVerification() {
     : services;
 
   useEffect(() => {
-    if (!active && history.length) {
-      const pending = history.find((item) => item.status === 'pending');
+    if (!active && newestFirstHistory.length) {
+      const pending = newestFirstHistory.find((item) => item.status === 'pending');
       if (pending) setActive(pending);
     }
-  }, [active, history]);
+  }, [active, newestFirstHistory]);
 
   const selectedCountry = countries.find((item) => item.code === country);
   const selectedService = services.find((item) => item.id === service);
@@ -392,7 +393,7 @@ export default function SmsVerification() {
       <section className="panel sms-history-panel">
         <div className="section-head"><div><h2>Recent activations</h2><span>Your SMS number orders on this account</span></div><button className="text-link" type="button" onClick={() => void historyQuery.refetch()} data-testid="button-refresh-sms-history"><RefreshCw size={15} /> Refresh</button></div>
         {historyQuery.isLoading ? <div className="loading-inline">Loading SMS history…</div> : historyQuery.isError ? <div className="error-box">Could not load activation history.</div> : history.length ? (
-          <div className="sms-history-list">{history.slice(0, 8).map((item) => <button type="button" className={`sms-history-row ${active?.activationId === item.activationId ? 'selected' : ''}`} key={item.activationId} onClick={() => { setActive(item); setLiveCode(item.code ? { activationId: item.activationId, status: item.status, code: item.code } : null); }}>
+          <div className="sms-history-list">{newestFirstHistory.slice(0, 8).map((item) => <button type="button" className={`sms-history-row ${active?.activationId === item.activationId ? 'selected' : ''}`} key={item.activationId} onClick={() => { setActive(item); setLiveCode(item.code ? { activationId: item.activationId, status: item.status, code: item.code } : null); }}>
             <span className="sms-history-icon"><MessageSquareText size={16} /></span><span className="sms-history-copy"><b>{item.service} · {item.country}</b><small>{item.number} · {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Recently'}</small></span><span className={`status-pill status-${item.status}`}>{item.code ?? item.status}</span>
           </button>)}</div>
         ) : <div className="loading-inline">No SMS activations yet.</div>}
