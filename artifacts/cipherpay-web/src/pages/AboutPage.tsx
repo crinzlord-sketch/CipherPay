@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUpRight, Banknote, Bitcoin, Check, Globe2, LockKeyhole, MessageSquare, Send, ShieldCheck, Smartphone, ShoppingBag, WalletCards, Wifi, Mail, UsersRound, Megaphone, Zap, CircleDollarSign, Boxes } from 'lucide-react';
 import { Link } from 'wouter';
 import './about.css';
@@ -28,6 +29,89 @@ const featureGroups = [
     ['Send, receive & swap', 'The crypto experience is designed around simple asset movement and management.', ArrowRight],
   ]},
 ];
+
+const adScenes = [
+  { eyebrow: 'CIPHERPAY', title: 'Your digital life,', accent: 'in motion.', detail: 'One account. A whole world of connected tools.', chips: ['ONE ACCOUNT', 'BUILT TO MOVE'], visual: 'launch' },
+  { eyebrow: 'MONEY WITHOUT THE MESS', title: 'Fund. Send.', accent: 'Stay in control.', detail: 'A wallet for funding, transfers and tracking your activity.', chips: ['WALLET', 'TRANSFERS', 'ACTIVITY'], visual: 'wallet' },
+  { eyebrow: 'CONNECTED WORLD', title: 'Numbers without', accent: 'the hassle.', detail: 'SMS verification, long-term numbers and international eSIM options.', chips: ['SMS VERIFY', 'eSIM', 'LONG-TERM NUMBERS'], visual: 'connect' },
+  { eyebrow: 'EMAIL TOOLS', title: 'A smarter inbox', accent: 'for quick tasks.', detail: 'Temporary email and Email Pro tools, together in one place.', chips: ['TEMP EMAIL', 'EMAIL PRO'], visual: 'email' },
+  { eyebrow: 'EVERYDAY DATA', title: 'Stay connected.', accent: 'Keep moving.', detail: 'Explore supported mobile data bundles from your CipherPay account.', chips: ['DATA BUNDLES', 'EASY ACCESS'], visual: 'data' },
+  { eyebrow: 'SOCIAL POWER', title: 'Build your', accent: 'online presence.', detail: 'Social Boost orders with status tracking and recent activity.', chips: ['SOCIAL BOOST', 'ORDER TRACKING'], visual: 'boost' },
+  { eyebrow: 'SOCIAL MARKETPLACE', title: 'Buy and sell', accent: 'with purpose.', detail: 'Browse available social accounts and seller listings in one marketplace.', chips: ['SOCIAL ACCOUNTS', 'SELLER TOOLS'], visual: 'market' },
+  { eyebrow: 'STAY IN TOUCH', title: 'Find your people.', accent: 'Keep the conversation.', detail: 'Find CipherPay users and chat with messages, images, GIFs and replies.', chips: ['FIND & CHAT', 'REFERRALS'], visual: 'chat' },
+  { eyebrow: 'WHAT COMES NEXT', title: 'One platform.', accent: 'More possibilities.', detail: 'Security-focused account controls today, with crypto marked as coming soon.', chips: ['ACCOUNT CONTROLS', 'CRYPTO COMING SOON'], visual: 'future' },
+];
+
+function CipherPayAdReel() {
+  const [sceneIndex, setSceneIndex] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const scene = adScenes[sceneIndex];
+  useEffect(() => {
+    if (!playing) return;
+    const timer = window.setInterval(() => {
+      setElapsed((current) => {
+        const next = current + 0.1;
+        if (next >= 36) {
+          setPlaying(false);
+          return 36;
+        }
+        setSceneIndex(Math.min(adScenes.length - 1, Math.floor(next / 4)));
+        return next;
+      });
+    }, 100);
+    return () => window.clearInterval(timer);
+  }, [playing]);
+  const start = () => {
+    if (elapsed >= 36) { setElapsed(0); setSceneIndex(0); }
+    setPlaying(true);
+  };
+  const reset = () => { setPlaying(false); setElapsed(0); setSceneIndex(0); };
+  const fullscreen = () => {
+    const element = document.getElementById('cipherpay-ad-reel');
+    if (element?.requestFullscreen) void element.requestFullscreen();
+  };
+  return <section className="about-ad-section about-width" aria-label="CipherPay animated advertisement">
+    <div className="about-ad-heading"><span className="about-section-label">THE CIPHERPAY REEL</span><h2>36 seconds.<br/><em>Every side of CipherPay.</em></h2><p>Play the cinematic feature showcase, then screen-record it for your social ads.</p></div>
+    <div id="cipherpay-ad-reel" className={`about-ad-reel ${playing ? 'is-playing' : ''}`}>
+      <div className="about-ad-stars" aria-hidden="true" />
+      <div className="about-ad-orb about-ad-orb-one" aria-hidden="true" />
+      <div className="about-ad-orb about-ad-orb-two" aria-hidden="true" />
+      <div className="about-ad-topline"><span><i/> CIPHERPAY / FEATURE FILM</span><span>00:{String(Math.max(0, Math.ceil(36-elapsed))).padStart(2,'0')}</span></div>
+      <div className="about-ad-content" key={scene.visual}>
+        <div className="about-ad-copy"><span className="about-ad-eyebrow">{scene.eyebrow}</span><h3>{scene.title}<br/><em>{scene.accent}</em></h3><p>{scene.detail}</p><div className="about-ad-chips">{scene.chips.map(chip=><span key={chip}>{chip}</span>)}</div></div>
+        <div className={`about-ad-device device-${scene.visual}`} aria-hidden="true">
+          <div className="about-ad-device-back" />
+          <div className="about-ad-screen">
+            <div className="about-ad-screen-top"><span className="about-ad-mini-logo">CP</span><span>cipherpay</span><i>•••</i></div>
+            {#if scene.visual === 'wallet'}
+              <small>AVAILABLE BALANCE</small><strong className="ad-balance">₦ 24,680.00</strong><div className="ad-action-row"><b>↗ Send</b><b>＋ Fund</b><b>↗ Activity</b></div><div className="ad-chart"><i/><i/><i/><i/><i/><i/><i/><i/><i/><i/><i/><i/></div>
+            {:else if scene.visual === 'connect'}
+              <div className="ad-ui-list"><b>Global services</b><span>◉ SMS verification <i>Ready</i></span><span>◎ International eSIM <i>Explore</i></span><span>▣ Long-term numbers <i>Manage</i></span></div>
+            {:else if scene.visual === 'email'}
+              <div className="ad-email-icon">✉</div><b className="ad-ui-title">Your inbox, simplified.</b><span className="ad-ui-line"/> <span className="ad-ui-line short"/><div className="ad-mini-pill">TEMP EMAIL · EMAIL PRO</div>
+            {:else if scene.visual === 'data'}
+              <div className="ad-data-orb">5G</div><b className="ad-ui-title">Stay connected</b><div className="ad-data-bars"><i/><i/><i/><i/><i/><i/><i/></div><div className="ad-mini-pill">DATA BUNDLES</div>
+            {:else if scene.visual === 'boost'}
+              <div className="ad-social-head"><span>◎</span><b>Social Boost</b><i>↗</i></div><div className="ad-growth">+ <strong>2,480</strong><small>growth in motion</small></div><div className="ad-progress"><i/></div><div className="ad-mini-pill">ORDER TRACKING</div>
+            {:else if scene.visual === 'market'}
+              <div className="ad-market-grid"><span>◎<b>Social</b></span><span>✉<b>Email</b></span><span>◉<b>Accounts</b></span><span>↗<b>Seller tools</b></span></div><div className="ad-mini-pill">MARKETPLACE</div>
+            {:else if scene.visual === 'chat'}
+              <div className="ad-chat-bubble">Hey! You on CipherPay? <small>Now</small></div><div className="ad-chat-bubble outgoing">Yeah, let's connect. <small>✓✓</small></div><div className="ad-chat-tools"><span>＋</span><span>GIF</span><span>☺</span><span>➤</span></div>
+            {:else if scene.visual === 'future'}
+              <div className="ad-future-mark">CP</div><b className="ad-ui-title">Everything moves.</b><div className="ad-mini-pill">CRYPTO · COMING SOON</div>
+            {:else}
+              <div className="ad-launch-mark">CP</div><b className="ad-launch-title">One account.<br/>Infinite moves.</b><div className="ad-mini-pill">WELCOME TO CIPHERPAY</div>
+            {/if}
+          </div>
+          <div className="about-ad-device-reflection" />
+        </div>
+      </div>
+      <div className="about-ad-bottom"><div className="about-ad-progress"><i style={{width:`${Math.min(100,elapsed/36*100)}%`}}/></div><div className="about-ad-controls"><span>SCENE {String(sceneIndex+1).padStart(2,'0')} / {String(adScenes.length).padStart(2,'0')}</span><div><button type="button" onClick={reset}>↺ Restart</button><button type="button" onClick={fullscreen}>⛶ Full screen</button><button type="button" className="about-ad-play" onClick={playing ? () => setPlaying(false) : start}>{playing ? 'Ⅱ Pause' : elapsed >= 36 ? '↻ Replay' : '▶ Play ad'}</button></div></div></div>
+    </div>
+    <p className="about-ad-note">Tip: tap <b>Full screen</b>, play the reel, and screen-record the 36-second run. Use a screen recorder at the highest available quality.</p>
+  </section>;
+}
 
 const marquee = ['MONEY', 'PAYMENTS', 'CRYPTO', 'eSIM', 'SOCIAL', 'CHAT', 'NUMBERS', 'EMAIL', 'DATA'];
 
@@ -69,6 +153,8 @@ export default function AboutPage() {
         <div className="about-float about-float-two"><Boxes size={15} /><span><b>Services</b><small>all connected</small></span></div>
       </div>
     </section>
+
+    <CipherPayAdReel />
 
     <div className="about-marquee" aria-hidden="true"><div>{[...marquee, ...marquee].map((item, i) => <span key={`${item}-${i}`}>{item}<b>◆</b></span>)}</div></div>
 
