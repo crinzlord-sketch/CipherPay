@@ -42,9 +42,9 @@ const adScenes = [
   { eyebrow: 'WHAT COMES NEXT', title: 'One platform.', accent: 'More possibilities.', detail: 'Security-focused account controls today, with crypto marked as coming soon.', chips: ['ACCOUNT CONTROLS', 'CRYPTO COMING SOON'], visual: 'future' },
 ];
 
-function CipherPayAdReel() {
+export function CipherPayAdReel({ location = 'about' }: { location?: 'about' | 'landing' }) {
   const [sceneIndex, setSceneIndex] = useState(0);
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlaying] = useState(true);
   const [elapsed, setElapsed] = useState(0);
   const scene = adScenes[sceneIndex];
   useEffect(() => {
@@ -52,12 +52,9 @@ function CipherPayAdReel() {
     const timer = window.setInterval(() => {
       setElapsed((current) => {
         const next = current + 0.1;
-        if (next >= 36) {
-          setPlaying(false);
-          return 36;
-        }
-        setSceneIndex(Math.min(adScenes.length - 1, Math.floor(next / 4)));
-        return next;
+        const looped = next >= 36 ? next % 36 : next;
+        setSceneIndex(Math.min(adScenes.length - 1, Math.floor(looped / 4)));
+        return looped;
       });
     }, 100);
     return () => window.clearInterval(timer);
@@ -71,8 +68,8 @@ function CipherPayAdReel() {
     const element = document.getElementById('cipherpay-ad-reel');
     if (element?.requestFullscreen) void element.requestFullscreen();
   };
-  return <section className="about-ad-section about-width" aria-label="CipherPay animated advertisement">
-    <div className="about-ad-heading"><span className="about-section-label">THE CIPHERPAY REEL</span><h2>36 seconds.<br/><em>Every side of CipherPay.</em></h2><p>Play the cinematic feature showcase, then screen-record it for your social ads.</p></div>
+  return <section className={'about-ad-section about-width ' + (location === 'landing' ? 'about-ad-landing' : '')} aria-label="CipherPay animated advertisement">
+    <div className="about-ad-heading"><span className="about-section-label">THE CIPHERPAY REEL</span><h2>36 seconds.<br/><em>Every side of CipherPay.</em></h2><p>An always-on cinematic feature showcase. Screen-record it for your social ads.</p></div>
     <div id="cipherpay-ad-reel" className={`about-ad-reel ${playing ? 'is-playing' : ''}`}>
       <div className="about-ad-stars" aria-hidden="true" />
       <div className="about-ad-orb about-ad-orb-one" aria-hidden="true" />
@@ -107,9 +104,9 @@ function CipherPayAdReel() {
           <div className="about-ad-device-reflection" />
         </div>
       </div>
-      <div className="about-ad-bottom"><div className="about-ad-progress"><i style={{width:`${Math.min(100,elapsed/36*100)}%`}}/></div><div className="about-ad-controls"><span>SCENE {String(sceneIndex+1).padStart(2,'0')} / {String(adScenes.length).padStart(2,'0')}</span><div><button type="button" onClick={reset}>↺ Restart</button><button type="button" onClick={fullscreen}>⛶ Full screen</button><button type="button" className="about-ad-play" onClick={playing ? () => setPlaying(false) : start}>{playing ? 'Ⅱ Pause' : elapsed >= 36 ? '↻ Replay' : '▶ Play ad'}</button></div></div></div>
+      <div className="about-ad-bottom"><div className="about-ad-progress"><i style={{width:`${Math.min(100,elapsed/36*100)}%`}}/></div><div className="about-ad-controls"><span>SCENE {String(sceneIndex+1).padStart(2,'0')} / {String(adScenes.length).padStart(2,'0')}</span><div><button type="button" onClick={reset}>↺ Restart</button><button type="button" onClick={fullscreen}>⛶ Full screen</button><button type="button" className="about-ad-play" onClick={playing ? () => setPlaying(false) : start}>{playing ? 'Ⅱ Pause' : '▶ Play ad'}</button></div></div></div>
     </div>
-    <p className="about-ad-note">Tip: tap <b>Full screen</b>, play the reel, and screen-record the 36-second run. Use a screen recorder at the highest available quality.</p>
+    <p className="about-ad-note">Tip: tap <b>Full screen</b> and screen-record the looping reel. Use a screen recorder at the highest available quality.</p>
   </section>;
 }
 
