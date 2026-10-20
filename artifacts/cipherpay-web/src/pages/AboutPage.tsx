@@ -73,7 +73,7 @@ export default function AboutPage() {
     <div className="about-marquee" aria-hidden="true"><div>{[...marquee, ...marquee].map((item, i) => <span key={`${item}-${i}`}>{item}<b>◆</b></span>)}</div></div>
 
     <section className="about-intro about-width">
-      <div><span className="about-section-label">THE IDEA / 01</span><h2>Less switching.<br /><em>More doing.</em></h2></div>
+      <div><span className="about-section-label">THE IDEA</span><h2>Less switching.<br /><em>More doing.</em></h2></div>
       <div className="about-intro-copy">
         <p>CipherPay was created around a straightforward idea: everyday digital life should not require a different app for every task.</p>
         <p>Instead of separating your wallet, transfers, digital services, social tools and communication, CipherPay brings them together behind one account and one balance.</p>
@@ -83,16 +83,16 @@ export default function AboutPage() {
 
     <section className="about-features about-width">
       <div className="about-section-head">
-        <div><span className="about-section-label">THE PLATFORM / 02</span><h2>Not another boring dashboard.</h2></div>
+        <div><span className="about-section-label">THE PLATFORM</span><h2>Not another boring dashboard.</h2></div>
         <p>Every part is designed around the same idea: useful tools, one account, less friction.</p>
       </div>
       <div className="about-feature-groups">
         {featureGroups.map((group, groupIndex) => <section className={`about-feature-group accent-${group.accent}`} key={group.label}>
-          <div className="about-group-head"><span className="group-number">0{groupIndex + 1}</span><div><span>{group.label}</span><h3>{group.title}</h3></div></div>
+          <div className="about-group-head"><div><span>{group.label}</span><h3>{group.title}</h3></div></div>
           <div className="about-feature-grid">{group.items.map(([title, text, Icon], index) => {
             const FeatureIcon = Icon as typeof WalletCards;
             return <article className="about-feature-card" key={title as string}>
-              <span className="about-feature-number">{String(index + 1).padStart(2, '0')}</span>
+              
               <span className="about-feature-icon"><FeatureIcon size={19} /></span>
               <div><h4>{title as string}</h4><p>{text as string}</p></div>
               <ArrowUpRight />
@@ -104,7 +104,7 @@ export default function AboutPage() {
 
     <section className="about-security about-width">
       <div className="about-security-copy">
-        <span className="about-section-label">BUILT AROUND CONTROL / 03</span>
+        <span className="about-section-label">BUILT AROUND CONTROL</span>
         <h2>Your account should feel like <em>yours.</em></h2>
         <p>CipherPay is designed around clear balances, transaction history, account controls and protected flows. We aim to make important actions understandable before you confirm them.</p>
       </div>
@@ -122,7 +122,7 @@ export default function AboutPage() {
         <i className="about-founder-orbit orbit-one" /><i className="about-founder-orbit orbit-two" />
       </div>
       <div className="about-founder-copy">
-        <span className="about-section-label">THE FOUNDER / 04</span>
+        <span className="about-section-label">THE FOUNDER</span>
         <h2>Patrick Udo <em>(Crinz)</em></h2>
         <p className="about-founder-role">Founder of CipherPay · Founder of Cipher Technologies</p>
         <p>Patrick Udo, known as Crinz, founded CipherPay and Cipher Technologies with a vision to build practical digital products that bring financial tools, online services and modern technology closer together.</p>
