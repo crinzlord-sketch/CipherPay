@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq, lt, notInArray } from "drizzle-orm";
+import { and, desc, eq, lt, notInArray } from "drizzle-orm";
 import { db, smsActivationsTable, socialOrdersTable, transactionsTable, usersTable } from "@workspace/db";
 import {
   PlaceSocialOrderBody, BuySmsNumberBody,
@@ -609,7 +609,7 @@ router.get("/social/orders", async (req, res): Promise<void> => {
   const offset = (page - 1) * limit;
 
   const data = await db.select().from(socialOrdersTable).where(eq(socialOrdersTable.userId, userId))
-    .orderBy(socialOrdersTable.createdAt).limit(limit).offset(offset);
+    .orderBy(desc(socialOrdersTable.createdAt)).limit(limit).offset(offset);
   res.json({
     data: data.map(o => ({ ...o, amount: parseFloat(o.amount), createdAt: o.createdAt.toISOString(), externalOrderId: o.externalOrderId ?? null })),
     total: data.length, page, limit,
