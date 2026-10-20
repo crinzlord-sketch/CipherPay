@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AnimatedDialogProvider, useAnimatedDialog } from './components/animated-dialog';
 import SmsVerification from './pages/SmsVerification';
+import { CipherPayAdReel } from './pages/AboutPage';
 import SmsPoolExtrasPage from './pages/SmsPoolExtrasPage';
 import LongTermNumbersPage from './pages/LongTermNumbersPage';
 import TemporaryEmail from './pages/TemporaryEmail';
@@ -526,6 +527,7 @@ function LandingPage() {
       <div className="cp-scatter cp-scatter-cta" aria-hidden="true"><div className="cp-mockup scatter-j"><div className="mock-screen"><b>Long-term numbers</b><strong>Manage rentals</strong><span>Messages & extensions</span><i>Explore</i></div></div></div>
       <span className="cp-kicker">CIPHERPAY</span><h2>Make everyday feel simpler.</h2><p>One place for the things you do often, with an interface that gets out of your way.</p><div className="cp-hero-actions"><button type="button" className="cp-land-btn primary" onClick={() => goToAuth('register')}>Get started <ArrowRight size={17}/></button><button type="button" className="cp-land-btn ghost" onClick={() => goToAuth('login')}>Log in</button></div></div></section>
     <div className="cp-service-marquee" aria-hidden="true"><div><span key={`MONEY-landing-0`}>MONEY<b>◆</b></span><span key={`PAYMENTS-landing-1`}>PAYMENTS<b>◆</b></span><span key={`CRYPTO-landing-2`}>CRYPTO<b>◆</b></span><span key={`eSIM-landing-3`}>eSIM<b>◆</b></span><span key={`SOCIAL-landing-4`}>SOCIAL<b>◆</b></span><span key={`CHAT-landing-5`}>CHAT<b>◆</b></span><span key={`NUMBERS-landing-6`}>NUMBERS<b>◆</b></span><span key={`EMAIL-landing-7`}>EMAIL<b>◆</b></span><span key={`DATA-landing-8`}>DATA<b>◆</b></span></div></div>
+    <CipherPayAdReel location="landing" />
     <footer className="cp-footer cp-footer-premium">
       <div className="cp-footer-glow cp-footer-glow-a" /><div className="cp-footer-glow cp-footer-glow-b" />
       <div className="cp-footer-top">
