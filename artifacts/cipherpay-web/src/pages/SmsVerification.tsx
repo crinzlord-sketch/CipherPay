@@ -93,6 +93,7 @@ export default function SmsVerification() {
   const [serviceOpen, setServiceOpen] = useState(false);
   const [activationType, setActivationType] = useState<'SMS' | 'VOICE' | 'FLASH'>('SMS');
   const [active, setActive] = useState<Activation | null>(null);
+  const [showAllHistory, setShowAllHistory] = useState(false);
   const [liveCode, setLiveCode] = useState<CodeResult | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -391,9 +392,9 @@ export default function SmsVerification() {
       </div>
 
       <section className="panel sms-history-panel">
-        <div className="section-head"><div><h2>Recent activations</h2><span>Your SMS number orders on this account</span></div><button className="text-link" type="button" onClick={() => void historyQuery.refetch()} data-testid="button-refresh-sms-history"><RefreshCw size={15} /> Refresh</button></div>
+        <div className="section-head"><div><h2>Recent activations</h2><span>Your SMS number orders on this account</span></div><div className="section-actions"><button className="text-link" type="button" onClick={() => setShowAllHistory(v => !v)}>{showAllHistory ? 'Show recent' : 'View all'}</button><button className="text-link" type="button" onClick={() => void historyQuery.refetch()} data-testid="button-refresh-sms-history"><RefreshCw size={15} /> Refresh</button></div></div>
         {historyQuery.isLoading ? <div className="loading-inline">Loading SMS history…</div> : historyQuery.isError ? <div className="error-box">Could not load activation history.</div> : history.length ? (
-          <div className="sms-history-list">{newestFirstHistory.slice(0, 8).map((item) => <button type="button" className={`sms-history-row ${active?.activationId === item.activationId ? 'selected' : ''}`} key={item.activationId} onClick={() => { setActive(item); setLiveCode(item.code ? { activationId: item.activationId, status: item.status, code: item.code } : null); }}>
+          <div className="sms-history-list">{newestFirstHistory.slice(0, showAllHistory ? undefined : 8).map((item) => <button type="button" className={`sms-history-row ${active?.activationId === item.activationId ? 'selected' : ''}`} key={item.activationId} onClick={() => { setActive(item); setLiveCode(item.code ? { activationId: item.activationId, status: item.status, code: item.code } : null); }}>
             <span className="sms-history-icon"><MessageSquareText size={16} /></span><span className="sms-history-copy"><b>{item.service} · {item.country}</b><small>{item.number} · {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Recently'}</small></span><span className={`status-pill status-${item.status}`}>{item.code ?? item.status}</span>
           </button>)}</div>
         ) : <div className="loading-inline">No SMS activations yet.</div>}
