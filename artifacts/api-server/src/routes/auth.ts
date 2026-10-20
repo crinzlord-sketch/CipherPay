@@ -402,6 +402,8 @@ router.post("/auth/verify-login-otp", async (req, res): Promise<void> => {
 });
 
 router.post("/auth/send-otp", async (req, res): Promise<void> => {
+  res.status(503).json({ error: "Email and OTP delivery are temporarily disabled. Please try again later." });
+  return;
   // Defensively default `type` so old/stale mobile bundles that omit it keep
   // working — infer from the target shape. Previously this returned a 400
   // ("type: Required") which users hit on the verify-email "Resend code" path.
@@ -443,6 +445,8 @@ router.post("/auth/send-otp", async (req, res): Promise<void> => {
 
 // ── PASSWORD RESET (in-app OTP flow) ───────────────────────────────────────
 router.post("/auth/forgot-password", async (req, res): Promise<void> => {
+  res.status(503).json({ error: "Password reset by email is temporarily unavailable. Please contact support." });
+  return;
   const email = String(req.body?.email ?? "").trim().toLowerCase();
   if (!email) { res.status(400).json({ error: "Email is required" }); return; }
 
