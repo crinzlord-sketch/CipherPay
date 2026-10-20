@@ -636,14 +636,19 @@ router.get("/social/orders/:id/status", async (req, res): Promise<void> => {
       const liveKey = live.status?.toLowerCase();
       const newStatus = liveKey ? (statusMap[liveKey] ?? order.status) : order.status;
       const reportedRemains = live.remains != null ? Number(live.remains) : null;
-      // Some providers return remains=0 before an order has started. Never show
-      // full delivery unless the provider explicitly reports completion.
+      // Trust a provider's remaining count only when it is a valid quantity.
+      // A zero remaining count is meaningful only when the provider reports
+      // completed/partial; pending providers sometimes return a placeholder 0.
+      const validRemains = reportedRemains != null
+        && Number.isFinite(reportedRemains)
+        && reportedRemains >= 0
+        && reportedRemains <= order.quantity;
       const remains = newStatus === "completed"
         ? 0
-        : reportedRemains === 0 && newStatus !== "partial"
-          ? Math.max(order.remainsCount ?? order.quantity, order.quantity)
-          : reportedRemains != null && Number.isFinite(reportedRemains)
-            ? reportedRemains
+        : newStatus === "partial" && validRemains
+          ? reportedRemains!
+          : validRemains && reportedRemains! > 0
+            ? reportedRemains!
             : order.remainsCount;
       const startCount = live.start_count != null ? Number(live.start_count) : order.startCount;
       await db.update(socialOrdersTable).set({ status: newStatus, remainsCount: remains, startCount }).where(eq(socialOrdersTable.id, id));
