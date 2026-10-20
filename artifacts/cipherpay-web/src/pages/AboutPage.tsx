@@ -84,25 +84,25 @@ function CipherPayAdReel() {
           <div className="about-ad-device-back" />
           <div className="about-ad-screen">
             <div className="about-ad-screen-top"><span className="about-ad-mini-logo">CP</span><span>cipherpay</span><i>•••</i></div>
-            {#if scene.visual === 'wallet'}
+            {scene.visual === 'wallet' ? <>
               <small>AVAILABLE BALANCE</small><strong className="ad-balance">₦ 24,680.00</strong><div className="ad-action-row"><b>↗ Send</b><b>＋ Fund</b><b>↗ Activity</b></div><div className="ad-chart"><i/><i/><i/><i/><i/><i/><i/><i/><i/><i/><i/><i/></div>
-            {:else if scene.visual === 'connect'}
+            </> : scene.visual === 'connect' ? <>
               <div className="ad-ui-list"><b>Global services</b><span>◉ SMS verification <i>Ready</i></span><span>◎ International eSIM <i>Explore</i></span><span>▣ Long-term numbers <i>Manage</i></span></div>
-            {:else if scene.visual === 'email'}
-              <div className="ad-email-icon">✉</div><b className="ad-ui-title">Your inbox, simplified.</b><span className="ad-ui-line"/> <span className="ad-ui-line short"/><div className="ad-mini-pill">TEMP EMAIL · EMAIL PRO</div>
-            {:else if scene.visual === 'data'}
+            </> : scene.visual === 'email' ? <>
+              <div className="ad-email-icon">✉</div><b className="ad-ui-title">Your inbox, simplified.</b><span className="ad-ui-line"/><span className="ad-ui-line short"/><div className="ad-mini-pill">TEMP EMAIL · EMAIL PRO</div>
+            </> : scene.visual === 'data' ? <>
               <div className="ad-data-orb">5G</div><b className="ad-ui-title">Stay connected</b><div className="ad-data-bars"><i/><i/><i/><i/><i/><i/><i/></div><div className="ad-mini-pill">DATA BUNDLES</div>
-            {:else if scene.visual === 'boost'}
+            </> : scene.visual === 'boost' ? <>
               <div className="ad-social-head"><span>◎</span><b>Social Boost</b><i>↗</i></div><div className="ad-growth">+ <strong>2,480</strong><small>growth in motion</small></div><div className="ad-progress"><i/></div><div className="ad-mini-pill">ORDER TRACKING</div>
-            {:else if scene.visual === 'market'}
+            </> : scene.visual === 'market' ? <>
               <div className="ad-market-grid"><span>◎<b>Social</b></span><span>✉<b>Email</b></span><span>◉<b>Accounts</b></span><span>↗<b>Seller tools</b></span></div><div className="ad-mini-pill">MARKETPLACE</div>
-            {:else if scene.visual === 'chat'}
+            </> : scene.visual === 'chat' ? <>
               <div className="ad-chat-bubble">Hey! You on CipherPay? <small>Now</small></div><div className="ad-chat-bubble outgoing">Yeah, let's connect. <small>✓✓</small></div><div className="ad-chat-tools"><span>＋</span><span>GIF</span><span>☺</span><span>➤</span></div>
-            {:else if scene.visual === 'future'}
+            </> : scene.visual === 'future' ? <>
               <div className="ad-future-mark">CP</div><b className="ad-ui-title">Everything moves.</b><div className="ad-mini-pill">CRYPTO · COMING SOON</div>
-            {:else}
+            </> : <>
               <div className="ad-launch-mark">CP</div><b className="ad-launch-title">One account.<br/>Infinite moves.</b><div className="ad-mini-pill">WELCOME TO CIPHERPAY</div>
-            {/if}
+            </>}
           </div>
           <div className="about-ad-device-reflection" />
         </div>
