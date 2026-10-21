@@ -7193,3 +7193,11 @@ html.dark .cp-chat-list-row.has-unread .cp-chat-list-copy span{color:#f7f3fb!imp
 .social-order-target{display:grid;gap:7px;margin-top:14px;padding:14px;border:1px solid hsl(var(--border));border-radius:15px}.social-order-target a{display:flex;align-items:center;gap:7px;min-width:0;color:hsl(var(--primary));font-size:.76rem;overflow:hidden}.social-order-target a{word-break:break-all}
 .social-order-progress{margin:16px 0 18px}.social-order-progress>div:first-child{display:flex;justify-content:space-between;font-size:.7rem;margin-bottom:7px}.social-order-progress>div:first-child span{color:hsl(var(--muted-foreground))}.social-order-progress-track{height:8px;overflow:hidden;border-radius:999px;background:hsl(var(--accent))}.social-order-progress-track i{display:block;height:100%;border-radius:inherit;background:hsl(var(--primary));transition:width .35s ease}
 @media(max-width:600px){.social-order-modal{padding:22px 17px;border-radius:20px}.social-order-detail-grid{grid-template-columns:1fr}.social-order-row{gap:8px}.social-order-open{padding:7px 8px}.social-order-copy small{font-size:.61rem}}
+
+
+/* User-visible reason attached to every refunded Social Boost order */
+.social-order-copy .social-refund-reason{display:block;white-space:normal;line-height:1.5;color:#b45309;font-size:.7rem;margin-top:3px}
+.social-order-copy .social-refund-reason b{display:inline;white-space:normal;font-size:inherit;color:inherit}
+.social-refund-reason-card{margin:14px 0;padding:14px 15px;border:1px solid rgba(217,119,6,.28);border-radius:13px;background:rgba(245,158,11,.075)}
+.social-refund-reason-card b{display:block;font-size:.83rem;color:#b45309;margin-bottom:6px}
+.social-refund-reason-card p{margin:0;color:hsl(var(--foreground));font-size:.82rem;line-height:1.6;overflow-wrap:anywhere}
