@@ -7201,3 +7201,15 @@ html.dark .cp-chat-list-row.has-unread .cp-chat-list-copy span{color:#f7f3fb!imp
 .social-refund-reason-card{margin:14px 0;padding:14px 15px;border:1px solid rgba(217,119,6,.28);border-radius:13px;background:rgba(245,158,11,.075)}
 .social-refund-reason-card b{display:block;font-size:.83rem;color:#b45309;margin-bottom:6px}
 .social-refund-reason-card p{margin:0;color:hsl(var(--foreground));font-size:.82rem;line-height:1.6;overflow-wrap:anywhere}
+
+
+/* Keep refund explanations readable and order actions on-screen on phones */
+@media(max-width:600px){
+  .social-orders-panel{padding:16px 13px;min-width:0;overflow:hidden}
+  .social-order-row{display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:start;gap:9px}
+  .social-order-copy{min-width:0;overflow-wrap:anywhere}
+  .social-order-copy>b{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .social-order-copy small{overflow-wrap:anywhere;word-break:break-word;line-height:1.45}
+  .social-order-copy .social-refund-reason{max-width:100%;font-size:.65rem}
+  .social-order-open{align-self:start;max-width:76px;white-space:normal}
+}
