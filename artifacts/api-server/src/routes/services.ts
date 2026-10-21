@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, lt, notInArray } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, notInArray } from "drizzle-orm";
 import { db, smsActivationsTable, socialOrdersTable, transactionsTable, usersTable } from "@workspace/db";
 import {
   PlaceSocialOrderBody, BuySmsNumberBody,
@@ -610,8 +610,24 @@ router.get("/social/orders", async (req, res): Promise<void> => {
 
   const data = await db.select().from(socialOrdersTable).where(eq(socialOrdersTable.userId, userId))
     .orderBy(desc(socialOrdersTable.createdAt)).limit(limit).offset(offset);
+  const transactionIds = data.map((order) => order.transactionId).filter((id): id is number => id != null);
+  const transactionRows = transactionIds.length
+    ? await db.select({ id: transactionsTable.id, description: transactionsTable.description, status: transactionsTable.status })
+        .from(transactionsTable).where(inArray(transactionsTable.id, transactionIds))
+    : [];
+  const transactionsById = new Map(transactionRows.map((tx) => [tx.id, tx]));
   res.json({
-    data: data.map(o => ({ ...o, amount: parseFloat(o.amount), createdAt: o.createdAt.toISOString(), externalOrderId: o.externalOrderId ?? null })),
+    data: data.map(o => {
+      const transaction = o.transactionId == null ? undefined : transactionsById.get(o.transactionId);
+      const isRefunded = o.status === "cancelled" || o.status === "failed" || transaction?.status === "failed";
+      return {
+        ...o,
+        amount: parseFloat(o.amount),
+        createdAt: o.createdAt.toISOString(),
+        externalOrderId: o.externalOrderId ?? null,
+        refundReason: isRefunded ? (transaction?.description || "This order was cancelled and refunded. Please contact support if you need more details.") : null,
+      };
+    }),
     total: data.length, page, limit,
   });
 });
@@ -659,7 +675,17 @@ router.get("/social/orders/:id/status", async (req, res): Promise<void> => {
     }
   }
 
-  res.json({ ...order, amount: parseFloat(order.amount), createdAt: order.createdAt.toISOString(), externalOrderId: order.externalOrderId ?? null });
+  let refundReason: string | null = null;
+  if (order.status === "cancelled" || order.status === "failed") {
+    if (order.transactionId != null) {
+      const [transaction] = await db.select({ description: transactionsTable.description, status: transactionsTable.status })
+        .from(transactionsTable).where(eq(transactionsTable.id, order.transactionId));
+      refundReason = transaction?.description || "This order was cancelled and refunded. Please contact support if you need more details.";
+    } else {
+      refundReason = "This order was cancelled. Please contact support if you need more details.";
+    }
+  }
+  res.json({ ...order, amount: parseFloat(order.amount), createdAt: order.createdAt.toISOString(), externalOrderId: order.externalOrderId ?? null, refundReason });
 });
 
 // ── SMSPool verification numbers ─────────────────────────────────────────────
