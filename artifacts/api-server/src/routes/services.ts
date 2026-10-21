@@ -625,7 +625,7 @@ router.get("/social/orders", async (req, res): Promise<void> => {
         amount: parseFloat(o.amount),
         createdAt: o.createdAt.toISOString(),
         externalOrderId: o.externalOrderId ?? null,
-        refundReason: isRefunded ? (transaction?.description || "This order was cancelled and refunded. Please contact support if you need more details.") : null,
+        refundReason: isRefunded ? (transaction?.description && !/https?:\/\/|www\.|TikTok Followers|Instagram Followers|YouTube Subscribers|x\d+\s*[-–]/i.test(transaction.description) ? transaction.description : "Refund reason unavailable. Please contact CipherPay support for details.") : null,
       };
     }),
     total: data.length, page, limit,
@@ -680,9 +680,9 @@ router.get("/social/orders/:id/status", async (req, res): Promise<void> => {
     if (order.transactionId != null) {
       const [transaction] = await db.select({ description: transactionsTable.description, status: transactionsTable.status })
         .from(transactionsTable).where(eq(transactionsTable.id, order.transactionId));
-      refundReason = transaction?.description || "This order was cancelled and refunded. Please contact support if you need more details.";
+      refundReason = transaction?.description && !/https?:\/\/|www\.|TikTok Followers|Instagram Followers|YouTube Subscribers|x\d+\s*[-–]/i.test(transaction.description) ? transaction.description : "Refund reason unavailable. Please contact CipherPay support for details.";
     } else {
-      refundReason = "This order was cancelled. Please contact support if you need more details.";
+      refundReason = "Refund reason unavailable. Please contact CipherPay support for details.";
     }
   }
   res.json({ ...order, amount: parseFloat(order.amount), createdAt: order.createdAt.toISOString(), externalOrderId: order.externalOrderId ?? null, refundReason });
