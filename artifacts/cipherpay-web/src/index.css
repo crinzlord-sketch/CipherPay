@@ -7217,3 +7217,36 @@ html.dark .cp-chat-list-row.has-unread .cp-chat-list-copy span{color:#f7f3fb!imp
 /* Prevent global input styles from creating a second border inside SMS pickers */
 .sms-picker-input input { width:100%; min-width:0; max-width:none; margin:0; border:0 !important; border-radius:0 !important; outline:0 !important; box-shadow:none !important; background:transparent !important; appearance:none; -webkit-appearance:none; }
 .sms-picker-input { width:100%; min-width:0; box-sizing:border-box; }
+
+
+/* Keep the SMS verification screen locked to the mobile viewport */
+@media (max-width: 760px) {
+  html:has(.sms-layout),
+  body:has(.sms-layout),
+  #root:has(.sms-layout) {
+    width:100%;
+    max-width:100%;
+    overflow-x:clip;
+  }
+  .main-area:has(.sms-layout),
+  .main-area:has(.sms-layout) > .content,
+  .main-area:has(.sms-layout) .page-content,
+  .main-area:has(.sms-layout) .sms-layout,
+  .main-area:has(.sms-layout) .sms-order-panel,
+  .main-area:has(.sms-layout) .sms-inbox-panel,
+  .main-area:has(.sms-layout) .sms-history-panel {
+    box-sizing:border-box;
+    width:100%;
+    max-width:100%;
+    min-width:0;
+  }
+  .main-area:has(.sms-layout) {
+    overflow-x:clip;
+  }
+  .sms-layout img,
+  .sms-layout input,
+  .sms-layout select,
+  .sms-layout button {
+    min-width:0;
+  }
+}
