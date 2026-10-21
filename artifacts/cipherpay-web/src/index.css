@@ -7213,3 +7213,7 @@ html.dark .cp-chat-list-row.has-unread .cp-chat-list-copy span{color:#f7f3fb!imp
   .social-order-copy .social-refund-reason{max-width:100%;font-size:.65rem}
   .social-order-open{align-self:start;max-width:76px;white-space:normal}
 }
+
+/* Prevent global input styles from creating a second border inside SMS pickers */
+.sms-picker-input input { width:100%; min-width:0; max-width:none; margin:0; border:0 !important; border-radius:0 !important; outline:0 !important; box-shadow:none !important; background:transparent !important; appearance:none; -webkit-appearance:none; }
+.sms-picker-input { width:100%; min-width:0; box-sizing:border-box; }
