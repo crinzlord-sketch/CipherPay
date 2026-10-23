@@ -104,14 +104,22 @@ export default function SocialBoostPage() {
     setLoading(true);
     setError('');
     try {
-      const [serviceResult, orderResult] = await Promise.all([
+      // The catalogue and order history are independent: a temporary order-history
+      // failure must not blank the purchase form when services loaded successfully.
+      const [serviceResult, orderResult] = await Promise.allSettled([
         apiRequest<SocialService[]>('/api/social/services'),
         apiRequest<{ data: SocialOrder[] }>('/api/social/orders?limit=100'),
       ]);
-      setServices(serviceResult);
-      setOrders(await refreshLiveStatuses(orderResult.data ?? []));
-      setPlatform((current) => current || serviceResult[0]?.platform || '');
-      setServiceId((current) => current || serviceResult[0]?.id || '');
+      if (serviceResult.status === 'rejected') throw serviceResult.reason;
+      const catalogue = serviceResult.value;
+      setServices(catalogue);
+      setPlatform((current) => current || catalogue[0]?.platform || '');
+      setServiceId((current) => current || catalogue[0]?.id || '');
+      if (orderResult.status === 'fulfilled') {
+        setOrders(await refreshLiveStatuses(orderResult.value.data ?? []));
+      } else {
+        setError('Your services loaded, but order history is temporarily unavailable. You can still browse services; try refreshing your orders shortly.');
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Social Boost is temporarily unavailable.');
     } finally {
