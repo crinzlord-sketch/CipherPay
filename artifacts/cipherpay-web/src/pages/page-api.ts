@@ -29,34 +29,56 @@ export function userFacingApiError(payload: unknown, status: number): string {
   return message;
 }
 
+const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
 export async function apiRequest<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const token = typeof window !== 'undefined' ? window.localStorage.getItem('cipherpay_token') : null;
-  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  const timeout = typeof window !== 'undefined' ? window.setTimeout(() => controller?.abort(), 15000) : null;
-  let response: Response;
-  try {
-    response = await fetch(apiUrl(path), {
-      method: options.method ?? 'GET',
-      cache: options.method === 'GET' ? 'no-store' : undefined,
-      headers: {
-        ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-      credentials: 'include',
-      signal: controller?.signal,
-    });
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new Error('The server took too long to respond. Please try again.');
+  const method = (options.method ?? 'GET').toUpperCase();
+  // Retry only safe reads. Never retry a transfer/order POST automatically,
+  // because doing so could duplicate a paid transaction after a timeout.
+  const retryDelays = method === 'GET' ? [0, 1200, 2800, 5000] : [0];
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < retryDelays.length; attempt += 1) {
+    if (retryDelays[attempt] > 0) await sleep(retryDelays[attempt]);
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeout = typeof window !== 'undefined' ? window.setTimeout(() => controller?.abort(), 25000) : null;
+    try {
+      const response = await fetch(apiUrl(path), {
+        method,
+        cache: method === 'GET' ? 'no-store' : undefined,
+        headers: {
+          ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+        credentials: 'include',
+        signal: controller?.signal,
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        if (method === 'GET' && attempt < retryDelays.length - 1 && [502, 503, 504].includes(response.status)) {
+          lastError = new Error(fallbackApiError(response.status));
+          continue;
+        }
+        throw new Error(userFacingApiError(payload, response.status));
+      }
+      return payload as T;
+    } catch (error) {
+      lastError = error;
+      const isAbort = error instanceof DOMException && error.name === 'AbortError';
+      const isRetryableNetworkError = error instanceof TypeError || isAbort;
+      if (method !== 'GET' || attempt >= retryDelays.length - 1 || !isRetryableNetworkError) {
+        if (isAbort) throw new Error('The server is taking longer than expected to wake up. Please try again in a moment.');
+        throw error;
+      }
+    } finally {
+      if (timeout !== null) window.clearTimeout(timeout);
     }
-    throw error;
-  } finally {
-    if (timeout !== null) window.clearTimeout(timeout);
   }
-  const payload = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(userFacingApiError(payload, response.status));
-  return payload as T;
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('The service is temporarily unavailable. Please try again shortly.');
 }
 
 export function formatWhen(value?: string | null) {
